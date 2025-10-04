@@ -1,4 +1,4 @@
-# HYPED 2025
+# HYPED 2026
 
 &nbsp;
 
@@ -10,11 +10,11 @@
 
 &nbsp;
 
-![Build Shield](https://github.com/Hyp-ed/hyped-2025/actions/workflows/ci.yml/badge.svg) ![TODO Shield](https://img.shields.io/github/search/hyp-ed/hyped-2025/TODOLater?color=red&label=TODO%20counter)
+![Build Shield](https://github.com/Hyp-ed/hyped-2026/actions/workflows/ci.yml/badge.svg) ![TODO Shield](https://img.shields.io/github/search/hyp-ed/hyped-2026/TODOLater?color=red&label=TODO%20counter)
 
 ## Software Architecture
 
-This repository contains the software for the HYPED 2025 pod. The software is divided into two main components:
+This repository contains the software for the HYPED 2026 pod. The software is divided into two main components:
 
 ### 1. Pod-side Code
 
@@ -43,7 +43,7 @@ The base station consists of two main components:
 - The Telemetry server, which communicates with the pod and serves the GUI.
 - The Telemetry GUI, which visualises data and allows the user to send commands to the pod.
 
-You can learn more about our Telemetry system on our Wiki [here](https://github.com/Hyp-ed/hyped-2025/wiki/What-is-Telemetry).
+You can learn more about our Telemetry system on our Wiki [here](https://github.com/Hyp-ed/hyped-2026/wiki/What-is-Telemetry).
 
 ## Dependencies
 
@@ -52,7 +52,7 @@ You can learn more about our Telemetry system on our Wiki [here](https://github.
 - [Rust](https://www.rust-lang.org/tools/install)
 - [probe-rs](https://probe.rs/guide/getting-started/)
 
-Our Wiki contains a guide on how to get started with Rust and `probe-rs` [here](https://github.com/Hyp-ed/hyped-2025/wiki/Getting-Started-with-Rust).
+Our Wiki contains a guide on how to get started with Rust and `probe-rs` [here](https://github.com/Hyp-ed/hyped-2026/wiki/Getting-Started-with-Rust).
 
 ### Base Station (Node.js)
 
@@ -63,7 +63,7 @@ Or if running with Docker (recommended, see usage section):
 
 - [Docker](https://docs.docker.com/get-docker/)
 
-For more details on how to set up a development environment for the Telemetry system, see our Wiki [here](https://github.com/Hyp-ed/hyped-2025/wiki/Telemetry-Development)
+For more details on how to set up a development environment for the Telemetry system, see our Wiki [here](https://github.com/Hyp-ed/hyped-2026/wiki/Telemetry-Development)
 
 ## Usage
 
