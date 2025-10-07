@@ -27,7 +27,7 @@ We use the following microcontrollers on our pod:
 
 | Sub-system         | Microcontroller | Number |
 | ------------------ | --------------- | ------ |
-| Localisation       | STM32F767       | 1      |
+| Navigation         | STM32F767       | 1      |
 | Telemetry          | STM32F767       | 1      |
 | Levitation control | STM32L432       | 6      |
 | Sensor             | STM32F767       | 1      |
