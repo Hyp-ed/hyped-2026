@@ -16,7 +16,7 @@ defmt-rtt = "0.4"
 
 cortex-m = { version = "0.7.6", features = ["inline-asm", "critical-section-single-core"] }
 cortex-m-rt = "0.7.0"
-embedded-hal = "1.0.0"
+embedded-hal = "0.2.6"
 panic-probe = { version = "0.3", features = ["print-defmt"] }
 rand_core = "0.6.3"
 critical-section = "1.1"
@@ -44,8 +44,6 @@ hyped_gpio = { path = "../../lib/io/hyped_gpio" }
 hyped_gpio_derive = { path = "../../lib/io/hyped_gpio/hyped_gpio_derive" }
 hyped_spi = { path = "../../lib/io/hyped_spi" }
 hyped_spi_derive = { path = "../../lib/io/hyped_spi/hyped_spi_derive" }
-embedded-sdmmc = "0.9.0"
-embedded-hal-async = "1.0.0"
 
 [[bin]]
 name = "telemetry"
