@@ -14,8 +14,8 @@ lib/control @joedunn-edi
 boards/stm32l432kc @joedunn-edi
 
 # Sensors
-lib/sensors @H-Allen
-lib/io @H-Allen
+lib/sensors @BL-CZY
+lib/io @BL-CZY
 
 # Telemetry
 telemetry @prakhars0206
