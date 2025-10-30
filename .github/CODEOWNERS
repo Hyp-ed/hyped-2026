@@ -1,22 +1,21 @@
-* @davidbeechey
+* @H-Allen
 
-# Infrastructure
-debugger @kshxtij
-lib/core @kshxtij
-lib/state_machine @DylanCavers
+# Communications
+lib/communications @catx1
+lib/state_machine @catx1
 
-# Localisation
+# Navigation
 lib/localisation @misha7b
 
 # Control
-lib/motors @jpfbastos
-lib/levitation @jpfbastos
-lib/control @jpfbastos
-boards/stm32l432kc @jpfbastos
+lib/motors @joedunn-edi
+lib/levitation @joedunn-edi
+lib/control @joedunn-edi
+boards/stm32l432kc @joedunn-edi
 
 # Sensors
 lib/sensors @H-Allen
 lib/io @H-Allen
 
 # Telemetry
-telemetry @arjunnaha
+telemetry @prakhars0206
