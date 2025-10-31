@@ -1,5 +1,5 @@
 import { useCurrentPod } from '@/context/pods';
-import { POD_IDS, type PodId, pods } from '@hyped/telemetry-constants';
+import { podIds, pods } from '@hyped/telemetry-constants';
 import { Label } from '../ui/label';
 import {
 	Select,
@@ -38,7 +38,7 @@ export const PodSelector = () => {
  */
 const PodOptions = () => {
 	// Get the display text for each pod in the `pods.ts` file
-	const podOptions = POD_IDS.map((podId) => getDisplayText(podId));
+	const podOptions = podIds.map((podId) => getDisplayText(podId));
 
 	return podOptions.map((podOption) => (
 		<SelectItem key={podOption} value={podOption}>

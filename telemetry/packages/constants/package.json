@@ -8,7 +8,7 @@
 	"files": ["dist", "src"],
 	"scripts": {
 		"start": "dts watch",
-		"build": "dts build",
+		"build": "node scripts/generate-pods.mjs && dts build",
 		"lint": "biome lint .",
 		"lint:fix": "biome check --write ."
 	},

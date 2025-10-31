@@ -7,19 +7,18 @@ WORKDIR /usr/src/app
 RUN npm install -g pnpm
 
 # Install dependencies
-COPY package.json ./
-COPY packages/constants/package.json ./packages/constants/
-COPY packages/server/package.json ./packages/server/
-COPY packages/types/package.json ./packages/types/
-COPY packages/ui/package.json ./packages/ui/
-COPY packages/public-app/package.json ./packages/public-app/
-COPY packages/fake/package.json ./packages/fake/
-COPY packages/tsconfig/package.json ./packages/tsconfig/
-COPY packages/e2e-tests/package.json ./packages/e2e-tests/
-COPY pnpm-lock.yaml ./
-COPY pnpm-workspace.yaml ./
-COPY patches ./patches
-COPY turbo.json ./
+COPY telemetry/package.json ./
+COPY telemetry/packages/constants/package.json ./packages/constants/
+COPY telemetry/packages/server/package.json ./packages/server/
+COPY telemetry/packages/types/package.json ./packages/types/
+COPY telemetry/packages/ui/package.json ./packages/ui/
+COPY telemetry/packages/public-app/package.json ./packages/public-app/
+COPY telemetry/packages/tsconfig/package.json ./packages/tsconfig/
+COPY config ./config
+COPY telemetry/pnpm-lock.yaml ./
+COPY telemetry/pnpm-workspace.yaml ./
+COPY telemetry/patches ./patches
+COPY telemetry/turbo.json ./
 RUN pnpm install --frozen-lockfile
 RUN pnpm --filter=e2e-tests exec playwright install --with-deps
 
@@ -31,6 +30,7 @@ EXPOSE 8086
 EXPOSE 9323
 
 # Entrypoint
-COPY entry.sh ./
+COPY telemetry/entry.sh ./
+RUN chmod +x entry.sh
 
 ENTRYPOINT [ "/usr/src/app/entry.sh" ]
