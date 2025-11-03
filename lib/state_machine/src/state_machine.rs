@@ -1,6 +1,8 @@
 use crate::states::State;
 use hyped_core::logging::{info, warn};
 
+// temp comment - for pr setup, remove later
+
 pub struct StateMachine {
     pub current_state: State,
 }
