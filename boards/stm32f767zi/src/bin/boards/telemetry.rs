@@ -23,6 +23,7 @@ use hyped_boards_stm32f767zi::{
     board_state::{CURRENT_STATE, EMERGENCY, THIS_BOARD},
     configure_networking, default_can_config,
     log::log,
+    sdmmc::sdmmc_task,
     set_up_network_stack,
     tasks::{
         can::{
@@ -76,6 +77,8 @@ async fn main(spawner: Spawner) -> ! {
     let (can_tx, can_rx) = can.split();
     spawner.must_spawn(can_receiver(can_rx));
     spawner.must_spawn(can_sender(can_tx));
+    // initialize the logger
+    spawner.must_spawn(sdmmc_task());
     defmt::info!("CAN setup complete");
 
     spawner.must_spawn(can_to_mqtt());
@@ -97,6 +100,8 @@ async fn emergency_handler() {
     loop {
         // All main loops should have logic to handle an emergency signal...
         if EMERGENCY.receiver().unwrap().get().await {
+            // TODO: Log the entire thing
+
             defmt::error!("Emergency signal received! Cleaning up...");
             // ... and take appropriate action
             current_state_sender.send(State::Emergency);

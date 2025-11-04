@@ -53,6 +53,9 @@ pub async fn can_receiver(mut rx: CanRx<'static>) {
             continue;
         }
         let envelope = envelope.unwrap();
+
+        // TODO: Log the entire thing to the SD Card
+
         let id = envelope.frame.id();
         let can_id = match id {
             Id::Standard(id) => id.as_raw() as u32, // 11-bit ID

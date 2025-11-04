@@ -1,18 +1,27 @@
-use core::cell::RefCell;
-use core::num::TryFromIntError;
+use core::{cell::RefCell, num::TryFromIntError};
 
-use embassy_stm32::sdmmc::{DataBlock, Sdmmc};
-use embassy_stm32::time::{mhz, Hertz};
-use embassy_stm32::{bind_interrupts, peripherals, sdmmc, Config};
-use embedded_sdmmc::{BlockCount, TimeSource};
-use {defmt_rtt as _, panic_probe as _};
+use defmt_rtt as _;
+use embassy_stm32::{
+    bind_interrupts, peripherals,
+    sdmmc::{self, DataBlock, Sdmmc},
+    time::{mhz, Hertz},
+    Config,
+};
+use embassy_sync::{blocking_mutex::raw::ThreadModeRawMutex, channel::Channel};
+use embedded_sdmmc::{BlockCount, Mode, TimeSource, VolumeIdx, VolumeManager};
+use hyped_core::{format, format_string::show};
+use panic_probe as _;
 
 use embedded_sdmmc::blockdevice::{BlockDevice, BlockIdx};
 
 use defmt::*;
-use {defmt_rtt as _, panic_probe as _};
+use defmt_rtt as _;
+use panic_probe as _;
+
+use crate::log::log;
 
 const BLOCK_SIZE: u32 = 512;
+static LOG_CHANNEL: Channel<ThreadModeRawMutex, &'static str, 4> = Channel::new();
 
 /*
 use embedded_sdmmc::VolumeManager;
@@ -42,7 +51,7 @@ impl TimeSource for HypedSdmmcTimeSource {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Format)]
 pub enum HypedSdmmcError {
     Sdmmc(sdmmc::Error),
     DriveSizeTooLarge,
@@ -88,24 +97,38 @@ impl BlockDevice for HypedSdmmc {
     type Error = HypedSdmmcError;
 
     // TODO: fork the embassy-sdmmc crate to add async read/write support
-    fn read(&self, blocks: &mut [embedded_sdmmc::Block], start_block_idx: BlockIdx) -> Result<(), Self::Error> {
+    fn read(
+        &self,
+        blocks: &mut [embedded_sdmmc::Block],
+        start_block_idx: BlockIdx,
+    ) -> Result<(), Self::Error> {
         for (i, block) in blocks.iter_mut().enumerate() {
             let block_id = start_block_idx.0 + i as u32;
             let mut data_block = DataBlock(block.contents);
 
             embassy_futures::block_on(
-            self.sdmmc.borrow_mut().read_block(block_id, &mut data_block))?;
+                self.sdmmc
+                    .borrow_mut()
+                    .read_block(block_id, &mut data_block),
+            )?;
         }
         Ok(())
     }
 
-    fn write(&self, blocks: &[embedded_sdmmc::Block], start_block_idx: BlockIdx) -> Result<(), Self::Error> {
+    fn write(
+        &self,
+        blocks: &[embedded_sdmmc::Block],
+        start_block_idx: BlockIdx,
+    ) -> Result<(), Self::Error> {
         for (i, block) in blocks.iter().enumerate() {
             let block_id = start_block_idx.0 + i as u32;
             let mut data_block = DataBlock(block.contents);
 
             embassy_futures::block_on(
-            self.sdmmc.borrow_mut().write_block(block_id, &mut data_block))?;
+                self.sdmmc
+                    .borrow_mut()
+                    .write_block(block_id, &mut data_block),
+            )?;
         }
 
         Ok(())
@@ -143,7 +166,9 @@ fn create_config() -> Config {
     config
 }
 
-async fn initialize_sdmmc(p: embassy_stm32::Peripherals) -> Sdmmc<'static, peripherals::SDMMC1, peripherals::DMA2_CH3> {
+async fn initialize_sdmmc(
+    p: embassy_stm32::Peripherals,
+) -> Sdmmc<'static, peripherals::SDMMC1, peripherals::DMA2_CH3> {
     let mut sdmmc = Sdmmc::new_4bit(
         p.SDMMC1,
         Irqs,
@@ -159,4 +184,42 @@ async fn initialize_sdmmc(p: embassy_stm32::Peripherals) -> Sdmmc<'static, perip
 
     unwrap!(sdmmc.init_card(mhz(25)).await);
     sdmmc
+}
+
+#[embassy_executor::task]
+pub async fn sdmmc_task() {
+    let hyped_sdmmc = HypedSdmmc::new().await;
+    let volume_manager = VolumeManager::new(hyped_sdmmc, HypedSdmmcTimeSource);
+    let volume0 = match volume_manager.open_volume(VolumeIdx(0)) {
+        Ok(res) => res,
+        Err(e) => {
+            // TODO: sort out logging
+            // defmt::error!("Sdmmc: Failed to initialize the volume: {:#?}", e);
+            return;
+        }
+    };
+
+    let root_dir = match volume0.open_root_dir() {
+        Ok(res) => res,
+        Err(e) => {
+            // defmt::error!("Sdmmc: Failed to open root dir: {:#?}", e);
+            return;
+        }
+    };
+
+    let logging_file = match root_dir.open_file_in_dir("log.txt", Mode::ReadWriteCreateOrAppend) {
+        Ok(res) => res,
+        Err(e) => {
+            // defmt::error!("Sdmmc: Failed to open the logs: {:#?}", e);
+            return;
+        }
+    };
+
+    loop {
+        let message = LOG_CHANNEL.receiver().receive().await;
+
+        logging_file.write(message.as_bytes()).unwrap_or_else(|e| {
+            defmt::error!("Sdmmc: Failed to log the message: {}, ignoring...", message);
+        });
+    }
 }
