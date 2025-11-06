@@ -1,6 +1,9 @@
 #![no_std]
 
 pub mod boards;
+pub mod bus;
+pub mod actions;
+pub mod events;
 pub mod can_id;
 pub mod data;
 pub mod emergency;

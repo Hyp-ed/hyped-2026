@@ -1,4 +1,9 @@
 use crate::states::State;
+use hyped_communications::{
+    actions::{Command, CommandTarget, Instruction, OUTGOING_COMMANDS},
+    bus::EVENT_BUS,
+    events::Event,
+};
 use hyped_core::logging::{info, warn};
 
 pub struct StateMachine {
@@ -51,6 +56,74 @@ impl StateMachine {
                     self.current_state, to_state
                 );
                 None
+            }
+        }
+    }
+
+    fn try_transition(&mut self, to: State) -> bool {
+        self.handle_transition(&to).is_some()
+    }
+}
+
+#[embassy_executor::task]
+pub async fn run(mut sm: StateMachine) -> ! {
+    let mut rx = EVENT_BUS.receiver();
+    let mut tx = OUTGOING_COMMANDS.sender();
+
+    loop {
+        let ev = rx.receive().await;
+
+        match ev {
+            // Prioritise emergency events
+            Event::Emergency { from, reason } => {
+                if sm.current_state != State::Emergency {
+                    info!("Emergency reported by {:?} (reason={:?})", from, reason);
+                    if sm.try_transition(State::Emergency) {
+                        let command = Command {
+                            target: CommandTarget::AllBoards,
+                            instruction: Instruction::EmergencyStop { reason },
+                        };
+                        let _ = tx.send(command).await;
+                    } else {
+                        warn!(
+                            "Failed to transition to Emergency on incoming alert from {:?}",
+                            from
+                        );
+                    }
+                }
+            }
+
+            Event::RequestTransition {
+                from,
+                to,
+                by,
+                reason,
+            } => {
+                info!(
+                    "Transition request from {:?} via {:?}: {:?} (reason={:?})",
+                    from, by, to, reason
+                );
+
+                if sm.try_transition(to) {
+                    let command = Command {
+                        target: CommandTarget::AllBoards,
+                        instruction: Instruction::EnterState(to),
+                    };
+                    let _ = tx.send(command).await;
+                } else {
+                    warn!(
+                        "Rejected transition request {:?} -> {:?} from {:?}",
+                        sm.current_state, to, from
+                    );
+                }
+            }
+
+            // NOTE: assuming these variant names exist in your Event enum.
+            Event::StateReport { from, state } => {
+                info!("State report from {:?}: {:?}", from, state);
+            }
+            Event::Heartbeat { from } => {
+                info!("Heartbeat seen from {:?}", from);
             }
         }
     }
