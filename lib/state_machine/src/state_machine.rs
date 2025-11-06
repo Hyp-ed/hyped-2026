@@ -117,14 +117,6 @@ pub async fn run(mut sm: StateMachine) -> ! {
                     );
                 }
             }
-
-            // NOTE: assuming these variant names exist in your Event enum.
-            Event::StateReport { from, state } => {
-                info!("State report from {:?}: {:?}", from, state);
-            }
-            Event::Heartbeat { from } => {
-                info!("Heartbeat seen from {:?}", from);
-            }
         }
     }
 }
