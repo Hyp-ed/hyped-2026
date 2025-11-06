@@ -43,13 +43,13 @@ type MeasurementType = (typeof telemetryTypes)[number];
 // Validate types on the raw data BEFORE PodSchema strips them out
 const validateRawPodData = (podData: any) => {
 	for (const [id, measurement] of Object.entries(podData.measurements)) {
-		const itemType = (measurement as any).type;
+		const itemType = (measurement as any).kind;
 		if (!telemetryTypes.includes(itemType as MeasurementType)) {
 			throw new Error(`Invalid measurement type "${itemType}" for ${id}`);
 		}
 	}
 	for (const [id, status] of Object.entries(podData.statuses)) {
-		const itemType = (status as any).type;
+		const itemType = (status as any).kind;
 		if (!telemetryTypes.includes(itemType as MeasurementType)) {
 			throw new Error(`Invalid status type "${itemType}" for ${id}`);
 		}
