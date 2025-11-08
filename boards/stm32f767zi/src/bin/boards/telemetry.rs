@@ -77,8 +77,8 @@ async fn main(spawner: Spawner) -> ! {
     default_can_config!(can);
     can.enable().await;
     let (can_tx, can_rx) = can.split();
-    spawner.must_spawn(can_receiver(can_rx, log_sender.clone()));
-    spawner.must_spawn(can_sender(can_tx, log_sender.clone()));
+    spawner.must_spawn(can_receiver(can_rx, Some(log_sender.clone())));
+    spawner.must_spawn(can_sender(can_tx, Some(log_sender.clone())));
     // initialize the logger
     spawner.must_spawn(sdmmc_task());
     defmt::info!("CAN setup complete");

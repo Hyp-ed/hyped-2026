@@ -247,6 +247,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "dvida_serialize"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ef3aff3e3fa3a5363ad01142aec4e10ac6523ad70ef3d358b54777f336fabab7"
+dependencies = [
+ "dvida_serialize_macros",
+]
+
+[[package]]
+name = "dvida_serialize_macros"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "66c619f65d5f92dd1f658b88372526762da9e80ac8748fb05a3820458cac86f7"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "embassy-embedded-hal"
 version = "0.2.0"
 source = "git+https://github.com/embassy-rs/embassy?rev=1c466b81e6af6b34b1f706318cc0870a459550b7#1c466b81e6af6b34b1f706318cc0870a459550b7"
@@ -415,20 +435,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "embassy-sync"
-version = "0.7.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "73974a3edbd0bd286759b3d483540f0ebef705919a5f56f4fc7709066f71689b"
-dependencies = [
- "cfg-if",
- "critical-section",
- "embedded-io-async",
- "futures-core",
- "futures-sink",
- "heapless 0.8.0",
-]
-
-[[package]]
 name = "embassy-time"
 version = "0.3.2"
 source = "git+https://github.com/embassy-rs/embassy?rev=1c466b81e6af6b34b1f706318cc0870a459550b7#1c466b81e6af6b34b1f706318cc0870a459550b7"
@@ -559,20 +565,6 @@ dependencies = [
  "embedded-io-async",
  "embedded-nal",
  "no-std-net",
-]
-
-[[package]]
-name = "embedded-sdmmc"
-version = "0.9.0"
-dependencies = [
- "byteorder",
- "embassy-sync 0.7.2",
- "embedded-hal 1.0.0",
- "embedded-io",
- "embedded-io-async",
- "heapless 0.9.1",
- "log",
- "maybe-async",
 ]
 
 [[package]]
@@ -725,16 +717,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "heapless"
-version = "0.9.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b1edcd5a338e64688fbdcb7531a846cfd3476a54784dcb918a0844682bc7ada5"
-dependencies = [
- "hash32 0.3.1",
- "stable_deref_trait",
-]
-
-[[package]]
 name = "hyped_adc"
 version = "0.1.0"
 dependencies = [
@@ -760,6 +742,7 @@ dependencies = [
  "critical-section",
  "defmt",
  "defmt-rtt",
+ "dvida_serialize",
  "embassy-executor",
  "embassy-futures",
  "embassy-net",
@@ -767,7 +750,6 @@ dependencies = [
  "embassy-sync 0.6.1",
  "embassy-time",
  "embedded-hal 0.2.7",
- "embedded-sdmmc",
  "embedded-storage",
  "heapless 0.8.0",
  "hyped_adc",
@@ -939,27 +921,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b4ce301924b7887e9d637144fdade93f9dfff9b60981d4ac161db09720d39aa5"
 
 [[package]]
-name = "log"
-version = "0.4.28"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "34080505efa8e45a4b816c349525ebe327ceaa8559756f0356cba97ef3bf7432"
-
-[[package]]
 name = "managed"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0ca88d725a0a943b096803bd34e73a4437208b6077654cc4ecb2947a5f91618d"
-
-[[package]]
-name = "maybe-async"
-version = "0.2.10"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5cf92c10c7e361d6b99666ec1c6f9805b0bea2c3bd8c78dc6fe98ac5bd78db11"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
-]
 
 [[package]]
 name = "nb"
@@ -1049,9 +1014,9 @@ dependencies = [
 
 [[package]]
 name = "proc-macro2"
-version = "1.0.93"
+version = "1.0.103"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "60946a68e5f9d28b0dc1c21bb8a97ee7d018a8b322fa57838ba31cc878e22d99"
+checksum = "5ee95bc4ef87b8d5ba32e8b7714ccc834865276eab0aed5c9958d00ec45f49e8"
 dependencies = [
  "unicode-ident",
 ]

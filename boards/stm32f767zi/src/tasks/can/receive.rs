@@ -44,7 +44,7 @@ pub static INCOMING_MEASUREMENTS: Channel<CriticalSectionRawMutex, MeasurementRe
 #[embassy_executor::task]
 pub async fn can_receiver(
     mut rx: CanRx<'static>,
-    log_sender: Sender<'static, ThreadModeRawMutex, &'static str, 4>,
+    _log_sender: Option<Sender<'static, ThreadModeRawMutex, [u8; 40], 4>>,
 ) {
     let emergency_sender = EMERGENCY.sender();
     let state_transition_commands_sender = INCOMING_STATE_TRANSITION_COMMANDS.sender();

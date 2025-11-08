@@ -5,7 +5,6 @@ use embassy_sync::{
 };
 use hyped_can::HypedCanFrame;
 use hyped_communications::messages::CanMessage;
-use hyped_core::format;
 
 /// Channel for sending CAN messages.
 pub static CAN_SEND: Channel<CriticalSectionRawMutex, CanMessage, 10> = Channel::new();
@@ -14,7 +13,7 @@ pub static CAN_SEND: Channel<CriticalSectionRawMutex, CanMessage, 10> = Channel:
 #[embassy_executor::task]
 pub async fn can_sender(
     mut tx: CanTx<'static>,
-    log_sender: Sender<'static, ThreadModeRawMutex, &'static str, 4>,
+    _log_sender: Option<Sender<'static, ThreadModeRawMutex, [u8; 40], 4>>,
 ) {
     let can_sender = CAN_SEND.receiver();
 
