@@ -11,7 +11,11 @@ use hyped_communications::{
     state_transition::{StateTransitionCommand, StateTransitionRequest},
 };
 
-use crate::board_state::EMERGENCY;
+use crate::{
+    board_state::EMERGENCY,
+    sdmmc::logging::{LogBufWriter, MESSAGE_SIZE_RAW},
+    send_log,
+};
 
 use defmt_rtt as _;
 use panic_probe as _;
@@ -44,7 +48,7 @@ pub static INCOMING_MEASUREMENTS: Channel<CriticalSectionRawMutex, MeasurementRe
 #[embassy_executor::task]
 pub async fn can_receiver(
     mut rx: CanRx<'static>,
-    _log_sender: Option<Sender<'static, ThreadModeRawMutex, [u8; 40], 4>>,
+    log_sender: Option<Sender<'static, ThreadModeRawMutex, [u8; MESSAGE_SIZE_RAW], 4>>,
 ) {
     let emergency_sender = EMERGENCY.sender();
     let state_transition_commands_sender = INCOMING_STATE_TRANSITION_COMMANDS.sender();
@@ -60,8 +64,6 @@ pub async fn can_receiver(
         }
         let envelope = envelope.unwrap();
 
-        // TODO: Log the entire thing to the SD Card
-
         let id = envelope.frame.id();
         let can_id = match id {
             Id::Standard(id) => id.as_raw() as u32, // 11-bit ID
@@ -73,6 +75,10 @@ pub async fn can_receiver(
 
         let can_message: CanMessage = can_frame.into();
         defmt::debug!("Received CAN message: {:?}", can_message);
+
+        // Log it to the SD Card
+        // TODO: make sure the length of the message fits in
+        send_log!(log_sender, "{:#?}", can_message);
 
         match can_message {
             CanMessage::StateTransitionCommand(state_transition_command) => {

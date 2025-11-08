@@ -18,13 +18,17 @@ use embassy_stm32::{
     time::Hertz,
     Config,
 };
+use embassy_sync::{blocking_mutex::raw::ThreadModeRawMutex, channel::Sender};
 use embassy_time::{Duration, Timer};
 use hyped_boards_stm32f767zi::{
     board_state::{CURRENT_STATE, EMERGENCY, THIS_BOARD},
     configure_networking, default_can_config,
     log::log,
-    sdmmc::{sdmmc_task, LOG_CHANNEL},
-    set_up_network_stack,
+    sdmmc::{
+        logging::{LogBufWriter, MESSAGE_SIZE_RAW},
+        sdmmc_task, LOG_CHANNEL,
+    },
+    send_log, set_up_network_stack,
     tasks::{
         can::{
             board_heartbeat::{heartbeat_listener, send_heartbeat},
@@ -84,7 +88,7 @@ async fn main(spawner: Spawner) -> ! {
     defmt::info!("CAN setup complete");
 
     spawner.must_spawn(can_to_mqtt());
-    spawner.must_spawn(emergency_handler());
+    spawner.must_spawn(emergency_handler(Some(log_sender.clone())));
     spawner.must_spawn(heartbeat_listener(Board::TemperatureTester));
     spawner.must_spawn(send_heartbeat(Board::TemperatureTester));
     // ... add more boards here
@@ -96,13 +100,15 @@ async fn main(spawner: Spawner) -> ! {
 }
 
 #[embassy_executor::task]
-async fn emergency_handler() {
+async fn emergency_handler(
+    log_sender: Option<Sender<'static, ThreadModeRawMutex, [u8; MESSAGE_SIZE_RAW], 4>>,
+) {
     let current_state_sender = CURRENT_STATE.sender();
 
     loop {
         // All main loops should have logic to handle an emergency signal...
         if EMERGENCY.receiver().unwrap().get().await {
-            // TODO: Log the entire thing
+            send_log!(log_sender, "EMERGENCY!!!!!!!!!");
 
             defmt::error!("Emergency signal received! Cleaning up...");
             // ... and take appropriate action

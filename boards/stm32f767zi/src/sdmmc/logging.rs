@@ -2,8 +2,9 @@ use dvida_serialize::{DvDeErr, DvDeSer, DvDeserialize, DvSerErr, DvSerialize, En
 
 /// magic is "LOG DISC"
 pub const MAGIC: [u8; 8] = [76, 79, 71, 32, 68, 69, 83, 67];
-pub const LOG_ENTRY_DESCRIPTOR_SIZE: u32 = 128;
-pub const MESSAGE_SIZE: u32 = 64;
+pub const LOG_ENTRY_DESCRIPTOR_SIZE: u32 = 256;
+pub const MESSAGE_SIZE: u32 = 256;
+pub const MESSAGE_SIZE_RAW: usize = (MESSAGE_SIZE - 24) as usize;
 
 #[derive(DvDeSer, Clone)]
 pub struct DescriptorBlock {
@@ -40,5 +41,53 @@ pub struct Message {
     pub time_sec: u64,
     pub time_milli: u64,
     pub time_micro: u64,
-    pub message: [u8; 40],
+    pub message: [u8; MESSAGE_SIZE_RAW],
+}
+
+pub struct LogBufWriter {
+    pub ind: usize,
+    pub buf: [u8; MESSAGE_SIZE_RAW],
+}
+
+impl LogBufWriter {
+    pub fn new() -> Self {
+        LogBufWriter {
+            ind: 0,
+            buf: [0; MESSAGE_SIZE_RAW],
+        }
+    }
+}
+
+impl core::fmt::Write for LogBufWriter {
+    fn write_str(&mut self, s: &str) -> core::fmt::Result {
+        s.as_bytes().iter().for_each(|i| {
+            if self.ind >= MESSAGE_SIZE_RAW {
+                return;
+            }
+
+            self.buf[self.ind] = *i;
+            self.ind += 1;
+        });
+
+        Ok(())
+    }
+}
+
+#[doc(hidden)]
+#[allow(unused_unsafe, unused)]
+pub fn _to_msg_buf(writer: &mut LogBufWriter, args: core::fmt::Arguments) {
+    use core::fmt::Write;
+
+    writer.write_fmt(args).unwrap();
+}
+
+#[macro_export]
+macro_rules! send_log {
+    ($sender:ident, $($arg:tt)*) => {
+        if let Some(sender) = $sender {
+            let mut writer = LogBufWriter::new();
+            $crate::sdmmc::logging::_to_msg_buf(&mut writer, format_args!($($arg)*));
+            sender.send(writer.buf).await;
+        }
+    };
 }

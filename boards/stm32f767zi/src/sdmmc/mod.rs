@@ -18,13 +18,14 @@ use panic_probe as _;
 
 use crate::sdmmc::logging::{
     DescriptorBlock, LogEntryDescriptor, Message, LOG_ENTRY_DESCRIPTOR_SIZE, MAGIC, MESSAGE_SIZE,
+    MESSAGE_SIZE_RAW,
 };
 
 pub mod logging;
 pub mod read_logs;
 
 const BLOCK_SIZE: usize = 512;
-pub static LOG_CHANNEL: Channel<ThreadModeRawMutex, [u8; 40], 4> = Channel::new();
+pub static LOG_CHANNEL: Channel<ThreadModeRawMutex, [u8; MESSAGE_SIZE_RAW], 4> = Channel::new();
 
 /*
 use embedded_sdmmc::VolumeManager;
