@@ -1,20 +1,15 @@
 [workspace]
 members = [
-  "lib/core",
-  "lib/control",
-  "lib/io/*",
-  "lib/localisation",
-  "lib/motors",
-  "lib/sensors",
-  "lib/state_machine",
-  "lib/communications",
-    "submodules/embedded-sdmmc-rs"
+    "lib/core",
+    "lib/control",
+    "lib/io/*",
+    "lib/localisation",
+    "lib/motors",
+    "lib/sensors",
+    "lib/state_machine",
+    "lib/communications",
 ]
-exclude = [
-  "boards/stm32l476rg",
-  "boards/stm32f767zi",
-  "boards/stm32l432kc",
-]
+exclude = ["boards/stm32l476rg", "boards/stm32f767zi", "boards/stm32l432kc"]
 resolver = "2"
 
 [workspace.lints.clippy]
