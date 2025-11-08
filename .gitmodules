@@ -1,0 +1,3 @@
+[submodule "submodules/embedded-sdmmc-rs"]
+	path = submodules/embedded-sdmmc-rs
+	url = git@github.com:Hyp-ed/embedded-sdmmc-rs.git
