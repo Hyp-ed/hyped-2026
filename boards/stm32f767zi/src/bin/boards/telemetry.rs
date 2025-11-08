@@ -23,7 +23,7 @@ use hyped_boards_stm32f767zi::{
     board_state::{CURRENT_STATE, EMERGENCY, THIS_BOARD},
     configure_networking, default_can_config,
     log::log,
-    sdmmc::sdmmc_task,
+    sdmmc::{sdmmc_task, LOG_CHANNEL},
     set_up_network_stack,
     tasks::{
         can::{
@@ -69,14 +69,16 @@ async fn main(spawner: Spawner) -> ! {
     Timer::after(Duration::from_secs(2)).await;
     spawner.must_spawn(base_station_heartbeat());
 
+    let log_sender = LOG_CHANNEL.sender();
+
     // CAN tasks: CAN send/receive, heartbeat controller, and state machine
     defmt::info!("Setting up CAN...");
     let mut can = Can::new(p.CAN1, p.PD0, p.PD1, Irqs);
     default_can_config!(can);
     can.enable().await;
     let (can_tx, can_rx) = can.split();
-    spawner.must_spawn(can_receiver(can_rx));
-    spawner.must_spawn(can_sender(can_tx));
+    spawner.must_spawn(can_receiver(can_rx, log_sender.clone()));
+    spawner.must_spawn(can_sender(can_tx, log_sender.clone()));
     // initialize the logger
     spawner.must_spawn(sdmmc_task());
     defmt::info!("CAN setup complete");

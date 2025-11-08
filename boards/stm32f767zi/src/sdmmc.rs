@@ -9,7 +9,6 @@ use embassy_stm32::{
 };
 use embassy_sync::{blocking_mutex::raw::ThreadModeRawMutex, channel::Channel};
 use embedded_sdmmc::{BlockCount, Mode, TimeSource, VolumeIdx, VolumeManager};
-use hyped_core::{format, format_string::show};
 use panic_probe as _;
 
 use embedded_sdmmc::blockdevice::{BlockDevice, BlockIdx};
@@ -18,10 +17,8 @@ use defmt::*;
 use defmt_rtt as _;
 use panic_probe as _;
 
-use crate::log::log;
-
 const BLOCK_SIZE: u32 = 512;
-static LOG_CHANNEL: Channel<ThreadModeRawMutex, &'static str, 4> = Channel::new();
+pub static LOG_CHANNEL: Channel<ThreadModeRawMutex, &'static str, 4> = Channel::new();
 
 /*
 use embedded_sdmmc::VolumeManager;
@@ -97,7 +94,14 @@ impl BlockDevice for HypedSdmmc {
     type Error = HypedSdmmcError;
 
     // TODO: fork the embassy-sdmmc crate to add async read/write support
-    fn read(
+    // fn read(
+    //     &self,
+    //     blocks: &mut [embedded_sdmmc::Block],
+    //     start_block_idx: BlockIdx,
+    // ) -> impl core::future::Future<Output = Result<(), Self::Error>> + Send {
+    // }
+
+    async fn read(
         &self,
         blocks: &mut [embedded_sdmmc::Block],
         start_block_idx: BlockIdx,
@@ -106,16 +110,15 @@ impl BlockDevice for HypedSdmmc {
             let block_id = start_block_idx.0 + i as u32;
             let mut data_block = DataBlock(block.contents);
 
-            embassy_futures::block_on(
-                self.sdmmc
-                    .borrow_mut()
-                    .read_block(block_id, &mut data_block),
-            )?;
+            self.sdmmc
+                .borrow_mut()
+                .read_block(block_id, &mut data_block)
+                .await?;
         }
         Ok(())
     }
 
-    fn write(
+    async fn write(
         &self,
         blocks: &[embedded_sdmmc::Block],
         start_block_idx: BlockIdx,
@@ -124,17 +127,16 @@ impl BlockDevice for HypedSdmmc {
             let block_id = start_block_idx.0 + i as u32;
             let mut data_block = DataBlock(block.contents);
 
-            embassy_futures::block_on(
-                self.sdmmc
-                    .borrow_mut()
-                    .write_block(block_id, &mut data_block),
-            )?;
+            self.sdmmc
+                .borrow_mut()
+                .write_block(block_id, &mut data_block)
+                .await?;
         }
 
         Ok(())
     }
 
-    fn num_blocks(&self) -> Result<embedded_sdmmc::BlockCount, Self::Error> {
+    async fn num_blocks(&self) -> Result<embedded_sdmmc::BlockCount, Self::Error> {
         let count = u32::try_from(self.sdmmc.borrow().card()?.size())? / BLOCK_SIZE;
 
         Ok(BlockCount(count))

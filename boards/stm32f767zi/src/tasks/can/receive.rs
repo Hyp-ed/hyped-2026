@@ -1,5 +1,8 @@
 use embassy_stm32::can::{CanRx, Id};
-use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, channel::Channel};
+use embassy_sync::{
+    blocking_mutex::raw::{CriticalSectionRawMutex, ThreadModeRawMutex},
+    channel::{Channel, Sender},
+};
 use hyped_can::HypedCanFrame;
 use hyped_communications::{
     heartbeat::Heartbeat,
@@ -39,7 +42,10 @@ pub static INCOMING_MEASUREMENTS: Channel<CriticalSectionRawMutex, MeasurementRe
 /// Task that receives CAN messages and puts them into a channel.
 /// Currently only supports `StateTransitionCommand`, `StateTransitionRequest` and `Heartbeat` messages.
 #[embassy_executor::task]
-pub async fn can_receiver(mut rx: CanRx<'static>) {
+pub async fn can_receiver(
+    mut rx: CanRx<'static>,
+    log_sender: Sender<'static, ThreadModeRawMutex, &'static str, 4>,
+) {
     let emergency_sender = EMERGENCY.sender();
     let state_transition_commands_sender = INCOMING_STATE_TRANSITION_COMMANDS.sender();
     let state_transition_requests_sender = INCOMING_STATE_TRANSITION_REQUESTS.sender();

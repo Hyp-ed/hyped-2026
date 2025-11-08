@@ -8,6 +8,7 @@ members = [
   "lib/sensors",
   "lib/state_machine",
   "lib/communications",
+    "submodules/embedded-sdmmc-rs"
 ]
 exclude = [
   "boards/stm32l476rg",
