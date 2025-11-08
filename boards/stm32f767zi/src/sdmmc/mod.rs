@@ -1,4 +1,4 @@
-use core::{cell::RefCell, num::TryFromIntError};
+use core::num::TryFromIntError;
 
 use defmt_rtt as _;
 use dvida_serialize::{DvDeserialize, DvSerialize};
@@ -8,7 +8,11 @@ use embassy_stm32::{
     time::{mhz, Hertz},
     Config,
 };
-use embassy_sync::{blocking_mutex::raw::ThreadModeRawMutex, channel::Channel};
+use embassy_sync::{
+    blocking_mutex::raw::{CriticalSectionRawMutex, ThreadModeRawMutex},
+    channel::Channel,
+    mutex::Mutex,
+};
 use embassy_time::Instant;
 use panic_probe as _;
 
@@ -63,7 +67,8 @@ impl From<TryFromIntError> for HypedSdmmcError {
 }
 
 pub struct HypedSdmmc {
-    sdmmc: RefCell<Sdmmc<'static, peripherals::SDMMC1, peripherals::DMA2_CH3>>,
+    sdmmc:
+        Mutex<CriticalSectionRawMutex, Sdmmc<'static, peripherals::SDMMC1, peripherals::DMA2_CH3>>,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
@@ -78,7 +83,7 @@ impl HypedSdmmc {
         let sdmmc = initialize_sdmmc(p).await;
 
         HypedSdmmc {
-            sdmmc: RefCell::new(sdmmc),
+            sdmmc: Mutex::new(sdmmc),
         }
     }
 
@@ -97,7 +102,7 @@ impl HypedSdmmc {
         for (i, block) in blocks.iter_mut().enumerate() {
             let block_id = start_block_idx.0 + i as u32;
 
-            self.sdmmc.borrow_mut().read_block(block_id, block).await?;
+            self.sdmmc.lock().await.read_block(block_id, block).await?;
         }
         Ok(())
     }
@@ -110,20 +115,20 @@ impl HypedSdmmc {
         for (i, block) in blocks.iter().enumerate() {
             let block_id = start_block_idx.0 + i as u32;
 
-            self.sdmmc.borrow_mut().write_block(block_id, block).await?;
+            self.sdmmc.lock().await.write_block(block_id, block).await?;
         }
 
         Ok(())
     }
 
     pub async fn num_blocks(&self) -> Result<BlockCount, HypedSdmmcError> {
-        let count = u32::try_from(self.sdmmc.borrow().card()?.size())? / BLOCK_SIZE as u32;
+        let count = u32::try_from(self.sdmmc.lock().await.card()?.size())? / BLOCK_SIZE as u32;
 
         Ok(BlockCount(count))
     }
 
     pub async fn get_descriptor_block(&self) -> Result<DescriptorBlock, HypedSdmmcError> {
-        let mut buffer = [DataBlock([0 as u8; BLOCK_SIZE]); 1];
+        let mut buffer = [DataBlock([0u8; BLOCK_SIZE]); 1];
         self.read(&mut buffer, BlockIdx(0)).await?;
 
         let descriptor_block =
@@ -135,7 +140,7 @@ impl HypedSdmmc {
     }
 
     pub async fn init(&self) -> Result<DescriptorBlock, HypedSdmmcError> {
-        let mut buffer = [DataBlock([0 as u8; BLOCK_SIZE]); 1];
+        let mut buffer = [DataBlock([0u8; BLOCK_SIZE]); 1];
         self.read(&mut buffer, BlockIdx(0)).await?;
 
         let mut descriptor_block =
@@ -153,7 +158,7 @@ impl HypedSdmmc {
                 .serialize(dvida_serialize::Endianness::Little, &mut buffer[0].0)
                 .map_err(|_| HypedSdmmcError::SerializationError)?;
 
-            self.write(&mut buffer, BlockIdx(0)).await?;
+            self.write(&buffer, BlockIdx(0)).await?;
         }
 
         buffer[0].0.fill(0);
@@ -175,7 +180,7 @@ impl HypedSdmmc {
             .serialize(dvida_serialize::Endianness::Little, &mut buffer[0].0)
             .map_err(|_| HypedSdmmcError::SerializationError)?;
 
-        self.write(&mut buffer, BlockIdx(descriptor_block.last_log_start))
+        self.write(&buffer, BlockIdx(descriptor_block.last_log_start))
             .await?;
 
         // create a log entry
@@ -190,7 +195,7 @@ impl HypedSdmmc {
             .serialize(dvida_serialize::Endianness::Little, &mut buffer[0].0)
             .map_err(|_| HypedSdmmcError::SerializationError)?;
 
-        self.write(&mut buffer, BlockIdx(descriptor_block.first_free_block))
+        self.write(&buffer, BlockIdx(descriptor_block.first_free_block))
             .await?;
 
         // update descriptor block
@@ -205,7 +210,7 @@ impl HypedSdmmc {
             .serialize(dvida_serialize::Endianness::Little, &mut buffer[0].0)
             .map_err(|_| HypedSdmmcError::SerializationError)?;
 
-        self.write(&mut buffer, BlockIdx(0)).await?;
+        self.write(&buffer, BlockIdx(0)).await?;
 
         Ok(descriptor_block_clone)
     }
@@ -268,7 +273,7 @@ pub async fn sdmmc_task() {
     };
 
     let start_time = Instant::now();
-    let mut buffer = [DataBlock([0 as u8; BLOCK_SIZE]); 1];
+    let mut buffer = [DataBlock([0u8; BLOCK_SIZE]); 1];
 
     let mut blocks_written_count: u32 = 0;
     let mut bytes_written_count: u32 = LOG_ENTRY_DESCRIPTOR_SIZE;
@@ -282,12 +287,13 @@ pub async fn sdmmc_task() {
 
         // write the message
         buffer[0].fill(0);
-        if let Err(_) = sdmmc
+        if sdmmc
             .read(
                 &mut buffer,
                 BlockIdx(descriptor_block.first_free_block + blocks_written_count),
             )
             .await
+            .is_err()
         {
             continue;
         }
@@ -299,19 +305,23 @@ pub async fn sdmmc_task() {
             message: msg,
         };
 
-        if let Err(_) = message.serialize(
-            dvida_serialize::Endianness::Little,
-            &mut buffer[0].0[bytes_written_count as usize..],
-        ) {
+        if message
+            .serialize(
+                dvida_serialize::Endianness::Little,
+                &mut buffer[0].0[bytes_written_count as usize..],
+            )
+            .is_err()
+        {
             continue;
         }
 
-        if let Err(_) = sdmmc
+        if sdmmc
             .write(
-                &mut buffer,
+                &buffer,
                 BlockIdx(descriptor_block.first_free_block + blocks_written_count),
             )
             .await
+            .is_err()
         {
             continue;
         }
@@ -324,13 +334,13 @@ pub async fn sdmmc_task() {
 
             buffer[0].fill(0);
 
-            if let Err(_) = sdmmc.read(&mut buffer, BlockIdx(0)).await {
+            if sdmmc.read(&mut buffer, BlockIdx(0)).await.is_err() {
                 continue;
             }
 
             let mut descriptor = match DescriptorBlock::deserialize(
                 dvida_serialize::Endianness::Little,
-                &mut buffer[0].0,
+                &buffer[0].0,
             ) {
                 Ok(d) => d.0,
                 Err(_) => continue,
@@ -340,13 +350,16 @@ pub async fn sdmmc_task() {
 
             buffer[0].fill(0);
 
-            if let Err(_) =
-                descriptor.serialize(dvida_serialize::Endianness::Little, &mut buffer[0].0)
+            if descriptor
+                .serialize(dvida_serialize::Endianness::Little, &mut buffer[0].0)
+                .is_err()
             {
+                defmt::error!("Failed to serialize");
                 continue;
             }
 
-            if let Err(_) = sdmmc.write(&mut buffer, BlockIdx(0)).await {
+            if let Err(e) = sdmmc.write(&buffer, BlockIdx(0)).await {
+                defmt::error!("Failed to write descriptor block for logging: {}", e);
                 continue;
             }
         }

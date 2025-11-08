@@ -81,14 +81,14 @@ async fn main(spawner: Spawner) -> ! {
     default_can_config!(can);
     can.enable().await;
     let (can_tx, can_rx) = can.split();
-    spawner.must_spawn(can_receiver(can_rx, Some(log_sender.clone())));
-    spawner.must_spawn(can_sender(can_tx, Some(log_sender.clone())));
+    spawner.must_spawn(can_receiver(can_rx, Some(log_sender)));
+    spawner.must_spawn(can_sender(can_tx, Some(log_sender)));
     // initialize the logger
     spawner.must_spawn(sdmmc_task());
     defmt::info!("CAN setup complete");
 
     spawner.must_spawn(can_to_mqtt());
-    spawner.must_spawn(emergency_handler(Some(log_sender.clone())));
+    spawner.must_spawn(emergency_handler(Some(log_sender)));
     spawner.must_spawn(heartbeat_listener(Board::TemperatureTester));
     spawner.must_spawn(send_heartbeat(Board::TemperatureTester));
     // ... add more boards here

@@ -49,6 +49,12 @@ pub struct LogBufWriter {
     pub buf: [u8; MESSAGE_SIZE_RAW],
 }
 
+impl Default for LogBufWriter {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl LogBufWriter {
     pub fn new() -> Self {
         LogBufWriter {

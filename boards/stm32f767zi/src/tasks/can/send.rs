@@ -33,7 +33,7 @@ pub async fn can_sender(
 
         // Log it to the SD Card
         // TODO: make sure the length of the message fits in
-        send_log!(log_sender, "{:#?}", message);
+        send_log!(log_sender, "Sent: {:#?}", message);
         let can_frame: HypedCanFrame = message.into();
 
         let id = Id::Extended(ExtendedId::new(can_frame.can_id).unwrap());
