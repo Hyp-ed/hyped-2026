@@ -21,6 +21,7 @@ use crate::sdmmc::logging::{
 };
 
 pub mod logging;
+pub mod read_logs;
 
 const BLOCK_SIZE: usize = 512;
 pub static LOG_CHANNEL: Channel<ThreadModeRawMutex, [u8; 40], 4> = Channel::new();
@@ -42,7 +43,8 @@ pub enum HypedSdmmcError {
     Sdmmc(sdmmc::Error),
     DriveSizeTooLarge,
     SerializationError,
-    // Other error variants can be added here
+    MagicMismatch,
+    NoLogsAvailable, // Other error variants can be added here
 }
 
 impl From<sdmmc::Error> for HypedSdmmcError {
@@ -117,6 +119,18 @@ impl HypedSdmmc {
         let count = u32::try_from(self.sdmmc.borrow().card()?.size())? / BLOCK_SIZE as u32;
 
         Ok(BlockCount(count))
+    }
+
+    pub async fn get_descriptor_block(&self) -> Result<DescriptorBlock, HypedSdmmcError> {
+        let mut buffer = [DataBlock([0 as u8; BLOCK_SIZE]); 1];
+        self.read(&mut buffer, BlockIdx(0)).await?;
+
+        let descriptor_block =
+            DescriptorBlock::deserialize(dvida_serialize::Endianness::Little, &buffer[0].0)
+                .map_err(|_| HypedSdmmcError::SerializationError)?
+                .0;
+
+        Ok(descriptor_block)
     }
 
     pub async fn init(&self) -> Result<DescriptorBlock, HypedSdmmcError> {
@@ -302,9 +316,9 @@ pub async fn sdmmc_task() {
         }
 
         bytes_written_count += MESSAGE_SIZE;
-        if bytes_written_count >= 512 {
+        if bytes_written_count >= BLOCK_SIZE as u32 {
             // update the descriptor
-            bytes_written_count %= 512;
+            bytes_written_count %= BLOCK_SIZE as u32;
             blocks_written_count += 1;
 
             buffer[0].fill(0);
