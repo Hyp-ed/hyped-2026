@@ -33,7 +33,7 @@ pub struct LogEntryDescriptor {
     pub last_log_start: u32,
     // set to 0 if it's the last log entry
     pub next_log_start: u32,
-    // reserved until 128
+    // reserved until 256
 }
 
 #[derive(DvDeSer)]
