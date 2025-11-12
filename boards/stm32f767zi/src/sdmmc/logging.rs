@@ -97,3 +97,12 @@ macro_rules! send_log {
         }
     };
 }
+
+#[macro_export]
+macro_rules! send_log_with_sender {
+    ($sender:ident, $($arg:tt)*) => {
+        let mut writer = LogBufWriter::new();
+        $crate::sdmmc::logging::_to_msg_buf(&mut writer, format_args!($($arg)*));
+        $sender.send(writer.buf).await;
+    };
+}
