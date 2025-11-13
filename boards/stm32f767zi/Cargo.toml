@@ -31,6 +31,7 @@ typenum = "1.17.0"
 
 hyped_core = { path = "../../lib/core" }
 hyped_sensors = { path = "../../lib/sensors" }
+hyped_localisation = { path = "../../lib/localisation" }
 hyped_state_machine = { path = "../../lib/state_machine" }
 hyped_communications = { path = "../../lib/communications" }
 
@@ -46,12 +47,12 @@ hyped_spi = { path = "../../lib/io/hyped_spi" }
 hyped_spi_derive = { path = "../../lib/io/hyped_spi/hyped_spi_derive" }
 
 [[bin]]
-name = "localisation"
-path = "src/bin/boards/localisation.rs"
-
-[[bin]]
 name = "telemetry"
 path = "src/bin/boards/telemetry.rs"
+
+[[bin]]
+name = "localisation"
+path = "src/bin/boards/localisation.rs"
 
 [[bin]]
 name = "i2cdetect"
