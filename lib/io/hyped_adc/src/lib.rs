@@ -1,5 +1,5 @@
 #![no_std]
-
+pub mod adc_mux;
 /// ADC trait used to abstract the ADC peripheral
 pub trait HypedAdc {
     /// Read value from the ADC channel
