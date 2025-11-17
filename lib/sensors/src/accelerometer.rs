@@ -294,7 +294,7 @@ mod tests {
             Accelerometer::new(&mut i2c, AccelerometerAddresses::Address1d).unwrap();
         assert_eq!(
             accelerometer.read(),
-            Some(Vec::from_slice(&[1220.0, 0.0, 0.0]).unwrap())
+            Some(Vec::from_slice(&[1.220, 0.0, 0.0]).unwrap())
         );
     }
 
@@ -351,7 +351,7 @@ mod tests {
             Accelerometer::new(&mut i2c, AccelerometerAddresses::Address1d).unwrap();
         assert_eq!(
             accelerometer.read(),
-            Some(Vec::from_slice(&[-1220.0, 0.0, 0.0]).unwrap())
+            Some(Vec::from_slice(&[-1.220, 0.0, 0.0]).unwrap())
         );
     }
 
@@ -408,7 +408,7 @@ mod tests {
             Accelerometer::new(&mut i2c, AccelerometerAddresses::Address1d).unwrap();
         assert_eq!(
             accelerometer.read(),
-            Some(Vec::from_slice(&[0.0, 1220.0, 0.0]).unwrap())
+            Some(Vec::from_slice(&[0.0, 1.220, 0.0]).unwrap())
         );
     }
 
@@ -465,7 +465,7 @@ mod tests {
             Accelerometer::new(&mut i2c, AccelerometerAddresses::Address1d).unwrap();
         assert_eq!(
             accelerometer.read(),
-            Some(Vec::from_slice(&[0.0, -1220.0, 0.0]).unwrap())
+            Some(Vec::from_slice(&[0.0, -1.220, 0.0]).unwrap())
         );
     }
 
@@ -522,7 +522,7 @@ mod tests {
             Accelerometer::new(&mut i2c, AccelerometerAddresses::Address1d).unwrap();
         assert_eq!(
             accelerometer.read(),
-            Some(Vec::from_slice(&[0.0, 0.0, 1220.0]).unwrap())
+            Some(Vec::from_slice(&[0.0, 0.0, 1.220]).unwrap())
         );
     }
 
@@ -579,7 +579,7 @@ mod tests {
             Accelerometer::new(&mut i2c, AccelerometerAddresses::Address1d).unwrap();
         assert_eq!(
             accelerometer.read(),
-            Some(Vec::from_slice(&[0.0, 0.0, -1220.0]).unwrap())
+            Some(Vec::from_slice(&[0.0, 0.0, -1.220]).unwrap())
         );
     }
 
@@ -635,7 +635,7 @@ mod tests {
             Accelerometer::new(&mut i2c, AccelerometerAddresses::Address1d).unwrap();
         assert_eq!(
             accelerometer.read(),
-            Some(Vec::from_slice(&[122.0, 244.0, -488.0]).unwrap())
+            Some(Vec::from_slice(&[0.122, 0.244, -0.488]).unwrap())
         );
     }
 
