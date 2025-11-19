@@ -53,13 +53,6 @@ pub enum Event {
         from: Board,
         reason: u8,
     },
-    CommandTransition {
-        from: State,
-        to: State,
-    },
-    HeartbeatSeen {
-        from: Board,
-    },
     EnterState(State),
     ExitState(State),
     StateEvent(StateEvent),
