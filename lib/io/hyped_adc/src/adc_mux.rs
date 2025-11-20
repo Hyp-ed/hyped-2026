@@ -37,6 +37,7 @@ impl<T: HypedI2c> HypedAdc for ADCMuxChannel<T> {
 
     fn get_reference_voltage(&self) -> f32 {
         // The actual value needs to be confirmed with the Electronics team
+        3.1
     }
 
     fn get_voltage(&mut self) -> f32 {
