@@ -18,7 +18,7 @@ use hyped_boards_stm32f767zi::{
     tasks::{
         can::{
             board_heartbeat::heartbeat_listener,        
-            // NOTE: doesn't include CAN reciever, this is done locally
+            receive::can_receiver,
             send::{can_sender, CAN_SEND},                 
         },
         state_machine::state_machine,
@@ -47,7 +47,7 @@ bind_interrupts!(struct Irqs {
 
 // NAV -> MotorControl command ID
 const NAV_TO_MTC_CMD_ID_EXT: u32 = 0x18FF_0301; // agree this with Navigation (29-bit Extended ID)
-// payload format proposal:
+// payload format proposal:4
 //   data[0] command code: 0x01=StartDrive, 0x02=Shutdown, 0x03=QuickStop, 0x04=SwitchOn, 0x05=SetFrequency
 
 #[embassy_executor::main]
@@ -56,12 +56,19 @@ async fn main(spawner: Spawner) -> ! {
 
     let p = embassy_stm32::init(Config::default());
 
-    defmt::info!("Setting up CAN1 (main bus, listen-only)...");
+    defmt::info!("Setting up CAN1 (main bus)...");
     let mut can1 = Can::new(p.CAN1, p.PD0, p.PD1, Irqs);
     default_can_config!(can1);
     can1.enable().await;
-    let (_can1_tx, can1_rx) = can1.split();        
-    // don't insantiate a sender for CAN1 
+
+
+    // Dedicated system receiver (heartbeats, emergency, state transitions)
+    let can1_rx_system = can1.receiver_for_fifo(Fifo::Rx0);
+    spawner.must_spawn(can_receiver(can1_rx_system));
+
+    // Dedicated NAV receiver
+    let can1_rx_nav = can1.receiver_for_fifo(Fifo::Rx1);
+    spawner.must_spawn(motor_control_loop(can1_rx_nav));
     defmt::info!("CAN1 ready");
 
     defmt::info!("Setting up CAN2 (EMSISO)...");
@@ -70,14 +77,12 @@ async fn main(spawner: Spawner) -> ! {
     can2.enable().await;
     let (can2_tx, _can2_rx) = can2.split();
 
-    w
     spawner.must_spawn(can_sender(can2_tx));
     defmt::info!("CAN2 ready");
 
-    spawner.must_spawn(heartbeat_listener(Board::Telemetry)); // listen-only
+    spawner.must_spawn(send_heartbeat(Board::MotorControl));
     spawner.must_spawn(emergency_handler());
     spawner.must_spawn(state_machine());
-    spawner.must_spawn(motor_control_loop(can1_rx));
 
     loop { Timer::after(Duration::from_secs(1)).await; }
 }
@@ -106,14 +111,16 @@ async fn enqueue_canopen(message: Messages) {
     CAN_SEND.send(can_msg).await;
 }
 
-// This is used instead of the global can_reciever as we're only taking commands
-// from navigation 
+// Reads frames from CAN1(RX1) which is reserved for the
+// navigation commands. These commands are parsed and converted
+// into CANOpen drive commands that are transmitted to the EMSISO
+// motor controller over CAN2
 #[embassy_executor::task]
 async fn motor_control_loop(mut can1_rx: embassy_stm32::can::Receiver<'_>) {
     defmt::info!("Motor control loop started (listening on CAN1, sending via CAN2)");
 
     loop {
-        // Uses the Embassy receiver directly (no shared can_receiver task for CAN1)
+    
         let env = match can1_rx.read().await {
             Ok(e) => e,
             Err(_e) => continue,
@@ -128,11 +135,15 @@ async fn motor_control_loop(mut can1_rx: embassy_stm32::can::Receiver<'_>) {
         if can_id != NAV_TO_MTC_CMD_ID_EXT || data.is_empty() { continue; }
 
         match data[0] {
-            0x01 => { defmt::info!("NAV→MTC: START_DRIVE");   enqueue_canopen(Messages::StartDrive).await; }
-            0x02 => { defmt::info!("NAV→MTC: SHUTDOWN");      enqueue_canopen(Messages::Shutdown).await; }
-            0x03 => { defmt::info!("NAV→MTC: QUICK_STOP");    enqueue_canopen(Messages::QuickStop).await; }
-            0x04 => { defmt::info!("NAV→MTC: SWITCH_ON");     enqueue_canopen(Messages::SwitchOn).await; }
-            // implement rest of the functions (frequency)
+            0x01 => { defmt::info!("NAV->MTC: START_DRIVE");    enqueue_canopen(Messages::StartDrive).await; }
+            0x02 => { defmt::info!("NAV->MTC: SHUTDOWN");       enqueue_canopen(Messages::Shutdown).await; }
+            0x03 => { defmt::info!("NAV->MTC: QUICK_STOP");     enqueue_canopen(Messages::QuickStop).await; }
+            0x04 => { defmt::info!("NAV->MTC: SWITCH_ON");      enqueue_canopen(Messages::SwitchOn).await; }
+            0x05 => { 
+                let freq = u32::from_le_bytes([data[1], data[2], data[3], data[4]]);
+                defmt::info!("NAV->MTC: SET_FREQUENCY")   
+                enqueue_canopen(Messages::SetFrequency(freq)).await;
+            }
             other => defmt::warn!("Unknown NAV→MTC command byte: {}", other),
         }
     }
