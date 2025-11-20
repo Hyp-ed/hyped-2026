@@ -7,6 +7,7 @@ pub mod high_pressure;
 pub mod keyence;
 pub mod laser_triangulation;
 pub mod low_pressure;
+pub mod lp_bms;
 pub mod optical_flow;
 pub mod temperature;
 pub mod time_of_flight;

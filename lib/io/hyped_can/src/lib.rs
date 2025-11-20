@@ -23,6 +23,7 @@ pub enum CanError {
     NotEnoughData,
     InvalidDataLength,
     InvalidCanId,
+    BufferOverflow,
 }
 
 #[derive(Clone, Copy, Debug, defmt::Format)]
