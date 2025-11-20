@@ -13,39 +13,7 @@ pub enum Nature {
 /// Per-state event envelopes (extend payload enums as needed).
 #[derive(Debug, Clone, defmt::Format)]
 pub enum StateEvent {
-    Idle(IdleEvent),
-    Calibrate(CalibrateEvent),
-    Precharge(PrechargeEvent),
-    Levitation(LevitationEvent),
-    Ready(ReadyEvent),
-    Accelerate(AccelerateEvent),
-    Brake(BrakeEvent),
-    Emergency(EmergencyEvent),
 }
-
-#[derive(Debug, Clone, defmt::Format)]
-pub enum IdleEvent {}
-
-#[derive(Debug, Clone, defmt::Format)]
-pub enum CalibrateEvent {}
-
-#[derive(Debug, Clone, defmt::Format)]
-pub enum PrechargeEvent {}
-
-#[derive(Debug, Clone, defmt::Format)]
-pub enum LevitationEvent {}
-
-#[derive(Debug, Clone, defmt::Format)]
-pub enum ReadyEvent {}
-
-#[derive(Debug, Clone, defmt::Format)]
-pub enum AccelerateEvent {}
-
-#[derive(Debug, Clone, defmt::Format)]
-pub enum BrakeEvent {}
-
-#[derive(Debug, Clone, defmt::Format)]
-pub enum EmergencyEvent {}
 
 #[derive(Debug, Clone, defmt::Format)]
 pub enum Event {
