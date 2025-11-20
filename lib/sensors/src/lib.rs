@@ -10,6 +10,7 @@ pub mod low_pressure;
 pub mod optical_flow;
 pub mod temperature;
 pub mod time_of_flight;
+pub mod led_driver;
 
 #[must_use]
 #[derive(PartialEq, Debug, Clone, Copy, Format)]
