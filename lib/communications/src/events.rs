@@ -24,4 +24,42 @@ pub enum Event {
     EnterState(State),
     ExitState(State),
     StateEvent(StateEvent),
+
+    // Electronics
+    PrechargeStartCommand {
+    },
+    PrechargeEndEvent {
+    },
+
+    // Levitation
+    ReadyToLevitateEvent {
+    },
+    LevitationStartCommand {
+    },
+    LevitatingEvent {
+    },
+    LevitationEndEvent {
+    },
+
+    // Dynamics
+    BrakesUnclampComand {
+    },
+    BrakesUnclampConfirmEvent {
+    },
+    BrakesClampCommand {
+    },
+    BrakesClampConfirmEvent {
+    },
+    LateralSuspensionRetractCommand {
+    },
+    LateralSuspensionExtendCommand {
+    },
+    
+    // Propulsion
+    PrechargingEvent {
+    },
+    AccelerationEvent {
+    },
+    BrakingEvent {
+    }
 }
