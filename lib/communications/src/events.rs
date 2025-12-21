@@ -1,65 +1,188 @@
 use crate::boards::Board;
-use hyped_state_machine::states::State;
+//use hyped_state_machine::states::State;
 
 /// Nature classification for events (compact codes).
-#[derive(Debug, Clone, Copy, PartialEq, defmt::Format)]
-#[repr(u8)]
-pub enum Nature {
-    MinorChange = 0,
-    MajorChange = 1,
-    DirEmergency = 2,
-}
+// #[derive(Debug, Clone, Copy, PartialEq, defmt::Format)]
+// #[repr(u8)]
+// pub enum Nature {
+//     MinorChange = 0,
+//     MajorChange = 1,
+//     DirEmergency = 2,
+// }
 
-/// Per-state event envelopes (extend payload enums as needed).
-#[derive(Debug, Clone, defmt::Format)]
-pub enum StateEvent {
-}
+#[derive(Debug, Clone, Copy, defmt::Format)]
+pub struct Airgap(pub u32);         // millimeters
+
+#[derive(Debug, Clone, Copy, defmt::Format)]
+pub struct Current(pub u32);        // milliamps
+
+#[derive(Debug, Clone, Copy, defmt::Format)]
+pub struct Timestamp(pub u64);      // milliseconds
+
+#[derive(Debug, Clone, Copy, defmt::Format)]
+pub struct Voltage(pub u32);        // millivolts
+
+#[derive(Debug, Clone, Copy, defmt::Format)]
+pub struct Pressure(pub u16);       // bar
+
+#[derive(Debug, Clone, Copy, defmt::Format)]
+pub struct Velocity(pub u16);       // km/h
+
+#[derive(Debug, Clone, Copy, defmt::Format)]
+pub struct Temperature(pub u8);     // celsius
+
+#[derive(Debug, Clone, Copy, defmt::Format)]
+pub struct Frequency(pub u16);      // hertz
+
+#[derive(Debug, Clone, Copy, defmt::Format)]
+pub struct Force(pub u16);          // newtons
 
 #[derive(Debug, Clone, defmt::Format)]
 pub enum Event {
-    Emergency {
-        from: Board,
-        reason: u8,
-    },
-    EnterState(State),
-    ExitState(State),
-    StateEvent(StateEvent),
 
-    // Electronics
-    PrechargeStartCommand {
-    },
-    PrechargeEndEvent {
+    // ------ Operator Commands ------
+    // TODO need some operator commands here, do later
+    EmergencyStopCommand,
+    GoCommand,
+
+    // ------ Emergency Events ------
+    Emergency { 
+        from: Board, 
+        reason: u8 
     },
 
-    // Levitation
-    ReadyToLevitateEvent {
+    // ------ Status Events ------
+    Heartbeat { 
+        from: Board
     },
-    LevitationStartCommand {
-    },
-    LevitatingEvent {
-    },
-    LevitationEndEvent {
+    // TODO any others?
+
+    // TODO check if we need calibration events
+
+    // ------ Electronics ------
+    // TODO reminder: include motor controller in precharge 
+
+    // Commands from FSM
+    StartPrechargeCommand,
+
+    // Confirmation 
+    PrechargeStarted {
+        timestamp_ms: Timestamp,
     },
 
-    // Dynamics
-    BrakesUnclampComand {
-    },
-    BrakesUnclampConfirmEvent {
-    },
-    BrakesClampCommand {
-    },
-    BrakesClampConfirmEvent {
-    },
-    LateralSuspensionRetractCommand {
-    },
-    LateralSuspensionExtendCommand {
+    // Completion
+    PrechargeComplete { 
+        timestamp_ms: Timestamp, 
+        voltage_final_mv: Voltage,
     },
     
-    // Propulsion
-    PrechargingEvent {
+    // Failure
+    PrechargeFailed {
+        reason: u8,  
+        voltage_mv: Voltage,
     },
-    AccelerationEvent {
+
+
+    // ------ Levitation ------
+
+    // Ready check
+    LevitationSystemsReady {
+        ready: bool,
+        // Send values if not ready
+        // check if we need this
+        current_airgap_mm: Option<Airgap>,
+        current_ma: Option<Current>,
     },
-    BrakingEvent {
-    }
+
+    // Commands from FSM
+    StartLevitationCommand, 
+    StopLevitationCommand,
+
+    // Confirmation
+    LevitationStarted { 
+        initial_current_ma: Current,
+        initial_airgap_mm: Airgap,
+        target_airgap_mm: Airgap,
+    },
+
+    // Continuous status updates
+    LevitationStatus {
+        current_airgap_mm: Airgap,
+        target_airgap_mm: Airgap,
+        current_ma: Current,
+    },
+
+    // Completion
+    LevitationStopped { 
+        final_airgap_mm: Airgap,
+        final_current_ma: Current,
+    },
+
+    // TODO If we want to handle rather than trigger shutdown?
+    // Failure
+    LevitationFailed {
+        reason: u8,  
+        current_airgap_mm: Airgap,
+        current_ma: Current,
+    },
+
+
+    // ------ Dynamics ------
+
+    // Commands from FSM
+    UnclampBrakesCommand,
+    ClampBrakesCommand,
+    RetractLateralSuspension,
+    ExtendLateralSuspension,
+
+    // Completion
+    BrakesClamped {
+        actuator_pressure_bar: Pressure,
+        timestamp_ms: Timestamp,
+    },
+
+    BrakesUnclamped {
+        actuator_pressure_bar: Pressure,
+        timestamp_ms: Timestamp,
+    },
+
+    LateralSuspensionRetracted {
+        actuator_pressure_bar: Pressure,
+        timestamp_ms: Timestamp,
+    },
+
+    LateralSuspensionExtended {
+        actuator_pressure_bar: Pressure,
+        timestamp_ms: Timestamp,
+    },
+
+    // TODO Failure events?
+    
+
+    // ------ Propulsion ------
+
+    // Commands from FSM
+    StartAccelerationCommand,
+    StartBrakingCommand,
+
+    // Confirmation
+    AccelerationStarted { 
+        timestamp_ms: Timestamp 
+    },
+    BrakingStarted { 
+        timestamp_ms: Timestamp 
+    },
+
+    // Continuous status updates
+    PropulsionStatus {
+        current_ma: Current,
+        velocity_kmh: Velocity,
+        temperature_c: Temperature,
+        voltage_mv: Voltage,
+        frequency_hz: Frequency,
+        force_n: Force, // calculated thrust force
+    },
+
+    // TODO decide whether to handle failure here or as an emergency
+
 }
