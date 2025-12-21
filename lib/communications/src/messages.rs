@@ -1,7 +1,7 @@
 use hyped_can::HypedCanFrame;
-use hyped_state_machine::states::State;
+//use hyped_state_machine::states::State;
 
-use crate::{boards::Board, emergency::Reason, state_transition::StateTransitionCommand};
+use crate::{boards::Board, emergency::Reason};
 
 use super::{
     can_id::CanId,
@@ -9,14 +9,14 @@ use super::{
     heartbeat::Heartbeat,
     measurements::MeasurementReading,
     message_identifier::MessageIdentifier,
-    state_transition::StateTransitionRequest,
+    //state_transition::StateTransitionRequest,
 };
 
 #[derive(PartialEq, Debug, Clone, defmt::Format)]
 pub enum CanMessage {
     MeasurementReading(MeasurementReading),
-    StateTransitionCommand(StateTransitionCommand),
-    StateTransitionRequest(StateTransitionRequest),
+    //StateTransitionCommand(StateTransitionCommand),
+    //StateTransitionRequest(StateTransitionRequest),
     Heartbeat(Heartbeat),
     Emergency(Board, Reason),
 }
@@ -35,28 +35,28 @@ impl From<CanMessage> for HypedCanFrame {
                 );
                 HypedCanFrame::new(can_id.into(), measurement_reading.reading.into())
             }
-            CanMessage::StateTransitionCommand(state_transition) => {
-                let can_id = CanId::new(
-                    state_transition.from_board,
-                    CanDataType::State,
-                    MessageIdentifier::StateTransitionCommand,
-                );
-                HypedCanFrame::new(
-                    can_id.into(),
-                    CanData::State(state_transition.to_state.into()).into(),
-                )
-            }
-            CanMessage::StateTransitionRequest(state_transition) => {
-                let can_id = CanId::new(
-                    state_transition.requesting_board,
-                    CanDataType::State,
-                    MessageIdentifier::StateTransitionRequest,
-                );
-                HypedCanFrame::new(
-                    can_id.into(),
-                    CanData::State(state_transition.to_state.into()).into(),
-                )
-            }
+            // CanMessage::StateTransitionCommand(state_transition) => {
+            //     let can_id = CanId::new(
+            //         state_transition.from_board,
+            //         CanDataType::State,
+            //         MessageIdentifier::StateTransitionCommand,
+            //     );
+            //     HypedCanFrame::new(
+            //         can_id.into(),
+            //         CanData::State(state_transition.to_state.into()).into(),
+            //     )
+            // }
+            // CanMessage::StateTransitionRequest(state_transition) => {
+            //     let can_id = CanId::new(
+            //         state_transition.requesting_board,
+            //         CanDataType::State,
+            //         MessageIdentifier::StateTransitionRequest,
+            //     );
+            //     HypedCanFrame::new(
+            //         can_id.into(),
+            //         CanData::State(state_transition.to_state.into()).into(),
+            //     )
+            // }
             CanMessage::Heartbeat(heartbeat) => {
                 let can_id = CanId::new(
                     heartbeat.from,
@@ -91,28 +91,28 @@ impl From<HypedCanFrame> for CanMessage {
                 };
                 CanMessage::MeasurementReading(measurement_reading)
             }
-            MessageIdentifier::StateTransitionCommand => {
-                let reading: CanData = frame.data.into();
-                match reading {
-                    CanData::State(state) => {
-                        let to_state: State = state.try_into().expect("Invalid State!");
-                        let state_transition = StateTransitionCommand::new(board, to_state);
-                        CanMessage::StateTransitionCommand(state_transition)
-                    }
-                    _ => panic!("Invalid CanData for StateTransition"),
-                }
-            }
-            MessageIdentifier::StateTransitionRequest => {
-                let reading: CanData = frame.data.into();
-                match reading {
-                    CanData::State(state) => {
-                        let to_state: State = state.try_into().expect("Invalid State!");
-                        let state_transition = StateTransitionRequest::new(board, to_state);
-                        CanMessage::StateTransitionRequest(state_transition)
-                    }
-                    _ => panic!("Invalid CanData for StateTransitionRequest"),
-                }
-            }
+            // MessageIdentifier::StateTransitionCommand => {
+            //     let reading: CanData = frame.data.into();
+            //     match reading {
+            //         CanData::State(state) => {
+            //             //let to_state: State = state.try_into().expect("Invalid State!");
+            //             //let state_transition = StateTransitionCommand::new(board, to_state);
+            //             //CanMessage::StateTransitionCommand(state_transition)
+            //         }
+            //         _ => panic!("Invalid CanData for StateTransition"),
+            //     }
+            // }
+            // // MessageIdentifier::StateTransitionRequest => {
+            //     let reading: CanData = frame.data.into();
+            //     match reading {
+            //         CanData::State(state) => {
+            //             //let to_state: State = state.try_into().expect("Invalid State!");
+            //             //let state_transition = StateTransitionRequest::new(board, to_state);
+            //             //CanMessage::StateTransitionRequest(state_transition)
+            //         }
+            //         _ => panic!("Invalid CanData for StateTransitionRequest"),
+            //     }
+            // }
             MessageIdentifier::Heartbeat => {
                 let reading: CanData = frame.data.into();
                 match reading {

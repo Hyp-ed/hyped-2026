@@ -3,8 +3,8 @@ use hyped_core::config::MeasurementId;
 #[derive(Debug, PartialEq, Clone)]
 pub enum MessageIdentifier {
     Measurement(MeasurementId),
-    StateTransitionCommand,
-    StateTransitionRequest,
+    //StateTransitionCommand,
+    //StateTransitionRequest,
     Heartbeat,
     Emergency,
 }
@@ -23,8 +23,8 @@ impl From<MessageIdentifier> for u16 {
             MessageIdentifier::Measurement(measurement_id) => measurement_id.into(),
             MessageIdentifier::Emergency => EMERGENCY_ID,
             MessageIdentifier::Heartbeat => HEARTBEAT_ID,
-            MessageIdentifier::StateTransitionRequest => STATE_TRANSITION_REQUEST_ID,
-            MessageIdentifier::StateTransitionCommand => STATE_TRANSITION_COMMAND_ID,
+            //MessageIdentifier::StateTransitionRequest => STATE_TRANSITION_REQUEST_ID,
+            //MessageIdentifier::StateTransitionCommand => STATE_TRANSITION_COMMAND_ID,
         }
     }
 }
@@ -34,8 +34,8 @@ impl TryFrom<u16> for MessageIdentifier {
 
     fn try_from(id: u16) -> Result<Self, Self::Error> {
         match id {
-            STATE_TRANSITION_COMMAND_ID => Ok(MessageIdentifier::StateTransitionCommand),
-            STATE_TRANSITION_REQUEST_ID => Ok(MessageIdentifier::StateTransitionRequest),
+            //STATE_TRANSITION_COMMAND_ID => Ok(MessageIdentifier::StateTransitionCommand),
+            //STATE_TRANSITION_REQUEST_ID => Ok(MessageIdentifier::StateTransitionRequest),
             HEARTBEAT_ID => Ok(MessageIdentifier::Heartbeat),
             EMERGENCY_ID => Ok(MessageIdentifier::Emergency),
             _ => match MeasurementId::try_from(id) {
@@ -51,25 +51,25 @@ mod tests {
     use super::*;
     use hyped_core::config::MeasurementId;
 
-    #[test]
-    fn test_message_identifier_state_transition_command() {
-        let message_identifier = MessageIdentifier::StateTransitionCommand;
-        let encoded_message_identifier: u16 = message_identifier.clone().into();
+    // #[test]
+    // fn test_message_identifier_state_transition_command() {
+    //     let message_identifier = MessageIdentifier::StateTransitionCommand;
+    //     let encoded_message_identifier: u16 = message_identifier.clone().into();
 
-        let decoded_message_identifier = MessageIdentifier::try_from(encoded_message_identifier)
-            .expect("Failed to decode message identifier");
-        assert_eq!(message_identifier, decoded_message_identifier);
-    }
+    //     let decoded_message_identifier = MessageIdentifier::try_from(encoded_message_identifier)
+    //         .expect("Failed to decode message identifier");
+    //     assert_eq!(message_identifier, decoded_message_identifier);
+    // }
 
-    #[test]
-    fn test_message_identifier_state_transition_request() {
-        let message_identifier = MessageIdentifier::StateTransitionRequest;
-        let encoded_message_identifier: u16 = message_identifier.clone().into();
+    // #[test]
+    // fn test_message_identifier_state_transition_request() {
+    //     let message_identifier = MessageIdentifier::StateTransitionRequest;
+    //     let encoded_message_identifier: u16 = message_identifier.clone().into();
 
-        let decoded_message_identifier = MessageIdentifier::try_from(encoded_message_identifier)
-            .expect("Failed to decode message identifier");
-        assert_eq!(message_identifier, decoded_message_identifier);
-    }
+    //     let decoded_message_identifier = MessageIdentifier::try_from(encoded_message_identifier)
+    //         .expect("Failed to decode message identifier");
+    //     assert_eq!(message_identifier, decoded_message_identifier);
+    // }
 
     #[test]
     fn test_message_identifier_heartbeat() {
