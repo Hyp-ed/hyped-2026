@@ -1,5 +1,8 @@
 use crate::states::State;
 use hyped_core::logging::{info, warn, debug};
+use heapless::FnvIndexSet; 
+use hyped_communications::boards::Board; 
+use crate::events::Event;
 use hyped_communications::{
     //actions::{Command, CommandTarget, Instruction, OUTGOING_COMMANDS},
     bus::EVENT_BUS,
@@ -8,6 +11,10 @@ use hyped_communications::{
 
 pub struct StateMachine {
     pub current_state: State,
+    boards_calibrated: FnvIndexSet<Board>,
+    boards_precharged: FnvIndexSet<Board>,
+    desired_boards_precharged: FnvIndexSet<Board>,
+    total_boards: u8,
 }
 
 impl Default for StateMachine {
@@ -20,6 +27,12 @@ impl StateMachine {
     pub fn new() -> Self {
         Self {
             current_state: State::Idle,
+            boards_calibrated: FnvIndexSet::new(),
+            boards_precharged: FnvIndexSet::new(),
+            // TODO implement which boards actually need to precharge
+
+            desired_boards_precharged: FnvIndexSet::new(),
+            total_boards: 5,
         }
     }
 
@@ -97,4 +110,147 @@ pub async fn run(mut sm: StateMachine) -> ! {
         sm.react(ev).await;
     
     }
+}
+
+
+
+// --------- State Specific Methods ---------
+
+
+// --------- IDLE --------- 
+
+async fn entry_idle(&mut self) {
+    info! ("Pod is idle")
+}
+
+async fn react_idle(&mut self, event: Event) {
+    match event {
+        _ => {}
+    }
+}
+
+// --------- CALIBRATE --------- 
+
+async fn entry_calibrate(&mut self) {
+    info! ("Starting calibration");
+    // Reset tracking
+    self.boards_calibrated.clear();
+    // Tell boards to start calibration
+    EVENT_BUS.sender().send(Event::StartCalibrationCommand).await;
+}
+
+async fn react_calibrate(&mut self, event: Event) {
+    match event {
+        Event::CalibrationComplete { from } => {
+            info!("Board {:?} calibrated", board);
+            // Track which boards are calibrated
+            self.boards_calibrated.insert(board);
+
+            // Check if all are done
+            if self.boards_calibrated.len() >= self.total_boards as usize {
+                info!("All boards calibrated");
+                self.transition_to(State::Precharge).await;
+            }
+        }
+        // Check if failure event necessary
+        _ => {}
+    }
+}
+
+
+// --------- PRECHARGE --------- 
+
+async fn entry_precharge(&mut self) {
+    info! ("Starting precharge")
+    EVENT_BUS.sender().send(Event::StartPrechargeCommand).await;
+    // TODO reminder: include motor controller in precharge 
+}
+
+async fn react_precharge(&mut self, event: Event) {
+    match event {
+        Event::PrechargeStarted { from, timestamp_ms } => {
+            info! ("Board {:?} started precharge at {}ms",from, timestamp_ms)
+        },
+        Event::PrechargeComplete { from, timestamp_ms, voltage_final_mv } => {
+            info! ("Board {:?} completed precharge at {}ms",from, timestamp_ms)
+            self.boards_precharged.insert(from)
+
+            // TODO do we need to check specific boards?
+            if self.boards_calibrated .len()== desired_boards_precharged.len() {
+                info! ("Necessary boards precharged")
+                // TODO implement which boards must be precharged
+                self.transition_to(State::ReadyForLevitation).await
+            }
+        },
+        Event::PrechargeFailed { reason, voltage_mv } => {
+            // TODO decide if we need this 
+        }
+        _ => {}
+    }
+}
+
+
+// --------- READY FOR LEVITATION --------- 
+
+async fn entry_ready_for_levitation(&mut self) {
+    info! ("Pod is ready for levitation")
+    EVENT_BUS.sender().send(Event::StartPrechargeCommand).await;
+}
+
+async fn react_ready_for_levitation(&mut self, event: Event) {
+    match event {
+        Event::LevitationSystemsReady{ current_airgap_mm, current_ma } => {
+            info! ("Status: current airgap: {:?}, current: {}",current_airgap_mm, current_ma)
+            // TODO implement logic 
+        },
+        _ => {}
+    }
+}
+
+
+// --------- BEGIN LEVITATION --------- 
+
+async fn entry_begin_levitation(&mut self) {}
+async fn react_begin_levitation(&mut self, event: Event) {}
+
+
+// --------- READY --------- 
+
+async fn entry_ready(&mut self) {}
+async fn react_readt(&mut self, event: Event) {}
+
+
+// --------- ACCELERATE --------- 
+
+async fn entry_accelerate(&mut self) {}
+async fn react_accelerate(&mut self, event: Event) {}
+
+
+// --------- BRAKE --------- 
+
+async fn entry_brake(&mut self) {}
+async fn react_brake(&mut self, event: Event) {}
+
+
+// --------- STOP LEVITATION --------- 
+
+async fn entry_stop_levitation(&mut self) {}
+async fn react_stop_levitation(&mut self, event: Event) {}
+
+
+// --------- STOPPED --------- 
+
+async fn entry_stopped(&mut self) {}
+async fn react_stopped(&mut self, event: Event) {}
+
+
+// --------- EMERGENCY --------- 
+
+async fn entry_emergency(&mut self) {
+    warn!("EMERGENCY STATE ENTERED");
+    EVENT_BUS.sender().send(Event::EmergencyStopCommand).await;
+}
+
+async fn react_emergency(&mut self, event: Event) {
+    // TODO decide what to do here 
 }

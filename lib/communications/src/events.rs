@@ -11,77 +11,81 @@ use crate::boards::Board;
 // }
 
 #[derive(Debug, Clone, Copy, defmt::Format)]
-pub struct Airgap(pub u32);         // millimeters
+pub struct Airgap(pub u32); // millimeters
 
 #[derive(Debug, Clone, Copy, defmt::Format)]
-pub struct Current(pub u32);        // milliamps
+pub struct Current(pub u32); // milliamps
 
 #[derive(Debug, Clone, Copy, defmt::Format)]
-pub struct Timestamp(pub u64);      // milliseconds
+pub struct Timestamp(pub u64); // milliseconds
 
 #[derive(Debug, Clone, Copy, defmt::Format)]
-pub struct Voltage(pub u32);        // millivolts
+pub struct Voltage(pub u32); // millivolts
 
 #[derive(Debug, Clone, Copy, defmt::Format)]
-pub struct Pressure(pub u16);       // bar
+pub struct Pressure(pub u16); // bar
 
 #[derive(Debug, Clone, Copy, defmt::Format)]
-pub struct Velocity(pub u16);       // km/h
+pub struct Velocity(pub u16); // km/h
 
 #[derive(Debug, Clone, Copy, defmt::Format)]
-pub struct Temperature(pub u8);     // celsius
+pub struct Temperature(pub u8); // celsius
 
 #[derive(Debug, Clone, Copy, defmt::Format)]
-pub struct Frequency(pub u16);      // hertz
+pub struct Frequency(pub u16); // hertz
 
 #[derive(Debug, Clone, Copy, defmt::Format)]
-pub struct Force(pub u16);          // newtons
+pub struct Force(pub u16); // newtons
 
 #[derive(Debug, Clone, defmt::Format)]
 pub enum Event {
-
     // ------ Operator Commands ------
     // TODO need some operator commands here, do later
     EmergencyStopCommand,
     GoCommand,
 
     // ------ Emergency Events ------
-    Emergency { 
-        from: Board, 
-        reason: u8 
+    Emergency {
+        from: Board,
+        reason: u8,
     },
 
     // ------ Status Events ------
-    Heartbeat { 
-        from: Board
+    Heartbeat {
+        from: Board,
     },
     // TODO any others?
 
-    // TODO check if we need calibration events
+    // ------ Calibration ------
+    StartCalibrationCommand,
+    CalibrationComplete {
+        from: Board,
+    },
 
     // ------ Electronics ------
-    // TODO reminder: include motor controller in precharge 
 
     // Commands from FSM
     StartPrechargeCommand,
 
-    // Confirmation 
+    // Confirmation
     PrechargeStarted {
+        from: Board,
         timestamp_ms: Timestamp,
     },
 
     // Completion
-    PrechargeComplete { 
-        timestamp_ms: Timestamp, 
+    PrechargeComplete {
+        from: Board,
+        timestamp_ms: Timestamp,
         voltage_final_mv: Voltage,
     },
-    
+
+    // TODO do we want this?
     // Failure
     PrechargeFailed {
-        reason: u8,  
+        reason: u8,
         voltage_mv: Voltage,
     },
-
 
     // ------ Levitation ------
 
@@ -95,11 +99,11 @@ pub enum Event {
     },
 
     // Commands from FSM
-    StartLevitationCommand, 
+    StartLevitationCommand,
     StopLevitationCommand,
 
     // Confirmation
-    LevitationStarted { 
+    LevitationStarted {
         initial_current_ma: Current,
         initial_airgap_mm: Airgap,
         target_airgap_mm: Airgap,
@@ -113,7 +117,7 @@ pub enum Event {
     },
 
     // Completion
-    LevitationStopped { 
+    LevitationStopped {
         final_airgap_mm: Airgap,
         final_current_ma: Current,
     },
@@ -121,11 +125,10 @@ pub enum Event {
     // TODO If we want to handle rather than trigger shutdown?
     // Failure
     LevitationFailed {
-        reason: u8,  
+        reason: u8,
         current_airgap_mm: Airgap,
         current_ma: Current,
     },
-
 
     // ------ Dynamics ------
 
@@ -157,7 +160,6 @@ pub enum Event {
     },
 
     // TODO Failure events?
-    
 
     // ------ Propulsion ------
 
@@ -166,11 +168,11 @@ pub enum Event {
     StartBrakingCommand,
 
     // Confirmation
-    AccelerationStarted { 
-        timestamp_ms: Timestamp 
+    AccelerationStarted {
+        timestamp_ms: Timestamp,
     },
-    BrakingStarted { 
-        timestamp_ms: Timestamp 
+    BrakingStarted {
+        timestamp_ms: Timestamp,
     },
 
     // Continuous status updates
@@ -182,7 +184,5 @@ pub enum Event {
         frequency_hz: Frequency,
         force_n: Force, // calculated thrust force
     },
-
     // TODO decide whether to handle failure here or as an emergency
-
 }
