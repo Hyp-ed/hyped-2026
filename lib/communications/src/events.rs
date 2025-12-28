@@ -13,6 +13,17 @@ use crate::boards::Board;
 #[derive(Debug, Clone, Copy, defmt::Format)]
 pub struct Airgap(pub u32); // millimeters
 
+// Calculate absolute distance two airgaps
+impl Airgap {
+    pub fn distance_to(&self, other: Airgap) -> u32 {
+        if self.0 > other.0 {
+            self.0 - other.0
+        } else {
+            other.0 - self.0
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, defmt::Format)]
 pub struct Current(pub u32); // milliamps
 
@@ -40,9 +51,12 @@ pub struct Force(pub u16); // newtons
 #[derive(Debug, Clone, defmt::Format)]
 pub enum Event {
     // ------ Operator Commands ------
-    // TODO need some operator commands here, do later
-    EmergencyStopCommand,
-    GoCommand,
+    EmergencyStopOperatorCommand,
+    CalibrateOperatorCommand,       // Idle -> Calibrating
+    BeginLevitationOperatorCommand, // Ready for levitation -> Begin Levitation
+    AccelerateOperatorCommand,      // Ready -> Accelerate
+    BrakeOperatorCommand,           // Accelerate -> Brake
+    StopLevitationOperatorCommand,  // Brake -> Stop Levitating
 
     // ------ Emergency Events ------
     Emergency {
@@ -66,15 +80,25 @@ pub enum Event {
 
     // Commands from FSM
     StartPrechargeCommand,
+    StartDischargeCommand,
 
     // Confirmation
     PrechargeStarted {
         from: Board,
         timestamp_ms: Timestamp,
     },
+    DischargeStarted {
+        from: Board,
+        timestamp_ms: Timestamp,
+    },
 
     // Completion
     PrechargeComplete {
+        from: Board,
+        timestamp_ms: Timestamp,
+        voltage_final_mv: Voltage,
+    },
+    DischargeComplete {
         from: Board,
         timestamp_ms: Timestamp,
         voltage_final_mv: Voltage,
@@ -94,8 +118,8 @@ pub enum Event {
         ready: bool,
         // Send values if not ready
         // check if we need this
-        current_airgap_mm: Option<Airgap>,
-        current_ma: Option<Current>,
+        current_airgap_mm: Airgap,
+        current_ma: Current,
     },
 
     // Commands from FSM
@@ -135,8 +159,8 @@ pub enum Event {
     // Commands from FSM
     UnclampBrakesCommand,
     ClampBrakesCommand,
-    RetractLateralSuspension,
-    ExtendLateralSuspension,
+    RetractLateralSuspensionCommand,
+    ExtendLateralSuspensionCommand,
 
     // Completion
     BrakesClamped {
@@ -164,14 +188,14 @@ pub enum Event {
     // ------ Propulsion ------
 
     // Commands from FSM
-    StartAccelerationCommand,
-    StartBrakingCommand,
+    StartPropulsionAccelerationCommand,
+    StartPropulsionBrakingCommand,
 
     // Confirmation
-    AccelerationStarted {
+    PropulsionAccelerationStarted {
         timestamp_ms: Timestamp,
     },
-    BrakingStarted {
+    PropulsionBrakingStarted {
         timestamp_ms: Timestamp,
     },
 
