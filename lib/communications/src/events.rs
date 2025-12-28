@@ -1,7 +1,7 @@
 use crate::boards::Board;
 use hyped_state_machine::states::State;
 
-/// Nature classification for events (compact codes).
+/// Nature classification for events (compact codes)
 #[derive(Debug, Clone, Copy, PartialEq, defmt::Format)]
 #[repr(u8)]
 pub enum Nature {
@@ -9,12 +9,6 @@ pub enum Nature {
     MajorChange = 1,
     DirEmergency = 2,
 }
-
-/// Per-state event envelopes (extend payload enums as needed).
-#[derive(Debug, Clone, defmt::Format)]
-pub enum StateEvent {
-}
-
 #[derive(Debug, Clone, defmt::Format)]
 pub enum Event {
     Emergency {
@@ -23,5 +17,5 @@ pub enum Event {
     },
     EnterState(State),
     ExitState(State),
-    StateEvent(StateEvent),
+    StateEvent { nature: Nature }, // Temp for generic react() and entry()
 }

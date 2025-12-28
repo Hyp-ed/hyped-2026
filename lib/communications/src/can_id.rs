@@ -1,4 +1,4 @@
-use super::{boards::Board, data::CanDataType, message_identifier::MessageIdentifier};
+use super::{boards::Board, data::CanDataType, events::Nature, message_identifier::MessageIdentifier};
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct CanId {
@@ -34,6 +34,20 @@ impl CanId {
             board,
             message_data_type: message_type,
             message_identifier,
+        }
+    }
+
+    /// Classifies nature of CAN message
+    /// Temp for generic react() and entry()
+    pub fn classify_nature(&self) -> Nature {
+        if self.message_data_type == CanDataType::Emergency
+            || matches!(self.message_identifier, MessageIdentifier::Emergency)
+        {
+            Nature::DirEmergency
+        } else if self.priority {
+            Nature::MajorChange
+        } else {
+            Nature::MinorChange
         }
     }
 }
