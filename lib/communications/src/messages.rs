@@ -2,6 +2,7 @@ use core::time;
 
 use defmt::timestamp;
 use hyped_can::{HypedCanFrame, Timestamp};
+use hyped_state_machine::states::State;
 
 use crate::{boards::Board, emergency::Reason, events::Voltage};
 
@@ -94,15 +95,33 @@ impl From<CanMessage> for HypedCanFrame {
                     CanId::new(board, CanDataType::Emergency, MessageIdentifier::Emergency);
                 HypedCanFrame::new(can_id.into(), CanData::Emergency(reason).into())
             }
-            CanMessage::PrechargeComplete(board, timestamp, voltage) => {
-                let can_id = CanId::new(
+
+            // New
+
+            // Calibration
+            CanMessage::StartCalibrationCommand => {
+                let can_id: CanId = CanId::new_high_priority(
+                    Board::Telemetry, // TODO: find out if this is right
+                    CanDataType::U32,
+                    MessageIdentifier::StartCalibrationCommand,
+                );
+                HypedCanFrame::new(can_id.into(), [0u8; 8])
+            }
+            CanMessage::CalibrationComplete(board) => {
+                let can_id: CanId = CanId::new(
                     board,
                     CanDataType::U32,
-                    MessageIdentifier::PrechargeComplete,
+                    MessageIdentifier::CalibrationComplete,
                 );
-                let data = CanData::U32(voltage.0);
-                HypedCanFrame::new(can_id.into(), data.into())
+                HypedCanFrame::new(can_id.into(), [0u8; 8])
             }
+
+            // Electronics
+            CanMessage::StartPrechargeCommand => {}
+            CanMessage::StartDischargeCommand => {}
+            CanMessage::PrechargeStarted(board) => {}
+            CanMessage::DischargeStarted(board) => {}
+            CanMessage::PrechargeFailed { board, reason } => {} // Levitation
         }
     }
 }
@@ -115,6 +134,7 @@ impl From<HypedCanFrame> for CanMessage {
         let board = can_id.board;
 
         match message_identifier {
+            // Existing
             MessageIdentifier::Measurement(measurement_id) => {
                 let reading: CanData = frame.data.into();
                 let measurement_reading = MeasurementReading {
@@ -140,6 +160,12 @@ impl From<HypedCanFrame> for CanMessage {
                     CanData::Emergency(reason) => CanMessage::Emergency(board, reason),
                     _ => panic!("Invalid CanData for Emergency"),
                 }
+            }
+
+            // New
+            MessageIdentifier::CalibrationComplete => {
+                let reading: CanData = frame.data.into();
+                l
             }
         }
     }
