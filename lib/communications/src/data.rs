@@ -13,15 +13,8 @@ pub enum CanData {
     U32(u32),
     Heartbeat(Board),
     Emergency(Reason),
-    // New
-    Airgap(u32),
-    Current(u32),
-    Timestamp(u32),
-    Pressure(u32),
-    Velocity(u16),
-    Temperature(u8),
-    Frequency(u16),
-    Force(u16),
+    U8(u8),
+    U16(u16),
 }
 
 impl Display for CanData {
@@ -34,7 +27,8 @@ impl Display for CanData {
             CanData::U32(u) => write!(formatter, "{u}"),
             CanData::Heartbeat(board) => write!(formatter, "{board:?}"),
             CanData::Emergency(reason) => write!(formatter, "{reason:?}"),
-            CanData::Airgap()
+            CanData::U8(u) => write!(formatter, "{u}"),
+            CanData::U16(u) => write!(formatter, "{u}"),
         }
     }
 }
@@ -50,6 +44,8 @@ impl From<CanData> for u8 {
             CanData::U32(_) => 4,
             CanData::Heartbeat(_) => 5,
             CanData::Emergency(_) => 6,
+            CanData::U8(_) => 7,
+            CanData::U16(_) => 8,
         }
     }
 }
@@ -65,6 +61,8 @@ impl From<u8> for CanData {
             4 => CanData::U32(0),
             5 => CanData::Heartbeat(Board::Test),
             6 => CanData::Emergency(Reason::Unknown),
+            7 => CanData::U8(0),
+            8 => CanData::U16(0),
             _ => panic!("Invalid CanData index"),
         }
     }
@@ -122,6 +120,19 @@ impl From<CanData> for [u8; 8] {
                 data[1] = reason as u8;
                 data
             }
+            CanData::U8(u) => {
+                let mut data: [u8; 8] = [0; 8];
+                data[0] = val.into();
+                data[1] = u;
+                data
+            }
+            CanData::U16(u) => {
+                let mut data: [u8; 8] = [0; 8];
+                data[0] = val.into();
+                let u16_bytes: [u8; 2] = u.to_le_bytes();
+                data[1..3].copy_from_slice(&u16_bytes);
+                data
+            }
         }
     }
 }
@@ -156,6 +167,13 @@ impl From<[u8; 8]> for CanData {
             }
             CanData::Heartbeat(_) => CanData::Heartbeat(data[1].try_into().unwrap()),
             CanData::Emergency(_) => CanData::Emergency(data[1].try_into().unwrap()),
+            CanData::U8(_) => CanData::U8(data[1]),
+            CanData::U16(_) => {
+                let mut u16_bytes: [u8; 2] = [0; 2];
+                u16_bytes.copy_from_slice(&data[1..3]);
+                let u = u16::from_le_bytes(u16_bytes);
+                CanData::U16(u)
+            }
         }
     }
 }
@@ -171,6 +189,8 @@ pub enum CanDataType {
     U32 = 4,
     Heartbeat = 5,
     Emergency = 6,
+    U8 = 7,
+    U16 = 8,
 }
 
 impl From<CanDataType> for u8 {
@@ -191,6 +211,8 @@ impl TryFrom<u8> for CanDataType {
             4 => Ok(CanDataType::U32),
             5 => Ok(CanDataType::Heartbeat),
             6 => Ok(CanDataType::Emergency),
+            7 => Ok(CanDataType::U8),
+            8 => Ok(CanDataType::U16),
             _ => Err("Invalid CanDataType index"),
         }
     }
@@ -203,9 +225,11 @@ impl From<CanData> for CanDataType {
             CanData::TwoU16(_) => CanDataType::TwoU16,
             CanData::F32(_) => CanDataType::F32,
             CanData::State(_) => CanDataType::State,
-            CanData::U32(_) => CanDataType::F32,
+            CanData::U32(_) => CanDataType::U32,
             CanData::Heartbeat(_) => CanDataType::Heartbeat,
             CanData::Emergency(_) => CanDataType::Emergency,
+            CanData::U8(_) => CanDataType::U8,
+            CanData::U16(_) => CanDataType::U16,
         }
     }
 }
@@ -220,6 +244,8 @@ impl From<CanDataType> for CanData {
             CanDataType::U32 => CanData::U32(0),
             CanDataType::Heartbeat => CanData::Heartbeat(Board::Test),
             CanDataType::Emergency => CanData::Emergency(Reason::Unknown),
+            CanDataType::U8 => CanData::U8(0),
+            CanDataType::U16 => CanData::U16(0),
         }
     }
 }
