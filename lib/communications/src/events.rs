@@ -131,10 +131,10 @@ pub enum Event {
 
     // Confirmation
     LevitationStarted {
-        // initial_current_ma: Current,
-        // initial_airgap_mm: Airgap,
-        // target_airgap_mm: Airgap,
-        from: Board, // TODO: not sure here
+        initial_current_ma: Current,
+        initial_airgap_mm: Airgap,
+        target_airgap_mm: Airgap,
+        //from: Board, // TODO: not sure here
     },
 
     // Continuous status updates

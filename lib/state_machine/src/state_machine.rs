@@ -216,7 +216,7 @@ impl StateMachine {
                 }
             }
             Event::PrechargeFailed {
-                from: Board,
+                from: board,
                 reason,
             } => {
                 // TODO decide if we need this
