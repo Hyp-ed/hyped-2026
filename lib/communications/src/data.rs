@@ -13,6 +13,15 @@ pub enum CanData {
     U32(u32),
     Heartbeat(Board),
     Emergency(Reason),
+    // New
+    Airgap(u32),
+    Current(u32),
+    Timestamp(u32),
+    Pressure(u32),
+    Velocity(u16),
+    Temperature(u8),
+    Frequency(u16),
+    Force(u16),
 }
 
 impl Display for CanData {
@@ -25,6 +34,7 @@ impl Display for CanData {
             CanData::U32(u) => write!(formatter, "{u}"),
             CanData::Heartbeat(board) => write!(formatter, "{board:?}"),
             CanData::Emergency(reason) => write!(formatter, "{reason:?}"),
+            CanData::Airgap()
         }
     }
 }

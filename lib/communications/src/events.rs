@@ -10,7 +10,7 @@ use crate::boards::Board;
 //     DirEmergency = 2,
 // }
 
-#[derive(Debug, Clone, Copy, defmt::Format)]
+#[derive(Debug, Clone, Copy, PartialEq, defmt::Format)]
 pub struct Airgap(pub u32); // millimeters
 
 // Calculate absolute distance two airgaps
@@ -24,29 +24,32 @@ impl Airgap {
     }
 }
 
-#[derive(Debug, Clone, Copy, defmt::Format)]
+#[derive(Debug, Clone, Copy, PartialEq, defmt::Format)]
 pub struct Current(pub u32); // milliamps
 
-#[derive(Debug, Clone, Copy, defmt::Format)]
+#[derive(Debug, Clone, Copy, PartialEq, defmt::Format)]
 pub struct Timestamp(pub u64); // milliseconds
 
-#[derive(Debug, Clone, Copy, defmt::Format)]
+#[derive(Debug, Clone, Copy, PartialEq, defmt::Format)]
 pub struct Voltage(pub u32); // millivolts
 
-#[derive(Debug, Clone, Copy, defmt::Format)]
+#[derive(Debug, Clone, Copy, PartialEq, defmt::Format)]
 pub struct Pressure(pub u16); // bar
 
-#[derive(Debug, Clone, Copy, defmt::Format)]
+#[derive(Debug, Clone, Copy, PartialEq, defmt::Format)]
 pub struct Velocity(pub u16); // km/h
 
-#[derive(Debug, Clone, Copy, defmt::Format)]
+#[derive(Debug, Clone, Copy, PartialEq, defmt::Format)]
 pub struct Temperature(pub u8); // celsius
 
-#[derive(Debug, Clone, Copy, defmt::Format)]
+#[derive(Debug, Clone, Copy, PartialEq, defmt::Format)]
 pub struct Frequency(pub u16); // hertz
 
-#[derive(Debug, Clone, Copy, defmt::Format)]
+#[derive(Debug, Clone, Copy, PartialEq, defmt::Format)]
 pub struct Force(pub u16); // newtons
+
+#[derive(Debug, Clone, Copy, PartialEq, defmt::Format)]
+pub struct Reason(pub u8); // reason
 
 #[derive(Debug, Clone, defmt::Format)]
 pub enum Event {
@@ -61,7 +64,7 @@ pub enum Event {
     // ------ Emergency Events ------
     Emergency {
         from: Board,
-        reason: u8,
+        reason: Reason,
     },
 
     // ------ Status Events ------
@@ -107,8 +110,8 @@ pub enum Event {
     // TODO do we want this?
     // Failure
     PrechargeFailed {
-        reason: u8,
-        voltage_mv: Voltage,
+        from: Board,
+        reason: Reason,
     },
 
     // ------ Levitation ------
@@ -128,9 +131,10 @@ pub enum Event {
 
     // Confirmation
     LevitationStarted {
-        initial_current_ma: Current,
-        initial_airgap_mm: Airgap,
-        target_airgap_mm: Airgap,
+        // initial_current_ma: Current,
+        // initial_airgap_mm: Airgap,
+        // target_airgap_mm: Airgap,
+        from: Board, // TODO: not sure here
     },
 
     // Continuous status updates
@@ -149,7 +153,7 @@ pub enum Event {
     // TODO If we want to handle rather than trigger shutdown?
     // Failure
     LevitationFailed {
-        reason: u8,
+        reason: Reason,
         current_airgap_mm: Airgap,
         current_ma: Current,
     },

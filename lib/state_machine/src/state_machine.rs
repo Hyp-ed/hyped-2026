@@ -215,7 +215,10 @@ impl StateMachine {
                     self.transition_to(State::ReadyForLevitation).await;
                 }
             }
-            Event::PrechargeFailed { reason, voltage_mv } => {
+            Event::PrechargeFailed {
+                from: Board,
+                reason,
+            } => {
                 // TODO decide if we need this
             }
             _ => {
