@@ -1,8 +1,9 @@
-use core::time;
+//use core::time;
 
-use defmt::timestamp;
-use hyped_can::{HypedCanFrame, Timestamp};
-use hyped_state_machine::states::State;
+//use defmt::timestamp;
+use hyped_can::HypedCanFrame;
+//, Timestamp};
+//use hyped_state_machine::states::State;
 
 use crate::{boards::Board, emergency::Reason, events::Voltage};
 
@@ -36,7 +37,7 @@ pub enum CanMessage {
     DischargeStarted(Board),
 
     // Includes Data
-    PrechargeCompleteVoltage { board: Board, voltage: Voltage },
+    PrechargeComplete { board: Board, voltage: Voltage },
     DischargeComplete { board: Board, voltage: Voltage },
     PrechargeFailed { board: Board, reason: Reason },
 
@@ -96,8 +97,6 @@ impl From<CanMessage> for HypedCanFrame {
                 HypedCanFrame::new(can_id.into(), CanData::Emergency(reason).into())
             }
 
-            // New
-
             // Calibration
             CanMessage::StartCalibrationCommand => {
                 let can_id: CanId = CanId::new_high_priority(
@@ -117,11 +116,191 @@ impl From<CanMessage> for HypedCanFrame {
             }
 
             // Electronics
-            CanMessage::StartPrechargeCommand => {}
-            CanMessage::StartDischargeCommand => {}
-            CanMessage::PrechargeStarted(board) => {}
-            CanMessage::DischargeStarted(board) => {}
-            CanMessage::PrechargeFailed { board, reason } => {} // Levitation
+            CanMessage::StartPrechargeCommand => {
+                let can_id: CanId = CanId::new_high_priority(
+                    Board::Telemetry,
+                    CanDataType::U32,
+                    MessageIdentifier::StartPrechargeCommand,
+                );
+                HypedCanFrame::new(can_id.into(), [0u8; 8])
+            }
+            CanMessage::StartDischargeCommand => {
+                let can_id: CanId = CanId::new_high_priority(
+                    Board::Telemetry,
+                    CanDataType::U32,
+                    MessageIdentifier::StartDischargeCommand,
+                );
+                HypedCanFrame::new(can_id.into(), [0u8; 8])
+            }
+            CanMessage::PrechargeStarted(board) => {
+                let can_id: CanId =
+                    CanId::new(board, CanDataType::U32, MessageIdentifier::PrechargeStarted);
+                HypedCanFrame::new(can_id.into(), [0u8; 8])
+            }
+            CanMessage::DischargeStarted(board) => {
+                let can_id: CanId =
+                    CanId::new(board, CanDataType::U32, MessageIdentifier::DischargeStarted);
+                HypedCanFrame::new(can_id.into(), [0u8; 8])
+            }
+            CanMessage::PrechargeFailed { board, reason } => {
+                let can_id: CanId =
+                    CanId::new(board, CanDataType::U8, MessageIdentifier::PrechargeFailed);
+                let data = CanData::U8(reason as u8).into();
+                HypedCanFrame::new(can_id.into(), data)
+            }
+            CanMessage::PrechargeComplete { board, voltage } => {
+                let can_id = CanId::new(
+                    board,
+                    CanDataType::U32,
+                    MessageIdentifier::PrechargeComplete,
+                );
+                let data = CanData::U32(voltage.0).into();
+                HypedCanFrame::new(can_id.into(), data)
+            }
+            CanMessage::DischargeComplete { board, voltage } => {
+                let can_id = CanId::new(
+                    board,
+                    CanDataType::U32,
+                    MessageIdentifier::DischargeComplete,
+                );
+                let data = CanData::U32(voltage.0).into();
+                HypedCanFrame::new(can_id.into(), data)
+            }
+
+            // Levitation
+            CanMessage::StartLevitationCommand => {
+                let can_id: CanId = CanId::new_high_priority(
+                    Board::Telemetry,
+                    CanDataType::U32,
+                    MessageIdentifier::StartLevitationCommand,
+                );
+                HypedCanFrame::new(can_id.into(), [0u8; 8])
+            }
+            CanMessage::StopLevitationCommand => {
+                let can_id: CanId = CanId::new_high_priority(
+                    Board::Telemetry,
+                    CanDataType::U32,
+                    MessageIdentifier::StopLevitationCommand,
+                );
+                HypedCanFrame::new(can_id.into(), [0u8; 8])
+            }
+            CanMessage::LevitationStarted(board) => {
+                let can_id: CanId = CanId::new(
+                    board,
+                    CanDataType::U32,
+                    MessageIdentifier::LevitationStarted,
+                );
+                HypedCanFrame::new(can_id.into(), [0u8; 8])
+            }
+            CanMessage::LevitationStopped(board) => {
+                let can_id: CanId = CanId::new(
+                    board,
+                    CanDataType::U32,
+                    MessageIdentifier::LevitationStopped,
+                );
+                HypedCanFrame::new(can_id.into(), [0u8; 8])
+            }
+            CanMessage::LevitationFailed { board, reason } => {
+                let can_id: CanId =
+                    CanId::new(board, CanDataType::U8, MessageIdentifier::LevitationFailed);
+                let data = CanData::U8(reason as u8).into();
+                HypedCanFrame::new(can_id.into(), data)
+            }
+
+            // Dynamics
+            CanMessage::ClampBrakesCommand => {
+                let can_id: CanId = CanId::new_high_priority(
+                    Board::Telemetry,
+                    CanDataType::U32,
+                    MessageIdentifier::ClampBrakesCommand,
+                );
+                HypedCanFrame::new(can_id.into(), [0u8; 8])
+            }
+            CanMessage::UnclampBrakesCommand => {
+                let can_id: CanId = CanId::new_high_priority(
+                    Board::Telemetry,
+                    CanDataType::U32,
+                    MessageIdentifier::UnclampBrakesCommand,
+                );
+                HypedCanFrame::new(can_id.into(), [0u8; 8])
+            }
+            CanMessage::ExtendLateralSuspensionCommand => {
+                let can_id: CanId = CanId::new_high_priority(
+                    Board::Telemetry,
+                    CanDataType::U32,
+                    MessageIdentifier::ExtendLateralSuspensionCommand,
+                );
+                HypedCanFrame::new(can_id.into(), [0u8; 8])
+            }
+            CanMessage::RetractLateralSuspensionCommand => {
+                let can_id: CanId = CanId::new_high_priority(
+                    Board::Telemetry,
+                    CanDataType::U32,
+                    MessageIdentifier::RetractLateralSuspensionCommand,
+                );
+                HypedCanFrame::new(can_id.into(), [0u8; 8])
+            }
+
+            CanMessage::BrakesClamped(board) => {
+                let can_id: CanId =
+                    CanId::new(board, CanDataType::U32, MessageIdentifier::BrakesClamped);
+                HypedCanFrame::new(can_id.into(), [0u8; 8])
+            }
+            CanMessage::BrakesUnclamped(board) => {
+                let can_id: CanId =
+                    CanId::new(board, CanDataType::U32, MessageIdentifier::BrakesUnclamped);
+                HypedCanFrame::new(can_id.into(), [0u8; 8])
+            }
+            CanMessage::LateralSuspensionExtended(board) => {
+                let can_id: CanId = CanId::new(
+                    board,
+                    CanDataType::U32,
+                    MessageIdentifier::LateralSuspensionExtended,
+                );
+                HypedCanFrame::new(can_id.into(), [0u8; 8])
+            }
+            CanMessage::LateralSuspensionRetracted(board) => {
+                let can_id: CanId = CanId::new(
+                    board,
+                    CanDataType::U32,
+                    MessageIdentifier::LateralSuspensionRetracted,
+                );
+                HypedCanFrame::new(can_id.into(), [0u8; 8])
+            }
+
+            // Propulsion
+            CanMessage::StartPropulsionAccelerationCommand => {
+                let can_id: CanId = CanId::new_high_priority(
+                    Board::Telemetry,
+                    CanDataType::U32,
+                    MessageIdentifier::StartPropulsionAccelerationCommand,
+                );
+                HypedCanFrame::new(can_id.into(), [0u8; 8])
+            }
+            CanMessage::StartPropulsionBrakingCommand => {
+                let can_id: CanId = CanId::new_high_priority(
+                    Board::Telemetry,
+                    CanDataType::U32,
+                    MessageIdentifier::StartPropulsionBrakingCommand,
+                );
+                HypedCanFrame::new(can_id.into(), [0u8; 8])
+            }
+            CanMessage::PropulsionAccelerationStarted(board) => {
+                let can_id: CanId = CanId::new(
+                    board,
+                    CanDataType::U32,
+                    MessageIdentifier::PropulsionAccelerationStarted,
+                );
+                HypedCanFrame::new(can_id.into(), [0u8; 8])
+            }
+            CanMessage::PropulsionBrakingStarted(board) => {
+                let can_id: CanId = CanId::new(
+                    board,
+                    CanDataType::U32,
+                    MessageIdentifier::PropulsionBrakingStarted,
+                );
+                HypedCanFrame::new(can_id.into(), [0u8; 8])
+            }
         }
     }
 }
@@ -162,10 +341,92 @@ impl From<HypedCanFrame> for CanMessage {
                 }
             }
 
-            // New
-            MessageIdentifier::CalibrationComplete => {
+            // Calibration
+            MessageIdentifier::StartCalibrationCommand => CanMessage::StartCalibrationCommand,
+            MessageIdentifier::CalibrationComplete => CanMessage::CalibrationComplete(board),
+
+            // Electronics
+            MessageIdentifier::StartPrechargeCommand => CanMessage::StartPrechargeCommand,
+            MessageIdentifier::StartDischargeCommand => CanMessage::StartDischargeCommand,
+            MessageIdentifier::PrechargeStarted => CanMessage::PrechargeStarted(board),
+            MessageIdentifier::DischargeStarted => CanMessage::DischargeStarted(board),
+            MessageIdentifier::PrechargeComplete => {
                 let reading: CanData = frame.data.into();
-                l
+                match reading {
+                    CanData::U32(voltage) => CanMessage::PrechargeComplete {
+                        board,
+                        voltage: Voltage(voltage),
+                    },
+                    _ => panic!("Invalid CanData for PrechargeComplete"),
+                }
+            }
+            MessageIdentifier::DischargeComplete => {
+                let reading: CanData = frame.data.into();
+                match reading {
+                    CanData::U32(voltage) => CanMessage::DischargeComplete {
+                        board,
+                        voltage: Voltage(voltage),
+                    },
+                    _ => panic!("Invalid CanData for DischargeComplete"),
+                }
+            }
+            MessageIdentifier::PrechargeFailed => {
+                let reading: CanData = frame.data.into();
+                match reading {
+                    CanData::U8(reason_u8) => CanMessage::PrechargeFailed {
+                        board,
+                        reason: Reason::try_from(reason_u8).unwrap(),
+                    },
+                    _ => panic!("Invalid CanData for PrechargeFailed"),
+                }
+            }
+
+            // Levitation
+            MessageIdentifier::StartLevitationCommand => CanMessage::StartLevitationCommand,
+            MessageIdentifier::StopLevitationCommand => CanMessage::StopLevitationCommand,
+            MessageIdentifier::LevitationStarted => CanMessage::LevitationStarted(board),
+            MessageIdentifier::LevitationStopped => CanMessage::LevitationStopped(board),
+            MessageIdentifier::LevitationFailed => {
+                let reading: CanData = frame.data.into();
+                match reading {
+                    CanData::U8(reason_u8) => CanMessage::LevitationFailed {
+                        board,
+                        reason: Reason::try_from(reason_u8).unwrap(),
+                    },
+                    _ => panic!("Invalid CanData for LevitationFailed"),
+                }
+            }
+
+            // Dynamics
+            MessageIdentifier::UnclampBrakesCommand => CanMessage::UnclampBrakesCommand,
+            MessageIdentifier::ClampBrakesCommand => CanMessage::ClampBrakesCommand,
+            MessageIdentifier::RetractLateralSuspensionCommand => {
+                CanMessage::RetractLateralSuspensionCommand
+            }
+            MessageIdentifier::ExtendLateralSuspensionCommand => {
+                CanMessage::ExtendLateralSuspensionCommand
+            }
+            MessageIdentifier::BrakesClamped => CanMessage::BrakesClamped(board),
+            MessageIdentifier::BrakesUnclamped => CanMessage::BrakesUnclamped(board),
+            MessageIdentifier::LateralSuspensionRetracted => {
+                CanMessage::LateralSuspensionRetracted(board)
+            }
+            MessageIdentifier::LateralSuspensionExtended => {
+                CanMessage::LateralSuspensionExtended(board)
+            }
+
+            // Propulsion
+            MessageIdentifier::StartPropulsionAccelerationCommand => {
+                CanMessage::StartPropulsionAccelerationCommand
+            }
+            MessageIdentifier::StartPropulsionBrakingCommand => {
+                CanMessage::StartPropulsionBrakingCommand
+            }
+            MessageIdentifier::PropulsionAccelerationStarted => {
+                CanMessage::PropulsionAccelerationStarted(board)
+            }
+            MessageIdentifier::PropulsionBrakingStarted => {
+                CanMessage::PropulsionBrakingStarted(board)
             }
         }
     }
@@ -178,12 +439,8 @@ mod tests {
     //use hyped_state_machine::states::State;
 
     use crate::{
-        boards::Board,
-        data::CanData,
-        heartbeat::Heartbeat,
-        measurements::MeasurementReading,
+        boards::Board, data::CanData, heartbeat::Heartbeat, measurements::MeasurementReading,
         messages::CanMessage,
-        //state_transition::{StateTransitionCommand, StateTransitionRequest},
     };
 
     #[test]
