@@ -12,7 +12,7 @@ use super::{
     data::{CanData, CanDataType},
     heartbeat::Heartbeat,
     measurements::MeasurementReading,
-    message_identifier::MessageIdentifier,
+    message_identifier::{EventId, MessageIdentifier},
 };
 
 #[derive(PartialEq, Debug, Clone, defmt::Format)]
@@ -102,7 +102,7 @@ impl From<CanMessage> for HypedCanFrame {
                 let can_id: CanId = CanId::new_high_priority(
                     Board::Telemetry, // TODO: find out if this is right
                     CanDataType::U32,
-                    MessageIdentifier::StartCalibrationCommand,
+                    MessageIdentifier::Event(EventId::StartCalibrationCommand),
                 );
                 HypedCanFrame::new(can_id.into(), [0u8; 8])
             }
@@ -110,7 +110,7 @@ impl From<CanMessage> for HypedCanFrame {
                 let can_id: CanId = CanId::new(
                     board,
                     CanDataType::U32,
-                    MessageIdentifier::CalibrationComplete,
+                    MessageIdentifier::Event(EventId::CalibrationComplete),
                 );
                 HypedCanFrame::new(can_id.into(), [0u8; 8])
             }
@@ -120,7 +120,7 @@ impl From<CanMessage> for HypedCanFrame {
                 let can_id: CanId = CanId::new_high_priority(
                     Board::Telemetry,
                     CanDataType::U32,
-                    MessageIdentifier::StartPrechargeCommand,
+                    MessageIdentifier::Event(EventId::StartPrechargeCommand),
                 );
                 HypedCanFrame::new(can_id.into(), [0u8; 8])
             }
@@ -128,23 +128,32 @@ impl From<CanMessage> for HypedCanFrame {
                 let can_id: CanId = CanId::new_high_priority(
                     Board::Telemetry,
                     CanDataType::U32,
-                    MessageIdentifier::StartDischargeCommand,
+                    MessageIdentifier::Event(EventId::StartDischargeCommand),
                 );
                 HypedCanFrame::new(can_id.into(), [0u8; 8])
             }
             CanMessage::PrechargeStarted(board) => {
-                let can_id: CanId =
-                    CanId::new(board, CanDataType::U32, MessageIdentifier::PrechargeStarted);
+                let can_id: CanId = CanId::new(
+                    board,
+                    CanDataType::U32,
+                    MessageIdentifier::Event(EventId::PrechargeStarted),
+                );
                 HypedCanFrame::new(can_id.into(), [0u8; 8])
             }
             CanMessage::DischargeStarted(board) => {
-                let can_id: CanId =
-                    CanId::new(board, CanDataType::U32, MessageIdentifier::DischargeStarted);
+                let can_id: CanId = CanId::new(
+                    board,
+                    CanDataType::U32,
+                    MessageIdentifier::Event(EventId::DischargeStarted),
+                );
                 HypedCanFrame::new(can_id.into(), [0u8; 8])
             }
             CanMessage::PrechargeFailed { board, reason } => {
-                let can_id: CanId =
-                    CanId::new(board, CanDataType::U8, MessageIdentifier::PrechargeFailed);
+                let can_id: CanId = CanId::new(
+                    board,
+                    CanDataType::U8,
+                    MessageIdentifier::Event(EventId::PrechargeFailed),
+                );
                 let data = CanData::U8(reason as u8).into();
                 HypedCanFrame::new(can_id.into(), data)
             }
@@ -152,7 +161,7 @@ impl From<CanMessage> for HypedCanFrame {
                 let can_id = CanId::new(
                     board,
                     CanDataType::U32,
-                    MessageIdentifier::PrechargeComplete,
+                    MessageIdentifier::Event(EventId::PrechargeComplete),
                 );
                 let data = CanData::U32(voltage.0).into();
                 HypedCanFrame::new(can_id.into(), data)
@@ -161,7 +170,7 @@ impl From<CanMessage> for HypedCanFrame {
                 let can_id = CanId::new(
                     board,
                     CanDataType::U32,
-                    MessageIdentifier::DischargeComplete,
+                    MessageIdentifier::Event(EventId::DischargeComplete),
                 );
                 let data = CanData::U32(voltage.0).into();
                 HypedCanFrame::new(can_id.into(), data)
@@ -172,7 +181,7 @@ impl From<CanMessage> for HypedCanFrame {
                 let can_id: CanId = CanId::new_high_priority(
                     Board::Telemetry,
                     CanDataType::U32,
-                    MessageIdentifier::StartLevitationCommand,
+                    MessageIdentifier::Event(EventId::StartLevitationCommand),
                 );
                 HypedCanFrame::new(can_id.into(), [0u8; 8])
             }
@@ -180,7 +189,7 @@ impl From<CanMessage> for HypedCanFrame {
                 let can_id: CanId = CanId::new_high_priority(
                     Board::Telemetry,
                     CanDataType::U32,
-                    MessageIdentifier::StopLevitationCommand,
+                    MessageIdentifier::Event(EventId::StopLevitationCommand),
                 );
                 HypedCanFrame::new(can_id.into(), [0u8; 8])
             }
@@ -188,7 +197,7 @@ impl From<CanMessage> for HypedCanFrame {
                 let can_id: CanId = CanId::new(
                     board,
                     CanDataType::U32,
-                    MessageIdentifier::LevitationStarted,
+                    MessageIdentifier::Event(EventId::LevitationStarted),
                 );
                 HypedCanFrame::new(can_id.into(), [0u8; 8])
             }
@@ -196,13 +205,16 @@ impl From<CanMessage> for HypedCanFrame {
                 let can_id: CanId = CanId::new(
                     board,
                     CanDataType::U32,
-                    MessageIdentifier::LevitationStopped,
+                    MessageIdentifier::Event(EventId::LevitationStopped),
                 );
                 HypedCanFrame::new(can_id.into(), [0u8; 8])
             }
             CanMessage::LevitationFailed { board, reason } => {
-                let can_id: CanId =
-                    CanId::new(board, CanDataType::U8, MessageIdentifier::LevitationFailed);
+                let can_id: CanId = CanId::new(
+                    board,
+                    CanDataType::U8,
+                    MessageIdentifier::Event(EventId::LevitationFailed),
+                );
                 let data = CanData::U8(reason as u8).into();
                 HypedCanFrame::new(can_id.into(), data)
             }
@@ -212,7 +224,7 @@ impl From<CanMessage> for HypedCanFrame {
                 let can_id: CanId = CanId::new_high_priority(
                     Board::Telemetry,
                     CanDataType::U32,
-                    MessageIdentifier::ClampBrakesCommand,
+                    MessageIdentifier::Event(EventId::ClampBrakesCommand),
                 );
                 HypedCanFrame::new(can_id.into(), [0u8; 8])
             }
@@ -220,7 +232,7 @@ impl From<CanMessage> for HypedCanFrame {
                 let can_id: CanId = CanId::new_high_priority(
                     Board::Telemetry,
                     CanDataType::U32,
-                    MessageIdentifier::UnclampBrakesCommand,
+                    MessageIdentifier::Event(EventId::UnclampBrakesCommand),
                 );
                 HypedCanFrame::new(can_id.into(), [0u8; 8])
             }
@@ -228,7 +240,7 @@ impl From<CanMessage> for HypedCanFrame {
                 let can_id: CanId = CanId::new_high_priority(
                     Board::Telemetry,
                     CanDataType::U32,
-                    MessageIdentifier::ExtendLateralSuspensionCommand,
+                    MessageIdentifier::Event(EventId::ExtendLateralSuspensionCommand),
                 );
                 HypedCanFrame::new(can_id.into(), [0u8; 8])
             }
@@ -236,26 +248,32 @@ impl From<CanMessage> for HypedCanFrame {
                 let can_id: CanId = CanId::new_high_priority(
                     Board::Telemetry,
                     CanDataType::U32,
-                    MessageIdentifier::RetractLateralSuspensionCommand,
+                    MessageIdentifier::Event(EventId::RetractLateralSuspensionCommand),
                 );
                 HypedCanFrame::new(can_id.into(), [0u8; 8])
             }
 
             CanMessage::BrakesClamped(board) => {
-                let can_id: CanId =
-                    CanId::new(board, CanDataType::U32, MessageIdentifier::BrakesClamped);
+                let can_id: CanId = CanId::new(
+                    board,
+                    CanDataType::U32,
+                    MessageIdentifier::Event(EventId::BrakesClamped),
+                );
                 HypedCanFrame::new(can_id.into(), [0u8; 8])
             }
             CanMessage::BrakesUnclamped(board) => {
-                let can_id: CanId =
-                    CanId::new(board, CanDataType::U32, MessageIdentifier::BrakesUnclamped);
+                let can_id: CanId = CanId::new(
+                    board,
+                    CanDataType::U32,
+                    MessageIdentifier::Event(EventId::BrakesUnclamped),
+                );
                 HypedCanFrame::new(can_id.into(), [0u8; 8])
             }
             CanMessage::LateralSuspensionExtended(board) => {
                 let can_id: CanId = CanId::new(
                     board,
                     CanDataType::U32,
-                    MessageIdentifier::LateralSuspensionExtended,
+                    MessageIdentifier::Event(EventId::LateralSuspensionExtended),
                 );
                 HypedCanFrame::new(can_id.into(), [0u8; 8])
             }
@@ -263,7 +281,7 @@ impl From<CanMessage> for HypedCanFrame {
                 let can_id: CanId = CanId::new(
                     board,
                     CanDataType::U32,
-                    MessageIdentifier::LateralSuspensionRetracted,
+                    MessageIdentifier::Event(EventId::LateralSuspensionRetracted),
                 );
                 HypedCanFrame::new(can_id.into(), [0u8; 8])
             }
@@ -273,7 +291,7 @@ impl From<CanMessage> for HypedCanFrame {
                 let can_id: CanId = CanId::new_high_priority(
                     Board::Telemetry,
                     CanDataType::U32,
-                    MessageIdentifier::StartPropulsionAccelerationCommand,
+                    MessageIdentifier::Event(EventId::StartPropulsionAccelerationCommand),
                 );
                 HypedCanFrame::new(can_id.into(), [0u8; 8])
             }
@@ -281,7 +299,7 @@ impl From<CanMessage> for HypedCanFrame {
                 let can_id: CanId = CanId::new_high_priority(
                     Board::Telemetry,
                     CanDataType::U32,
-                    MessageIdentifier::StartPropulsionBrakingCommand,
+                    MessageIdentifier::Event(EventId::StartPropulsionBrakingCommand),
                 );
                 HypedCanFrame::new(can_id.into(), [0u8; 8])
             }
@@ -289,7 +307,7 @@ impl From<CanMessage> for HypedCanFrame {
                 let can_id: CanId = CanId::new(
                     board,
                     CanDataType::U32,
-                    MessageIdentifier::PropulsionAccelerationStarted,
+                    MessageIdentifier::Event(EventId::PropulsionAccelerationStarted),
                 );
                 HypedCanFrame::new(can_id.into(), [0u8; 8])
             }
@@ -297,7 +315,7 @@ impl From<CanMessage> for HypedCanFrame {
                 let can_id: CanId = CanId::new(
                     board,
                     CanDataType::U32,
-                    MessageIdentifier::PropulsionBrakingStarted,
+                    MessageIdentifier::Event(EventId::PropulsionBrakingStarted),
                 );
                 HypedCanFrame::new(can_id.into(), [0u8; 8])
             }
@@ -342,15 +360,27 @@ impl From<HypedCanFrame> for CanMessage {
             }
 
             // Calibration
-            MessageIdentifier::StartCalibrationCommand => CanMessage::StartCalibrationCommand,
-            MessageIdentifier::CalibrationComplete => CanMessage::CalibrationComplete(board),
+            MessageIdentifier::Event(EventId::StartCalibrationCommand) => {
+                CanMessage::StartCalibrationCommand
+            }
+            MessageIdentifier::Event(EventId::CalibrationComplete) => {
+                CanMessage::CalibrationComplete(board)
+            }
 
             // Electronics
-            MessageIdentifier::StartPrechargeCommand => CanMessage::StartPrechargeCommand,
-            MessageIdentifier::StartDischargeCommand => CanMessage::StartDischargeCommand,
-            MessageIdentifier::PrechargeStarted => CanMessage::PrechargeStarted(board),
-            MessageIdentifier::DischargeStarted => CanMessage::DischargeStarted(board),
-            MessageIdentifier::PrechargeComplete => {
+            MessageIdentifier::Event(EventId::StartPrechargeCommand) => {
+                CanMessage::StartPrechargeCommand
+            }
+            MessageIdentifier::Event(EventId::StartDischargeCommand) => {
+                CanMessage::StartDischargeCommand
+            }
+            MessageIdentifier::Event(EventId::PrechargeStarted) => {
+                CanMessage::PrechargeStarted(board)
+            }
+            MessageIdentifier::Event(EventId::DischargeStarted) => {
+                CanMessage::DischargeStarted(board)
+            }
+            MessageIdentifier::Event(EventId::PrechargeComplete) => {
                 let reading: CanData = frame.data.into();
                 match reading {
                     CanData::U32(voltage) => CanMessage::PrechargeComplete {
@@ -360,7 +390,7 @@ impl From<HypedCanFrame> for CanMessage {
                     _ => panic!("Invalid CanData for PrechargeComplete"),
                 }
             }
-            MessageIdentifier::DischargeComplete => {
+            MessageIdentifier::Event(EventId::DischargeComplete) => {
                 let reading: CanData = frame.data.into();
                 match reading {
                     CanData::U32(voltage) => CanMessage::DischargeComplete {
@@ -370,7 +400,7 @@ impl From<HypedCanFrame> for CanMessage {
                     _ => panic!("Invalid CanData for DischargeComplete"),
                 }
             }
-            MessageIdentifier::PrechargeFailed => {
+            MessageIdentifier::Event(EventId::PrechargeFailed) => {
                 let reading: CanData = frame.data.into();
                 match reading {
                     CanData::U8(reason_u8) => CanMessage::PrechargeFailed {
@@ -382,11 +412,19 @@ impl From<HypedCanFrame> for CanMessage {
             }
 
             // Levitation
-            MessageIdentifier::StartLevitationCommand => CanMessage::StartLevitationCommand,
-            MessageIdentifier::StopLevitationCommand => CanMessage::StopLevitationCommand,
-            MessageIdentifier::LevitationStarted => CanMessage::LevitationStarted(board),
-            MessageIdentifier::LevitationStopped => CanMessage::LevitationStopped(board),
-            MessageIdentifier::LevitationFailed => {
+            MessageIdentifier::Event(EventId::StartLevitationCommand) => {
+                CanMessage::StartLevitationCommand
+            }
+            MessageIdentifier::Event(EventId::StopLevitationCommand) => {
+                CanMessage::StopLevitationCommand
+            }
+            MessageIdentifier::Event(EventId::LevitationStarted) => {
+                CanMessage::LevitationStarted(board)
+            }
+            MessageIdentifier::Event(EventId::LevitationStopped) => {
+                CanMessage::LevitationStopped(board)
+            }
+            MessageIdentifier::Event(EventId::LevitationFailed) => {
                 let reading: CanData = frame.data.into();
                 match reading {
                     CanData::U8(reason_u8) => CanMessage::LevitationFailed {
@@ -398,34 +436,38 @@ impl From<HypedCanFrame> for CanMessage {
             }
 
             // Dynamics
-            MessageIdentifier::UnclampBrakesCommand => CanMessage::UnclampBrakesCommand,
-            MessageIdentifier::ClampBrakesCommand => CanMessage::ClampBrakesCommand,
-            MessageIdentifier::RetractLateralSuspensionCommand => {
+            MessageIdentifier::Event(EventId::UnclampBrakesCommand) => {
+                CanMessage::UnclampBrakesCommand
+            }
+            MessageIdentifier::Event(EventId::ClampBrakesCommand) => CanMessage::ClampBrakesCommand,
+            MessageIdentifier::Event(EventId::RetractLateralSuspensionCommand) => {
                 CanMessage::RetractLateralSuspensionCommand
             }
-            MessageIdentifier::ExtendLateralSuspensionCommand => {
+            MessageIdentifier::Event(EventId::ExtendLateralSuspensionCommand) => {
                 CanMessage::ExtendLateralSuspensionCommand
             }
-            MessageIdentifier::BrakesClamped => CanMessage::BrakesClamped(board),
-            MessageIdentifier::BrakesUnclamped => CanMessage::BrakesUnclamped(board),
-            MessageIdentifier::LateralSuspensionRetracted => {
+            MessageIdentifier::Event(EventId::BrakesClamped) => CanMessage::BrakesClamped(board),
+            MessageIdentifier::Event(EventId::BrakesUnclamped) => {
+                CanMessage::BrakesUnclamped(board)
+            }
+            MessageIdentifier::Event(EventId::LateralSuspensionRetracted) => {
                 CanMessage::LateralSuspensionRetracted(board)
             }
-            MessageIdentifier::LateralSuspensionExtended => {
+            MessageIdentifier::Event(EventId::LateralSuspensionExtended) => {
                 CanMessage::LateralSuspensionExtended(board)
             }
 
             // Propulsion
-            MessageIdentifier::StartPropulsionAccelerationCommand => {
+            MessageIdentifier::Event(EventId::StartPropulsionAccelerationCommand) => {
                 CanMessage::StartPropulsionAccelerationCommand
             }
-            MessageIdentifier::StartPropulsionBrakingCommand => {
+            MessageIdentifier::Event(EventId::StartPropulsionBrakingCommand) => {
                 CanMessage::StartPropulsionBrakingCommand
             }
-            MessageIdentifier::PropulsionAccelerationStarted => {
+            MessageIdentifier::Event(EventId::PropulsionAccelerationStarted) => {
                 CanMessage::PropulsionAccelerationStarted(board)
             }
-            MessageIdentifier::PropulsionBrakingStarted => {
+            MessageIdentifier::Event(EventId::PropulsionBrakingStarted) => {
                 CanMessage::PropulsionBrakingStarted(board)
             }
         }

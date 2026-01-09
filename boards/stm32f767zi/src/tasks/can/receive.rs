@@ -29,6 +29,13 @@ pub static INCOMING_STATE_TRANSITION_REQUESTS: Channel<
     10,
 > = Channel::new();
 
+/// Stores Events 
+pub static EVENT_BUS: Channel<
+    CriticalSectionRawMutex,
+    Event,
+    64, // TODO placeholder: decide on a channel capacity 
+> = Channel::new();
+
 /// Stores heartbeat messages coming in from other boards that we need to respond to.
 pub static INCOMING_HEARTBEATS: Channel<CriticalSectionRawMutex, Heartbeat, 10> = Channel::new();
 

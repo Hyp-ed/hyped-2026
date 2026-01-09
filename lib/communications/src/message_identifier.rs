@@ -5,7 +5,11 @@ pub enum MessageIdentifier {
     Measurement(MeasurementId),
     Heartbeat,
     Emergency,
+    Event(EventId),
+}
 
+#[derive(Debug, PartialEq, Clone)]
+pub enum EventId {
     // Calibration
     StartCalibrationCommand,
     CalibrationComplete,
@@ -85,54 +89,103 @@ const START_PROPULSION_BRAKING_COMMAND_ID: u16 = MAX_MESSAGE_IDENTIFIER - 28;
 const PROPULSION_ACCELERATION_STARTED_ID: u16 = MAX_MESSAGE_IDENTIFIER - 29;
 const PROPULSION_BRAKING_STARTED_ID: u16 = MAX_MESSAGE_IDENTIFIER - 30;
 
+impl From<EventId> for u16 {
+    fn from(val: EventId) -> Self {
+        match val {
+            // Calibration
+            EventId::StartCalibrationCommand => START_CALIBRATION_COMMAND_ID,
+            EventId::CalibrationComplete => CALIBRATION_COMPLETE,
+
+            // Electronics
+            EventId::StartPrechargeCommand => START_PRECHARGE_COMMAND_ID,
+            EventId::StartDischargeCommand => START_DISCHARGE_COMMAND_ID,
+            EventId::PrechargeStarted => PRECHARGE_STARTED_ID,
+            EventId::PrechargeComplete => PRECHARGE_COMPLETE_ID,
+            EventId::PrechargeFailed => PRECHARGE_FAILED_ID,
+            EventId::DischargeStarted => DISCHARGE_STARTED_ID,
+            EventId::DischargeComplete => DISCHARGE_COMPLETE_ID,
+
+            // Levitation
+            EventId::StartLevitationCommand => START_LEVITATION_COMMAND_ID,
+            EventId::StopLevitationCommand => STOP_LEVITATION_COMMAND_ID,
+            EventId::LevitationStarted => LEVITATION_STARTED_ID,
+            EventId::LevitationStopped => LEVITATION_STOPPED_ID,
+            EventId::LevitationFailed => LEVITATION_FAILED_ID,
+
+            // Dynamics
+            EventId::UnclampBrakesCommand => UNCLAMP_BRAKES_COMMAND_ID,
+            EventId::ClampBrakesCommand => CLAMP_BRAKES_COMMAND_ID,
+            EventId::BrakesClamped => BRAKES_CLAMPED_ID,
+            EventId::BrakesUnclamped => BRAKES_UNCLAMPED_ID,
+            EventId::RetractLateralSuspensionCommand => RETRACT_LATERAL_SUSPENSION_COMMAND_ID,
+            EventId::ExtendLateralSuspensionCommand => EXTEND_LATERAL_SUSPENSION_COMMAND_ID,
+            EventId::LateralSuspensionRetracted => LATERAL_SUSPENSION_RETRACTED_ID,
+            EventId::LateralSuspensionExtended => LATERAL_SUSPENSION_EXTENDED_ID,
+
+            // Propulsion
+            EventId::StartPropulsionAccelerationCommand => START_PROPULSION_ACCELERATION_COMMAND_ID,
+            EventId::StartPropulsionBrakingCommand => START_PROPULSION_BRAKING_COMMAND_ID,
+            EventId::PropulsionAccelerationStarted => PROPULSION_ACCELERATION_STARTED_ID,
+            EventId::PropulsionBrakingStarted => PROPULSION_BRAKING_STARTED_ID,
+        }
+    }
+}
+
+impl TryFrom<u16> for EventId {
+    type Error = &'static str;
+
+    fn try_from(id: u16) -> Result<Self, Self::Error> {
+        match id {
+            // Calibration
+            START_CALIBRATION_COMMAND_ID => Ok(EventId::StartCalibrationCommand),
+            CALIBRATION_COMPLETE => Ok(EventId::CalibrationComplete),
+
+            // Electronics
+            START_PRECHARGE_COMMAND_ID => Ok(EventId::StartPrechargeCommand),
+            START_DISCHARGE_COMMAND_ID => Ok(EventId::StartDischargeCommand),
+            PRECHARGE_STARTED_ID => Ok(EventId::PrechargeStarted),
+            PRECHARGE_COMPLETE_ID => Ok(EventId::PrechargeComplete),
+            PRECHARGE_FAILED_ID => Ok(EventId::PrechargeFailed),
+            DISCHARGE_STARTED_ID => Ok(EventId::DischargeStarted),
+            DISCHARGE_COMPLETE_ID => Ok(EventId::DischargeComplete),
+
+            // Levitation
+            START_LEVITATION_COMMAND_ID => Ok(EventId::StartLevitationCommand),
+            STOP_LEVITATION_COMMAND_ID => Ok(EventId::StopLevitationCommand),
+            LEVITATION_STARTED_ID => Ok(EventId::LevitationStarted),
+            LEVITATION_STOPPED_ID => Ok(EventId::LevitationStopped),
+            LEVITATION_FAILED_ID => Ok(EventId::LevitationFailed),
+
+            // Dynamics
+            UNCLAMP_BRAKES_COMMAND_ID => Ok(EventId::UnclampBrakesCommand),
+            CLAMP_BRAKES_COMMAND_ID => Ok(EventId::ClampBrakesCommand),
+            BRAKES_CLAMPED_ID => Ok(EventId::BrakesClamped),
+            BRAKES_UNCLAMPED_ID => Ok(EventId::BrakesUnclamped),
+            RETRACT_LATERAL_SUSPENSION_COMMAND_ID => Ok(EventId::RetractLateralSuspensionCommand),
+            EXTEND_LATERAL_SUSPENSION_COMMAND_ID => Ok(EventId::ExtendLateralSuspensionCommand),
+            LATERAL_SUSPENSION_RETRACTED_ID => Ok(EventId::LateralSuspensionRetracted),
+            LATERAL_SUSPENSION_EXTENDED_ID => Ok(EventId::LateralSuspensionExtended),
+
+            // Propulsion
+            START_PROPULSION_ACCELERATION_COMMAND_ID => {
+                Ok(EventId::StartPropulsionAccelerationCommand)
+            }
+            START_PROPULSION_BRAKING_COMMAND_ID => Ok(EventId::StartPropulsionBrakingCommand),
+            PROPULSION_ACCELERATION_STARTED_ID => Ok(EventId::PropulsionAccelerationStarted),
+            PROPULSION_BRAKING_STARTED_ID => Ok(EventId::PropulsionBrakingStarted),
+
+            _ => Err("Invalid EventId"),
+        }
+    }
+}
+
 impl From<MessageIdentifier> for u16 {
     fn from(val: MessageIdentifier) -> Self {
         match val {
             MessageIdentifier::Measurement(measurement_id) => measurement_id.into(),
             MessageIdentifier::Emergency => EMERGENCY_ID,
             MessageIdentifier::Heartbeat => HEARTBEAT_ID,
-
-            // Calibration
-            MessageIdentifier::StartCalibrationCommand => START_CALIBRATION_COMMAND_ID,
-            MessageIdentifier::CalibrationComplete => CALIBRATION_COMPLETE,
-
-            // Precharge/Discharge
-            MessageIdentifier::StartPrechargeCommand => START_PRECHARGE_COMMAND_ID,
-            MessageIdentifier::StartDischargeCommand => START_DISCHARGE_COMMAND_ID,
-            MessageIdentifier::PrechargeStarted => PRECHARGE_STARTED_ID,
-            MessageIdentifier::PrechargeComplete => PRECHARGE_COMPLETE_ID,
-            MessageIdentifier::PrechargeFailed => PRECHARGE_FAILED_ID,
-            MessageIdentifier::DischargeStarted => DISCHARGE_STARTED_ID,
-            MessageIdentifier::DischargeComplete => DISCHARGE_COMPLETE_ID,
-
-            // Levitation
-            MessageIdentifier::StartLevitationCommand => START_LEVITATION_COMMAND_ID,
-            MessageIdentifier::StopLevitationCommand => STOP_LEVITATION_COMMAND_ID,
-            MessageIdentifier::LevitationStarted => LEVITATION_STARTED_ID,
-            MessageIdentifier::LevitationStopped => LEVITATION_STOPPED_ID,
-            MessageIdentifier::LevitationFailed => LEVITATION_FAILED_ID,
-
-            // Dynamics
-            MessageIdentifier::UnclampBrakesCommand => UNCLAMP_BRAKES_COMMAND_ID,
-            MessageIdentifier::ClampBrakesCommand => CLAMP_BRAKES_COMMAND_ID,
-            MessageIdentifier::BrakesClamped => BRAKES_CLAMPED_ID,
-            MessageIdentifier::BrakesUnclamped => BRAKES_UNCLAMPED_ID,
-            MessageIdentifier::RetractLateralSuspensionCommand => {
-                RETRACT_LATERAL_SUSPENSION_COMMAND_ID
-            }
-            MessageIdentifier::ExtendLateralSuspensionCommand => {
-                EXTEND_LATERAL_SUSPENSION_COMMAND_ID
-            }
-            MessageIdentifier::LateralSuspensionRetracted => LATERAL_SUSPENSION_RETRACTED_ID,
-            MessageIdentifier::LateralSuspensionExtended => LATERAL_SUSPENSION_EXTENDED_ID,
-
-            // Propulsion
-            MessageIdentifier::StartPropulsionAccelerationCommand => {
-                START_PROPULSION_ACCELERATION_COMMAND_ID
-            }
-            MessageIdentifier::StartPropulsionBrakingCommand => START_PROPULSION_BRAKING_COMMAND_ID,
-            MessageIdentifier::PropulsionAccelerationStarted => PROPULSION_ACCELERATION_STARTED_ID,
-            MessageIdentifier::PropulsionBrakingStarted => PROPULSION_BRAKING_STARTED_ID,
+            MessageIdentifier::Event(event_id) => event_id.into(),
         }
     }
 }
@@ -145,60 +198,18 @@ impl TryFrom<u16> for MessageIdentifier {
             HEARTBEAT_ID => Ok(MessageIdentifier::Heartbeat),
             EMERGENCY_ID => Ok(MessageIdentifier::Emergency),
 
-            // Calibration
-            START_CALIBRATION_COMMAND_ID => Ok(MessageIdentifier::StartCalibrationCommand),
-            CALIBRATION_COMPLETE => Ok(MessageIdentifier::CalibrationComplete),
-
-            // Electronics
-            START_PRECHARGE_COMMAND_ID => Ok(MessageIdentifier::StartPrechargeCommand),
-            START_DISCHARGE_COMMAND_ID => Ok(MessageIdentifier::StartDischargeCommand),
-            PRECHARGE_STARTED_ID => Ok(MessageIdentifier::PrechargeStarted),
-            PRECHARGE_COMPLETE_ID => Ok(MessageIdentifier::PrechargeComplete),
-            PRECHARGE_FAILED_ID => Ok(MessageIdentifier::PrechargeFailed),
-            DISCHARGE_STARTED_ID => Ok(MessageIdentifier::DischargeStarted),
-            DISCHARGE_COMPLETE_ID => Ok(MessageIdentifier::DischargeComplete),
-
-            // Levitation
-            START_LEVITATION_COMMAND_ID => Ok(MessageIdentifier::StartLevitationCommand),
-            STOP_LEVITATION_COMMAND_ID => Ok(MessageIdentifier::StopLevitationCommand),
-            LEVITATION_STARTED_ID => Ok(MessageIdentifier::LevitationStarted),
-            LEVITATION_STOPPED_ID => Ok(MessageIdentifier::LevitationStopped),
-            LEVITATION_FAILED_ID => Ok(MessageIdentifier::LevitationFailed),
-
-            // Dynamics
-            UNCLAMP_BRAKES_COMMAND_ID => Ok(MessageIdentifier::UnclampBrakesCommand),
-            CLAMP_BRAKES_COMMAND_ID => Ok(MessageIdentifier::ClampBrakesCommand),
-            BRAKES_CLAMPED_ID => Ok(MessageIdentifier::BrakesClamped),
-            RETRACT_LATERAL_SUSPENSION_COMMAND_ID => {
-                Ok(MessageIdentifier::RetractLateralSuspensionCommand)
+            _ => {
+                if let Ok(event_id) = EventId::try_from(id) {
+                    Ok(MessageIdentifier::Event(event_id))
+                } else if let Ok(measurement_id) = MeasurementId::try_from(id) {
+                    Ok(MessageIdentifier::Measurement(measurement_id))
+                } else {
+                    Err("Invalid MessageIdentifier")
+                }
             }
-            EXTEND_LATERAL_SUSPENSION_COMMAND_ID => {
-                Ok(MessageIdentifier::ExtendLateralSuspensionCommand)
-            }
-            LATERAL_SUSPENSION_RETRACTED_ID => Ok(MessageIdentifier::LateralSuspensionRetracted),
-            LATERAL_SUSPENSION_EXTENDED_ID => Ok(MessageIdentifier::LateralSuspensionExtended),
-
-            // Propulsion
-            START_PROPULSION_ACCELERATION_COMMAND_ID => {
-                Ok(MessageIdentifier::StartPropulsionAccelerationCommand)
-            }
-            START_PROPULSION_BRAKING_COMMAND_ID => {
-                Ok(MessageIdentifier::StartPropulsionBrakingCommand)
-            }
-            PROPULSION_ACCELERATION_STARTED_ID => {
-                Ok(MessageIdentifier::PropulsionAccelerationStarted)
-            }
-            PROPULSION_BRAKING_STARTED_ID => Ok(MessageIdentifier::PropulsionBrakingStarted),
-
-            // Fallback
-            _ => match MeasurementId::try_from(id) {
-                Ok(measurement_id) => Ok(MessageIdentifier::Measurement(measurement_id)),
-                Err(e) => Err(e),
-            },
         }
     }
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
