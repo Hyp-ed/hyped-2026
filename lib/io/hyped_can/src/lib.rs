@@ -8,6 +8,7 @@
 #[derive(Debug)]
 pub enum CanError {
     Stuff,
+    Timeout,
     Form,
     Acknowledge,
     BitRecessive,
