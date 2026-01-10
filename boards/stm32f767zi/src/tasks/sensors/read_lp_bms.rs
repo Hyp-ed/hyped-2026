@@ -1,4 +1,4 @@
-use crate::{board_state::THIS_BOARD, tasks::can::send::CAN_SEND};
+use crate::{board_state::THIS_BOARD, io::Stm32f767ziCan, tasks::can::send::CAN_SEND};
 use defmt::warn;
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, watch::Sender};
 use embassy_time::{Duration, Timer};
@@ -9,18 +9,15 @@ use hyped_sensors::lp_bms::{BatteryData, Bms};
 
 /// Task to periodically read data from the LP BMS and send it over CAN
 #[embassy_executor::task]
-pub async fn read_lp_bms<T>(
-    bms: &'static mut Bms<'static, T>,
+pub async fn read_lp_bms(
+    bms: &'static mut Bms<'static, Stm32f767ziCan>,
     measurement_id: MeasurementId,
     latest_bms_sender: Sender<'static, CriticalSectionRawMutex, Option<BatteryData>, 1>,
-) -> !
-where
-    T: HypedCanTx + HypedCanRx,
-{
+) -> ! {
     let can_sender = CAN_SEND.sender();
 
     loop {
-        match bms.read_battery_data() {
+        match bms.read_battery_data().await {
             Ok(battery_data) => {
                 latest_bms_sender.send(Some(battery_data.clone()));
 
