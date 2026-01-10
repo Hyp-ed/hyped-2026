@@ -13,7 +13,7 @@ use crate::boards::Board;
 #[derive(Debug, Clone, Copy, PartialEq, defmt::Format)]
 pub struct Airgap(pub u16); // micrometers
 
-// Calculate absolute distance two airgaps
+// Calculate absolute distance between two airgaps
 impl Airgap {
     pub fn distance_to(&self, other: Airgap) -> u16 {
         if self.0 > other.0 {
