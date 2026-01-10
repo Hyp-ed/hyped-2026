@@ -11,11 +11,11 @@ use crate::boards::Board;
 // }
 
 #[derive(Debug, Clone, Copy, PartialEq, defmt::Format)]
-pub struct Airgap(pub u32); // millimeters
+pub struct Airgap(pub u16); // micrometers
 
 // Calculate absolute distance two airgaps
 impl Airgap {
-    pub fn distance_to(&self, other: Airgap) -> u32 {
+    pub fn distance_to(&self, other: Airgap) -> u16 {
         if self.0 > other.0 {
             self.0 - other.0
         } else {
@@ -25,13 +25,10 @@ impl Airgap {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, defmt::Format)]
-pub struct Current(pub u32); // milliamps
+pub struct Current(pub u16); // milliamps
 
 #[derive(Debug, Clone, Copy, PartialEq, defmt::Format)]
-pub struct Timestamp(pub u64); // milliseconds
-
-#[derive(Debug, Clone, Copy, PartialEq, defmt::Format)]
-pub struct Voltage(pub u32); // millivolts
+pub struct Voltage(pub u16); // centivolts
 
 #[derive(Debug, Clone, Copy, PartialEq, defmt::Format)]
 pub struct Pressure(pub u16); // bar
@@ -88,23 +85,19 @@ pub enum Event {
     // Confirmation
     PrechargeStarted {
         from: Board,
-        timestamp_ms: Timestamp,
     },
     DischargeStarted {
         from: Board,
-        timestamp_ms: Timestamp,
     },
 
     // Completion
     PrechargeComplete {
         from: Board,
-        timestamp_ms: Timestamp,
-        voltage_final_mv: Voltage,
+        voltage_final_cv: Voltage,
     },
     DischargeComplete {
         from: Board,
-        timestamp_ms: Timestamp,
-        voltage_final_mv: Voltage,
+        voltage_final_cv: Voltage,
     },
 
     // TODO do we want this?
@@ -120,8 +113,8 @@ pub enum Event {
     LevitationSystemsReady {
         ready: bool,
         // Send values if not ready
-        // check if we need this
-        current_airgap_mm: Airgap,
+        // TODO: check if we need this
+        current_airgap_μm: Airgap,
         current_ma: Current,
     },
 
@@ -132,21 +125,21 @@ pub enum Event {
     // Confirmation
     LevitationStarted {
         initial_current_ma: Current,
-        initial_airgap_mm: Airgap,
-        target_airgap_mm: Airgap,
+        initial_airgap_μm: Airgap,
+        target_airgap_μm: Airgap,
         //from: Board, // TODO: not sure here
     },
 
     // Continuous status updates
     LevitationStatus {
-        current_airgap_mm: Airgap,
-        target_airgap_mm: Airgap,
+        current_airgap_μm: Airgap,
+        target_airgap_μm: Airgap,
         current_ma: Current,
     },
 
     // Completion
     LevitationStopped {
-        final_airgap_mm: Airgap,
+        final_airgap_μm: Airgap,
         final_current_ma: Current,
     },
 
@@ -154,7 +147,7 @@ pub enum Event {
     // Failure
     LevitationFailed {
         reason: Reason,
-        current_airgap_mm: Airgap,
+        current_airgap_μm: Airgap,
         current_ma: Current,
     },
 
@@ -169,22 +162,18 @@ pub enum Event {
     // Completion
     BrakesClamped {
         actuator_pressure_bar: Pressure,
-        timestamp_ms: Timestamp,
     },
 
     BrakesUnclamped {
         actuator_pressure_bar: Pressure,
-        timestamp_ms: Timestamp,
     },
 
     LateralSuspensionRetracted {
         actuator_pressure_bar: Pressure,
-        timestamp_ms: Timestamp,
     },
 
     LateralSuspensionExtended {
         actuator_pressure_bar: Pressure,
-        timestamp_ms: Timestamp,
     },
 
     // TODO Failure events?
@@ -196,19 +185,15 @@ pub enum Event {
     StartPropulsionBrakingCommand,
 
     // Confirmation
-    PropulsionAccelerationStarted {
-        timestamp_ms: Timestamp,
-    },
-    PropulsionBrakingStarted {
-        timestamp_ms: Timestamp,
-    },
+    PropulsionAccelerationStarted,
+    PropulsionBrakingStarted,
 
     // Continuous status updates
     PropulsionStatus {
         current_ma: Current,
         velocity_kmh: Velocity,
         temperature_c: Temperature,
-        voltage_mv: Voltage,
+        voltage_cv: Voltage,
         frequency_hz: Frequency,
         force_n: Force, // calculated thrust force
     },

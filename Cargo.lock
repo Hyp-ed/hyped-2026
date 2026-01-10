@@ -609,6 +609,7 @@ dependencies = [
  "defmt 0.3.100",
  "embassy-executor",
  "embassy-net",
+ "embassy-time",
  "heapless",
  "hyped_communications",
  "hyped_core",

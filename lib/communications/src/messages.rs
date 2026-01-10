@@ -160,19 +160,19 @@ impl From<CanMessage> for HypedCanFrame {
             CanMessage::PrechargeComplete { board, voltage } => {
                 let can_id = CanId::new(
                     board,
-                    CanDataType::U32,
+                    CanDataType::U16,
                     MessageIdentifier::Event(EventId::PrechargeComplete),
                 );
-                let data = CanData::U32(voltage.0).into();
+                let data = CanData::U16(voltage.0).into();
                 HypedCanFrame::new(can_id.into(), data)
             }
             CanMessage::DischargeComplete { board, voltage } => {
                 let can_id = CanId::new(
                     board,
-                    CanDataType::U32,
+                    CanDataType::U16,
                     MessageIdentifier::Event(EventId::DischargeComplete),
                 );
-                let data = CanData::U32(voltage.0).into();
+                let data = CanData::U16(voltage.0).into();
                 HypedCanFrame::new(can_id.into(), data)
             }
 
@@ -383,7 +383,7 @@ impl From<HypedCanFrame> for CanMessage {
             MessageIdentifier::Event(EventId::PrechargeComplete) => {
                 let reading: CanData = frame.data.into();
                 match reading {
-                    CanData::U32(voltage) => CanMessage::PrechargeComplete {
+                    CanData::U16(voltage) => CanMessage::PrechargeComplete {
                         board,
                         voltage: Voltage(voltage),
                     },
@@ -393,7 +393,7 @@ impl From<HypedCanFrame> for CanMessage {
             MessageIdentifier::Event(EventId::DischargeComplete) => {
                 let reading: CanData = frame.data.into();
                 match reading {
-                    CanData::U32(voltage) => CanMessage::DischargeComplete {
+                    CanData::U16(voltage) => CanMessage::DischargeComplete {
                         board,
                         voltage: Voltage(voltage),
                     },

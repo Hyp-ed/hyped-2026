@@ -1,11 +1,7 @@
 use crate::states::State;
+use embassy_time::Instant;
 use heapless::FnvIndexSet;
-use hyped_communications::boards::Board;
-use hyped_communications::{
-    //actions::{Command, CommandTarget, Instruction, OUTGOING_COMMANDS},
-    bus::EVENT_BUS,
-    events::Event,
-};
+use hyped_communications::{boards::Board, bus::EVENT_BUS, events::Event};
 use hyped_core::logging::{debug, info, warn};
 
 pub struct StateMachine {
@@ -76,7 +72,7 @@ impl StateMachine {
         match event {
             // Emergency
             Event::Emergency { from, reason } => {
-                warn!("EMERGENCY: from {:?} reason={}", from, reason);
+                warn!("EMERGENCY: from {:?} reason={}", from, reason.0);
                 self.transition_to(State::Emergency).await;
                 return;
             }
@@ -181,24 +177,30 @@ impl StateMachine {
 
     async fn react_precharge(&mut self, event: Event) {
         match event {
-            Event::PrechargeStarted { from, timestamp_ms } => {
-                info!("Board {:?} started precharge at {}ms", from, timestamp_ms.0);
+            Event::PrechargeStarted { from } => {
+                info!(
+                    "Board {:?} started precharge at {}ms",
+                    from,
+                    Instant::now().as_millis(),
+                );
             }
             Event::PrechargeComplete {
                 from,
-                timestamp_ms,
-                voltage_final_mv,
+                voltage_final_cv,
             } => {
                 info!(
                     "Board {:?} completed precharge at {}ms",
-                    from, timestamp_ms.0
+                    from,
+                    Instant::now().as_millis(),
                 );
 
                 // Validate voltage - stated minimum should be close to  400V
-                // So = 400000mV target
+                // So = 40000 cV target
                 // Load capacitance reaches 5% of battery voltage, so allow 5% tolerance
-                if voltage_final_mv.0 < 380000 {
-                    warn!("Precharge voltage too low: {}mV", voltage_final_mv.0);
+                // TODO: Check this
+                // TODO: if having voltage display in cV is annoying can change to display in mV or V
+                if voltage_final_cv.0 < 38000 {
+                    warn!("Precharge voltage too low: {}cV", voltage_final_cv.0);
                     self.transition_to(State::Emergency).await; // TODO Emergency or no?
                     return;
                 }
@@ -238,16 +240,16 @@ impl StateMachine {
         match event {
             Event::BrakesUnclamped {
                 actuator_pressure_bar,
-                timestamp_ms,
             } => {
                 info!(
                     "Brakes unclamped: pressure={}bar at {}ms",
-                    actuator_pressure_bar.0, timestamp_ms.0
+                    actuator_pressure_bar.0,
+                    Instant::now().as_millis(),
                 );
             }
             Event::LevitationSystemsReady {
                 ready,
-                current_airgap_mm,
+                current_airgap_μm,
                 current_ma,
             } => {
                 if ready {
@@ -256,8 +258,8 @@ impl StateMachine {
                 } else {
                     warn!("Levitation systems not ready");
                     info!(
-                        "Status: current airgap: {:?}mm, current: {}ma",
-                        current_airgap_mm.0, current_ma.0
+                        "Status: current airgap: {:?}μm, current: {}mA",
+                        current_airgap_μm.0, current_ma.0
                     );
                 }
             }
@@ -285,12 +287,12 @@ impl StateMachine {
         match event {
             Event::LevitationStarted {
                 initial_current_ma,
-                initial_airgap_mm,
-                target_airgap_mm,
+                initial_airgap_μm,
+                target_airgap_μm,
             } => {
                 info!(
-                    "Status: initial current: {}ma, initial airgap: {}mm, target airgap: {:?}mm",
-                    initial_current_ma.0, initial_airgap_mm.0, target_airgap_mm.0
+                    "Status: initial current: {}mA, initial airgap: {}μm, target airgap: {:?}μm",
+                    initial_current_ma.0, initial_airgap_μm.0, target_airgap_μm.0
                 );
                 EVENT_BUS
                     .sender()
@@ -299,34 +301,34 @@ impl StateMachine {
             }
             Event::LateralSuspensionRetracted {
                 actuator_pressure_bar,
-                timestamp_ms,
             } => {
                 info!(
                     "Lateral suspension retracted: pressure={}bar at {}ms",
-                    actuator_pressure_bar.0, timestamp_ms.0
+                    actuator_pressure_bar.0,
+                    Instant::now().as_millis(),
                 );
             }
             Event::LevitationStatus {
-                current_airgap_mm,
-                target_airgap_mm,
+                current_airgap_μm,
+                target_airgap_μm,
                 current_ma,
             } => {
                 // calculate absolute distance
-                let dist_to_target = current_airgap_mm.distance_to(target_airgap_mm);
+                let dist_to_target = current_airgap_μm.distance_to(target_airgap_μm);
                 info!(
-                    "Status: current: {:?}ma, distance to target airgap: {}mm",
+                    "Status: current: {:?}mA, distance to target airgap: {}μm",
                     current_ma.0, dist_to_target
                 );
 
-                if dist_to_target < 5 {
-                    // TODO later: 5 is a placeholder, check with levitation team for real number
+                if dist_to_target < 5000 {
+                    // TODO later: 5000μm is a placeholder, check with levitation team for real number
                     // TODO later: track how long we've been stable before transitioning to ensure its not a fluctuation
                     info!("Levitation stable, transitioning to Ready");
                     self.transition_to(State::Ready).await;
                 }
             }
             Event::LevitationStopped {
-                final_airgap_mm,
+                final_airgap_μm,
                 final_current_ma,
             } => {} // TODO decide if we need this
             _ => {
@@ -351,27 +353,27 @@ impl StateMachine {
                 self.transition_to(State::Accelerate).await;
             }
             Event::LevitationStatus {
-                current_airgap_mm,
-                target_airgap_mm,
+                current_airgap_μm,
+                target_airgap_μm,
                 current_ma,
             } => {
-                let dist_to_target = current_airgap_mm.distance_to(target_airgap_mm);
+                let dist_to_target = current_airgap_μm.distance_to(target_airgap_μm);
 
                 // Handle if we drift too far from target
-                if dist_to_target > 10 {
+                if dist_to_target > 7000 {
                     // TODO check with levitation team how big
-                    warn!("Levitation unstable: {}mm from target", dist_to_target);
+                    warn!("Levitation unstable: {}μm from target", dist_to_target);
                 }
             }
             // TODO decide if we need this
             Event::LevitationFailed {
                 reason,
-                current_airgap_mm,
+                current_airgap_μm,
                 current_ma,
             } => {
                 warn!(
-                    "Levitation failed: reason={}, airgap={}mm, current={}mA",
-                    reason, current_airgap_mm.0, current_ma.0
+                    "Levitation failed: reason={}, airgap={}μm, current={}mA",
+                    reason.0, current_airgap_μm.0, current_ma.0
                 );
                 self.transition_to(State::Emergency).await;
             }
@@ -406,23 +408,23 @@ impl StateMachine {
                 info!("Operator initiated braking");
                 self.transition_to(State::Brake).await;
             }
-            Event::PropulsionAccelerationStarted { timestamp_ms } => {
-                info!("Acceleration started at {}ms", timestamp_ms.0);
+            Event::PropulsionAccelerationStarted => {
+                info!("Acceleration started at {}ms", Instant::now().as_millis());
             }
             Event::PropulsionStatus {
                 current_ma,
                 velocity_kmh,
                 temperature_c,
-                voltage_mv,
+                voltage_cv,
                 frequency_hz,
                 force_n,
             } => {
                 info!(
-                    "Propulsion status: {}mA, {}km/h, {}°C, {}mV, {}Hz, {}N",
+                    "Propulsion status: {}mA, {}km/h, {}°C, {}cV, {}Hz, {}N",
                     current_ma.0,
                     velocity_kmh.0,
                     temperature_c.0,
-                    voltage_mv.0,
+                    voltage_cv.0,
                     frequency_hz.0,
                     force_n.0
                 );
@@ -448,32 +450,32 @@ impl StateMachine {
 
     async fn react_brake(&mut self, event: Event) {
         match event {
-            Event::PropulsionBrakingStarted { timestamp_ms } => {
-                info!("Braking started at {}ms", timestamp_ms.0);
+            Event::PropulsionBrakingStarted => {
+                info!("Braking started at {}ms", Instant::now().as_millis(),);
             }
             Event::BrakesClamped {
                 actuator_pressure_bar,
-                timestamp_ms,
             } => {
                 info!(
                     "Brakes clamped: pressure={}bar at {}ms",
-                    actuator_pressure_bar.0, timestamp_ms.0
+                    actuator_pressure_bar.0,
+                    Instant::now().as_millis(),
                 );
             }
             Event::PropulsionStatus {
                 current_ma,
                 velocity_kmh,
                 temperature_c,
-                voltage_mv,
+                voltage_cv,
                 frequency_hz,
                 force_n,
             } => {
                 info!(
-                    "Propulsion status: {}mA, {}km/h, {}°C, {}mV, {}Hz, {}N",
+                    "Propulsion status: {}mA, {}km/h, {}°C, {}cV, {}Hz, {}N",
                     current_ma.0,
                     velocity_kmh.0,
                     temperature_c.0,
-                    voltage_mv.0,
+                    voltage_cv.0,
                     frequency_hz.0,
                     force_n.0
                 );
@@ -509,21 +511,21 @@ impl StateMachine {
         match event {
             Event::LateralSuspensionExtended {
                 actuator_pressure_bar,
-                timestamp_ms,
             } => {
                 info!(
                     "Lateral suspension extended: pressure={}bar at {}ms",
-                    actuator_pressure_bar.0, timestamp_ms.0
+                    actuator_pressure_bar.0,
+                    Instant::now().as_millis(),
                 );
                 EVENT_BUS.sender().send(Event::StopLevitationCommand).await;
             }
             Event::LevitationStopped {
-                final_airgap_mm,
+                final_airgap_μm,
                 final_current_ma,
             } => {
                 info!(
-                    "Levitation stopped: airgap={}mm, current={}mA",
-                    final_airgap_mm.0, final_current_ma.0
+                    "Levitation stopped: airgap={}μm, current={}mA",
+                    final_airgap_μm.0, final_current_ma.0
                 );
                 self.transition_to(State::Stopped).await;
             }
@@ -541,17 +543,22 @@ impl StateMachine {
     }
     async fn react_stopped(&mut self, event: Event) {
         match event {
-            Event::DischargeStarted { from, timestamp_ms } => {
-                info!("Board {:?} started discharge at {}ms", from, timestamp_ms.0);
+            Event::DischargeStarted { from } => {
+                info!(
+                    "Board {:?} started discharge at {}ms",
+                    from,
+                    Instant::now().as_millis(),
+                );
             }
             Event::DischargeComplete {
                 from,
-                timestamp_ms,
-                voltage_final_mv,
+                voltage_final_cv,
             } => {
                 info!(
-                    "Board {:?} completed discharge at {}ms",
-                    from, timestamp_ms.0
+                    "Board {:?} completed discharge at {}ms with a final voltage of {}cV",
+                    from,
+                    Instant::now().as_millis(),
+                    voltage_final_cv,
                 );
                 self.boards_discharged.insert(from);
 
@@ -593,21 +600,21 @@ impl StateMachine {
         match event {
             Event::BrakesClamped {
                 actuator_pressure_bar,
-                timestamp_ms,
             } => {
                 info!(
                     "Emergency brakes engaged: pressure={}bar at {}ms",
-                    actuator_pressure_bar.0, timestamp_ms.0
+                    actuator_pressure_bar.0,
+                    Instant::now().as_millis(),
                 );
             }
 
             Event::LateralSuspensionExtended {
                 actuator_pressure_bar,
-                timestamp_ms,
             } => {
                 info!(
                     "Emergency suspension extended: pressure={}bar at {}ms",
-                    actuator_pressure_bar.0, timestamp_ms.0
+                    actuator_pressure_bar.0,
+                    Instant::now().as_millis(),
                 );
             }
             // TODO decide what to do here
