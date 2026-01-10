@@ -248,11 +248,12 @@ dependencies = [
 
 [[package]]
 name = "dvida_serialize"
-version = "0.1.0"
+version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ef3aff3e3fa3a5363ad01142aec4e10ac6523ad70ef3d358b54777f336fabab7"
+checksum = "00743c097b59d5aa4e564539001d59f3e5d2404cd8c5fdf9f7f3a0ea1a663875"
 dependencies = [
  "dvida_serialize_macros",
+ "thiserror-core",
 ]
 
 [[package]]
@@ -1208,6 +1209,26 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d452f284b73e6d76dd36758a0c8684b1d5be31f92b89d07fd5822175732206fc"
 dependencies = [
  "thiserror-impl",
+]
+
+[[package]]
+name = "thiserror-core"
+version = "1.0.50"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c001ee18b7e5e3f62cbf58c7fe220119e68d902bb7443179c0c8aef30090e999"
+dependencies = [
+ "thiserror-core-impl",
+]
+
+[[package]]
+name = "thiserror-core-impl"
+version = "1.0.50"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e4c60d69f36615a077cc7663b9cb8e42275722d23e58a7fa3d2c7f2915d09d04"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]

@@ -73,7 +73,7 @@ hyped_gpio = { path = "../../lib/io/hyped_gpio" }
 hyped_gpio_derive = { path = "../../lib/io/hyped_gpio/hyped_gpio_derive" }
 hyped_spi = { path = "../../lib/io/hyped_spi" }
 hyped_spi_derive = { path = "../../lib/io/hyped_spi/hyped_spi_derive" }
-dvida_serialize = "0.1.0"
+dvida_serialize = "0.1.1"
 
 [[bin]]
 name = "telemetry"
