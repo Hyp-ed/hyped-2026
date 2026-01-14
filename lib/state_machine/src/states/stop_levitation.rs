@@ -26,14 +26,8 @@ impl StateMachine {
                 );
                 EVENT_BUS.sender().send(Event::StopLevitationCommand).await;
             }
-            Event::LevitationStopped {
-                final_airgap_μm,
-                final_current_ma,
-            } => {
-                info!(
-                    "Levitation stopped: airgap={}μm, current={}mA",
-                    final_airgap_μm.0, final_current_ma.0
-                );
+            Event::LevitationStopped { from } => {
+                info!("Levitation stopped on board={}", from);
                 self.transition_to(State::Stopped).await;
             }
             _ => {

@@ -21,10 +21,7 @@ impl StateMachine {
                     Instant::now().as_millis(),
                 );
             }
-            Event::PrechargeComplete {
-                from,
-                voltage_final_cv,
-            } => {
+            Event::PrechargeComplete { from, voltage_cv } => {
                 info!(
                     "Board {:?} completed precharge at {}ms",
                     from,
@@ -36,8 +33,8 @@ impl StateMachine {
                 // Load capacitance reaches 5% of battery voltage, so allow 5% tolerance
                 // TODO: Check this
                 // TODO: if having voltage display in cV is annoying can change to display in mV or V
-                if voltage_final_cv.0 < 38000 {
-                    warn!("Precharge voltage too low: {}cV", voltage_final_cv.0);
+                if voltage_cv.0 < 38000 {
+                    warn!("Precharge voltage too low: {}cV", voltage_cv.0);
                     self.transition_to(State::Emergency).await; // TODO Emergency or no?
                     return;
                 }

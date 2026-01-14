@@ -22,21 +22,9 @@ impl StateMachine {
                     Instant::now().as_millis(),
                 );
             }
-            Event::LevitationSystemsReady {
-                ready,
-                current_airgap_μm,
-                current_ma,
-            } => {
-                if ready {
-                    info!("Levitation systems ready, awaiting operator command");
-                    self.levitation_systems_ready = true;
-                } else {
-                    warn!("Levitation systems not ready");
-                    info!(
-                        "Status: current airgap: {:?}μm, current: {}mA",
-                        current_airgap_μm.0, current_ma.0
-                    );
-                }
+            Event::LevitationSystemsReady => {
+                info!("Levitation systems ready, awaiting operator command");
+                self.levitation_systems_ready = true;
             }
             Event::BeginLevitationOperatorCommand => {
                 if self.levitation_systems_ready {

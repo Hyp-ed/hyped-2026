@@ -1,5 +1,9 @@
 use crate::{state_enum::State, state_machine::StateMachine};
-use hyped_communications::{bus::EVENT_BUS, events::Event};
+use hyped_communications::{
+    bus::EVENT_BUS,
+    events::{Airgap, Event},
+};
+
 use hyped_core::logging::{debug, info, warn};
 
 impl StateMachine {
@@ -19,11 +23,12 @@ impl StateMachine {
                 self.transition_to(State::Accelerate).await;
             }
             Event::LevitationStatus {
-                current_airgap_μm,
-                target_airgap_μm,
+                from,
+                airgap_μm,
                 current_ma,
             } => {
-                let dist_to_target = current_airgap_μm.distance_to(target_airgap_μm);
+                let target_airgap_μm = Airgap(5000); // TODO confirm a figure for this
+                let dist_to_target = airgap_μm.distance_to(target_airgap_μm);
 
                 // Handle if we drift too far from target
                 if dist_to_target > 7000 {
@@ -32,15 +37,8 @@ impl StateMachine {
                 }
             }
             // TODO decide if we need this
-            Event::LevitationFailed {
-                reason,
-                current_airgap_μm,
-                current_ma,
-            } => {
-                warn!(
-                    "Levitation failed: reason={}, airgap={}μm, current={}mA",
-                    reason.0, current_airgap_μm.0, current_ma.0
-                );
+            Event::LevitationFailed { from, reason } => {
+                warn!("Levitation failed: reason={}, board={}", reason.0, from);
                 self.transition_to(State::Emergency).await;
             }
 

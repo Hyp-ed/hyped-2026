@@ -1,6 +1,10 @@
 use crate::{state_enum::State, state_machine::StateMachine};
 use embassy_time::Instant;
-use hyped_communications::{bus::EVENT_BUS, events::Event};
+use hyped_communications::{
+    bus::EVENT_BUS,
+    events::{Airgap, Event},
+};
+
 use hyped_core::logging::{debug, info};
 
 impl StateMachine {
@@ -11,15 +15,8 @@ impl StateMachine {
 
     pub(crate) async fn react_begin_levitation(&mut self, event: Event) {
         match event {
-            Event::LevitationStarted {
-                initial_current_ma,
-                initial_airgap_μm,
-                target_airgap_μm,
-            } => {
-                info!(
-                    "Status: initial current: {}mA, initial airgap: {}μm, target airgap: {:?}μm",
-                    initial_current_ma.0, initial_airgap_μm.0, target_airgap_μm.0
-                );
+            Event::LevitationStarted { from } => {
+                info!("Levitation has started on board: {} ", from);
                 EVENT_BUS
                     .sender()
                     .send(Event::RetractLateralSuspensionCommand)
@@ -35,14 +32,15 @@ impl StateMachine {
                 );
             }
             Event::LevitationStatus {
-                current_airgap_μm,
-                target_airgap_μm,
+                from,
+                airgap_μm,
                 current_ma,
             } => {
                 // calculate absolute distance
-                let dist_to_target = current_airgap_μm.distance_to(target_airgap_μm);
+                let target_airgap_μm = Airgap(5000);
+                let dist_to_target = airgap_μm.distance_to(target_airgap_μm);
                 info!(
-                    "Status: current: {:?}mA, distance to target airgap: {}μm",
+                    "Status: current={}mA, distance to target airgap={}μm",
                     current_ma.0, dist_to_target
                 );
 
@@ -53,10 +51,7 @@ impl StateMachine {
                     self.transition_to(State::Ready).await;
                 }
             }
-            Event::LevitationStopped {
-                final_airgap_μm,
-                final_current_ma,
-            } => {} // TODO decide if we need this
+            Event::LevitationStopped { from } => {} // TODO decide if we need this
             _ => {
                 debug!("Event {} is ignored in current state", event)
             }

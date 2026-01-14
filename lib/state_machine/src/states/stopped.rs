@@ -19,15 +19,12 @@ impl StateMachine {
                     Instant::now().as_millis(),
                 );
             }
-            Event::DischargeComplete {
-                from,
-                voltage_final_cv,
-            } => {
+            Event::DischargeComplete { from, voltage_cv } => {
                 info!(
                     "Board {:?} completed discharge at {}ms with a final voltage of {}cV",
                     from,
                     Instant::now().as_millis(),
-                    voltage_final_cv,
+                    voltage_cv,
                 );
                 self.boards_discharged.insert(from);
 

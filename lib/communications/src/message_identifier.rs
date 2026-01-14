@@ -29,6 +29,8 @@ pub enum EventId {
     LevitationStarted,
     LevitationStopped,
     LevitationFailed,
+    LevitationStatus,
+    LevitationSystemsReady,
 
     // Dynamics
     UnclampBrakesCommand,
@@ -39,12 +41,16 @@ pub enum EventId {
     BrakesUnclamped,
     LateralSuspensionRetracted,
     LateralSuspensionExtended,
+    DynamicsStatus,
 
     // Propulsion
     StartPropulsionAccelerationCommand,
     StartPropulsionBrakingCommand,
     PropulsionAccelerationStarted,
     PropulsionBrakingStarted,
+    PropulsionStatus,
+    PropulsionForce,
+    PropulsionFailed,
 }
 
 // 12 bits
@@ -72,22 +78,28 @@ const STOP_LEVITATION_COMMAND_ID: u16 = MAX_MESSAGE_IDENTIFIER - 15;
 const LEVITATION_STARTED_ID: u16 = MAX_MESSAGE_IDENTIFIER - 16;
 const LEVITATION_STOPPED_ID: u16 = MAX_MESSAGE_IDENTIFIER - 17;
 const LEVITATION_FAILED_ID: u16 = MAX_MESSAGE_IDENTIFIER - 18;
+const LEVITATION_STATUS_ID: u16 = MAX_MESSAGE_IDENTIFIER - 19;
+const LEVITATION_SYSTEMS_READY_ID: u16 = MAX_MESSAGE_IDENTIFIER - 20;
 
 // Dynamics
-const UNCLAMP_BRAKES_COMMAND_ID: u16 = MAX_MESSAGE_IDENTIFIER - 19;
-const CLAMP_BRAKES_COMMAND_ID: u16 = MAX_MESSAGE_IDENTIFIER - 20;
-const BRAKES_CLAMPED_ID: u16 = MAX_MESSAGE_IDENTIFIER - 21;
-const BRAKES_UNCLAMPED_ID: u16 = MAX_MESSAGE_IDENTIFIER - 22;
-const RETRACT_LATERAL_SUSPENSION_COMMAND_ID: u16 = MAX_MESSAGE_IDENTIFIER - 23;
-const EXTEND_LATERAL_SUSPENSION_COMMAND_ID: u16 = MAX_MESSAGE_IDENTIFIER - 24;
-const LATERAL_SUSPENSION_RETRACTED_ID: u16 = MAX_MESSAGE_IDENTIFIER - 25;
-const LATERAL_SUSPENSION_EXTENDED_ID: u16 = MAX_MESSAGE_IDENTIFIER - 26;
+const UNCLAMP_BRAKES_COMMAND_ID: u16 = MAX_MESSAGE_IDENTIFIER - 21;
+const CLAMP_BRAKES_COMMAND_ID: u16 = MAX_MESSAGE_IDENTIFIER - 22;
+const BRAKES_CLAMPED_ID: u16 = MAX_MESSAGE_IDENTIFIER - 23;
+const BRAKES_UNCLAMPED_ID: u16 = MAX_MESSAGE_IDENTIFIER - 24;
+const RETRACT_LATERAL_SUSPENSION_COMMAND_ID: u16 = MAX_MESSAGE_IDENTIFIER - 25;
+const EXTEND_LATERAL_SUSPENSION_COMMAND_ID: u16 = MAX_MESSAGE_IDENTIFIER - 26;
+const LATERAL_SUSPENSION_RETRACTED_ID: u16 = MAX_MESSAGE_IDENTIFIER - 27;
+const LATERAL_SUSPENSION_EXTENDED_ID: u16 = MAX_MESSAGE_IDENTIFIER - 28;
+const DYNAMICS_STATUS_ID: u16 = MAX_MESSAGE_IDENTIFIER - 29;
 
 // Propulsion
-const START_PROPULSION_ACCELERATION_COMMAND_ID: u16 = MAX_MESSAGE_IDENTIFIER - 27;
-const START_PROPULSION_BRAKING_COMMAND_ID: u16 = MAX_MESSAGE_IDENTIFIER - 28;
-const PROPULSION_ACCELERATION_STARTED_ID: u16 = MAX_MESSAGE_IDENTIFIER - 29;
-const PROPULSION_BRAKING_STARTED_ID: u16 = MAX_MESSAGE_IDENTIFIER - 30;
+const START_PROPULSION_ACCELERATION_COMMAND_ID: u16 = MAX_MESSAGE_IDENTIFIER - 30;
+const START_PROPULSION_BRAKING_COMMAND_ID: u16 = MAX_MESSAGE_IDENTIFIER - 31;
+const PROPULSION_ACCELERATION_STARTED_ID: u16 = MAX_MESSAGE_IDENTIFIER - 32;
+const PROPULSION_BRAKING_STARTED_ID: u16 = MAX_MESSAGE_IDENTIFIER - 33;
+const PROPULSION_STATUS_ID: u16 = MAX_MESSAGE_IDENTIFIER - 34;
+const PROPULSION_FORCE_ID: u16 = MAX_MESSAGE_IDENTIFIER - 35;
+const PROPULSION_FAILED_ID: u16 = MAX_MESSAGE_IDENTIFIER - 36;
 
 impl From<EventId> for u16 {
     fn from(val: EventId) -> Self {
@@ -111,6 +123,8 @@ impl From<EventId> for u16 {
             EventId::LevitationStarted => LEVITATION_STARTED_ID,
             EventId::LevitationStopped => LEVITATION_STOPPED_ID,
             EventId::LevitationFailed => LEVITATION_FAILED_ID,
+            EventId::LevitationStatus => LEVITATION_STATUS_ID,
+            EventId::LevitationSystemsReady => LEVITATION_SYSTEMS_READY_ID,
 
             // Dynamics
             EventId::UnclampBrakesCommand => UNCLAMP_BRAKES_COMMAND_ID,
@@ -121,12 +135,16 @@ impl From<EventId> for u16 {
             EventId::ExtendLateralSuspensionCommand => EXTEND_LATERAL_SUSPENSION_COMMAND_ID,
             EventId::LateralSuspensionRetracted => LATERAL_SUSPENSION_RETRACTED_ID,
             EventId::LateralSuspensionExtended => LATERAL_SUSPENSION_EXTENDED_ID,
+            EventId::DynamicsStatus => DYNAMICS_STATUS_ID,
 
             // Propulsion
             EventId::StartPropulsionAccelerationCommand => START_PROPULSION_ACCELERATION_COMMAND_ID,
             EventId::StartPropulsionBrakingCommand => START_PROPULSION_BRAKING_COMMAND_ID,
             EventId::PropulsionAccelerationStarted => PROPULSION_ACCELERATION_STARTED_ID,
             EventId::PropulsionBrakingStarted => PROPULSION_BRAKING_STARTED_ID,
+            EventId::PropulsionStatus => PROPULSION_STATUS_ID,
+            EventId::PropulsionForce => PROPULSION_FORCE_ID,
+            EventId::PropulsionFailed => PROPULSION_FAILED_ID,
         }
     }
 }
@@ -155,6 +173,8 @@ impl TryFrom<u16> for EventId {
             LEVITATION_STARTED_ID => Ok(EventId::LevitationStarted),
             LEVITATION_STOPPED_ID => Ok(EventId::LevitationStopped),
             LEVITATION_FAILED_ID => Ok(EventId::LevitationFailed),
+            LEVITATION_STATUS_ID => Ok(EventId::LevitationStatus),
+            LEVITATION_SYSTEMS_READY_ID => Ok(EventId::LevitationSystemsReady),
 
             // Dynamics
             UNCLAMP_BRAKES_COMMAND_ID => Ok(EventId::UnclampBrakesCommand),
@@ -165,6 +185,7 @@ impl TryFrom<u16> for EventId {
             EXTEND_LATERAL_SUSPENSION_COMMAND_ID => Ok(EventId::ExtendLateralSuspensionCommand),
             LATERAL_SUSPENSION_RETRACTED_ID => Ok(EventId::LateralSuspensionRetracted),
             LATERAL_SUSPENSION_EXTENDED_ID => Ok(EventId::LateralSuspensionExtended),
+            DYNAMICS_STATUS_ID => Ok(EventId::DynamicsStatus),
 
             // Propulsion
             START_PROPULSION_ACCELERATION_COMMAND_ID => {
@@ -173,6 +194,9 @@ impl TryFrom<u16> for EventId {
             START_PROPULSION_BRAKING_COMMAND_ID => Ok(EventId::StartPropulsionBrakingCommand),
             PROPULSION_ACCELERATION_STARTED_ID => Ok(EventId::PropulsionAccelerationStarted),
             PROPULSION_BRAKING_STARTED_ID => Ok(EventId::PropulsionBrakingStarted),
+            PROPULSION_STATUS_ID => Ok(EventId::PropulsionStatus),
+            PROPULSION_FORCE_ID => Ok(EventId::PropulsionForce),
+            PROPULSION_FAILED_ID => Ok(EventId::PropulsionFailed),
 
             _ => Err("Invalid EventId"),
         }

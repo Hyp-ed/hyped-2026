@@ -15,6 +15,12 @@ pub enum CanData {
     Emergency(Reason),
     U8(u8),
     U16(u16),
+    PropulsionStatus {
+        current_ma: u16,
+        velocity_kmh: u16,
+        temperature_c: u8,
+        voltage_cv: u16,
+    },
 }
 
 impl Display for CanData {
@@ -29,6 +35,14 @@ impl Display for CanData {
             CanData::Emergency(reason) => write!(formatter, "{reason:?}"),
             CanData::U8(u) => write!(formatter, "{u}"),
             CanData::U16(u) => write!(formatter, "{u}"),
+            CanData::PropulsionStatus {
+                current_ma,
+                velocity_kmh,
+                temperature_c,
+                voltage_cv,
+            } => {
+                write!(formatter, "current={current_ma}mA, vel={velocity_kmh}km/h, temp={temperature_c}C, volt={voltage_cv}cV")
+            }
         }
     }
 }
@@ -46,6 +60,7 @@ impl From<CanData> for u8 {
             CanData::Emergency(_) => 6,
             CanData::U8(_) => 7,
             CanData::U16(_) => 8,
+            CanData::PropulsionStatus { .. } => 9,
         }
     }
 }
@@ -63,6 +78,12 @@ impl From<u8> for CanData {
             6 => CanData::Emergency(Reason::Unknown),
             7 => CanData::U8(0),
             8 => CanData::U16(0),
+            9 => CanData::PropulsionStatus {
+                current_ma: 0,
+                velocity_kmh: 0,
+                temperature_c: 0,
+                voltage_cv: 0,
+            },
             _ => panic!("Invalid CanData index"),
         }
     }
@@ -133,6 +154,20 @@ impl From<CanData> for [u8; 8] {
                 data[1..3].copy_from_slice(&u16_bytes);
                 data
             }
+            CanData::PropulsionStatus {
+                current_ma,
+                velocity_kmh,
+                temperature_c,
+                voltage_cv,
+            } => {
+                let mut data: [u8; 8] = [0; 8];
+                data[0] = val.into();
+                data[1..3].copy_from_slice(&current_ma.to_le_bytes());
+                data[3..5].copy_from_slice(&velocity_kmh.to_le_bytes());
+                data[5] = temperature_c;
+                data[6..8].copy_from_slice(&voltage_cv.to_le_bytes());
+                data
+            }
         }
     }
 }
@@ -174,6 +209,18 @@ impl From<[u8; 8]> for CanData {
                 let u = u16::from_le_bytes(u16_bytes);
                 CanData::U16(u)
             }
+            CanData::PropulsionStatus { .. } => {
+                let current_ma = u16::from_le_bytes([data[1], data[2]]);
+                let velocity_kmh = u16::from_le_bytes([data[3], data[4]]);
+                let temperature_c = data[5];
+                let voltage_cv = u16::from_le_bytes([data[6], data[7]]);
+                CanData::PropulsionStatus {
+                    current_ma,
+                    velocity_kmh,
+                    temperature_c,
+                    voltage_cv,
+                }
+            }
         }
     }
 }
@@ -191,6 +238,7 @@ pub enum CanDataType {
     Emergency = 6,
     U8 = 7,
     U16 = 8,
+    PropulsionStatus = 9,
 }
 
 impl From<CanDataType> for u8 {
@@ -213,6 +261,7 @@ impl TryFrom<u8> for CanDataType {
             6 => Ok(CanDataType::Emergency),
             7 => Ok(CanDataType::U8),
             8 => Ok(CanDataType::U16),
+            9 => Ok(CanDataType::PropulsionStatus),
             _ => Err("Invalid CanDataType index"),
         }
     }
@@ -230,6 +279,7 @@ impl From<CanData> for CanDataType {
             CanData::Emergency(_) => CanDataType::Emergency,
             CanData::U8(_) => CanDataType::U8,
             CanData::U16(_) => CanDataType::U16,
+            CanData::PropulsionStatus { .. } => CanDataType::PropulsionStatus,
         }
     }
 }
@@ -246,6 +296,12 @@ impl From<CanDataType> for CanData {
             CanDataType::Emergency => CanData::Emergency(Reason::Unknown),
             CanDataType::U8 => CanData::U8(0),
             CanDataType::U16 => CanData::U16(0),
+            CanDataType::PropulsionStatus => CanData::PropulsionStatus {
+                current_ma: 0,
+                velocity_kmh: 0,
+                temperature_c: 0,
+                voltage_cv: 0,
+            },
         }
     }
 }

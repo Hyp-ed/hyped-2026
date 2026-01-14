@@ -34,17 +34,10 @@ impl StateMachine {
                 velocity_kmh,
                 temperature_c,
                 voltage_cv,
-                frequency_hz,
-                force_n,
             } => {
                 info!(
-                    "Propulsion status: {}mA, {}km/h, {}°C, {}cV, {}Hz, {}N",
-                    current_ma.0,
-                    velocity_kmh.0,
-                    temperature_c.0,
-                    voltage_cv.0,
-                    frequency_hz.0,
-                    force_n.0
+                    "Propulsion status: {}mA, {}km/h, {}°C, {}cV",
+                    current_ma.0, velocity_kmh.0, temperature_c.0, voltage_cv.0,
                 );
                 info!("Braking: velocity={}km/h", velocity_kmh.0);
 
@@ -53,6 +46,13 @@ impl StateMachine {
                     info!("Pod has stopped, ready for stop levitation command");
                     // TODO: auto transition or wait for operator?
                 }
+            }
+            Event::PropulsionForce { force_n } => {
+                info!(
+                    "
+                Calculated propulsion force: {}N",
+                    force_n.0
+                )
             }
             Event::StopLevitationOperatorCommand => {
                 info!("Stop levitation pressed");

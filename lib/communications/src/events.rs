@@ -39,8 +39,8 @@ pub struct Velocity(pub u16); // km/h
 #[derive(Debug, Clone, Copy, PartialEq, defmt::Format)]
 pub struct Temperature(pub u8); // celsius
 
-#[derive(Debug, Clone, Copy, PartialEq, defmt::Format)]
-pub struct Frequency(pub u16); // hertz
+// #[derive(Debug, Clone, Copy, PartialEq, defmt::Format)]
+// pub struct Frequency(pub u16); // hertz
 
 #[derive(Debug, Clone, Copy, PartialEq, defmt::Format)]
 pub struct Force(pub u16); // newtons
@@ -93,14 +93,13 @@ pub enum Event {
     // Completion
     PrechargeComplete {
         from: Board,
-        voltage_final_cv: Voltage,
+        voltage_cv: Voltage,
     },
     DischargeComplete {
         from: Board,
-        voltage_final_cv: Voltage,
+        voltage_cv: Voltage,
     },
 
-    // TODO do we want this?
     // Failure
     PrechargeFailed {
         from: Board,
@@ -110,13 +109,7 @@ pub enum Event {
     // ------ Levitation ------
 
     // Ready check
-    LevitationSystemsReady {
-        ready: bool,
-        // Send values if not ready
-        // TODO: check if we need this
-        current_airgap_μm: Airgap,
-        current_ma: Current,
-    },
+    LevitationSystemsReady,
 
     // Commands from FSM
     StartLevitationCommand,
@@ -124,31 +117,25 @@ pub enum Event {
 
     // Confirmation
     LevitationStarted {
-        initial_current_ma: Current,
-        initial_airgap_μm: Airgap,
-        target_airgap_μm: Airgap,
-        //from: Board, // TODO: not sure here
+        from: Board,
     },
 
     // Continuous status updates
     LevitationStatus {
-        current_airgap_μm: Airgap,
-        target_airgap_μm: Airgap,
+        from: Board,
+        airgap_μm: Airgap,
         current_ma: Current,
     },
 
     // Completion
     LevitationStopped {
-        final_airgap_μm: Airgap,
-        final_current_ma: Current,
+        from: Board,
     },
 
-    // TODO If we want to handle rather than trigger shutdown?
     // Failure
     LevitationFailed {
+        from: Board,
         reason: Reason,
-        current_airgap_μm: Airgap,
-        current_ma: Current,
     },
 
     // ------ Dynamics ------
@@ -194,8 +181,14 @@ pub enum Event {
         velocity_kmh: Velocity,
         temperature_c: Temperature,
         voltage_cv: Voltage,
-        frequency_hz: Frequency,
+    },
+
+    PropulsionForce {
         force_n: Force, // calculated thrust force
     },
-    // TODO decide whether to handle failure here or as an emergency
+
+    PropulsionFailed {
+        from: Board,
+        reason: Reason,
+    },
 }
