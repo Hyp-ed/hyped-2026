@@ -5,8 +5,8 @@ use hyped_communications::{
     heartbeat::Heartbeat,
     measurements::MeasurementReading,
     messages::CanMessage,
-    state_transition::{StateTransitionCommand, StateTransitionRequest},
-};
+    bus::EVENT_BUS};
+
 
 use crate::board_state::EMERGENCY;
 
@@ -15,19 +15,19 @@ use panic_probe as _;
 
 /// Stores incoming state transitions received from CAN.
 /// All boards should listen to this channel and update their states accordingly.
-pub static INCOMING_STATE_TRANSITION_COMMANDS: Channel<
-    CriticalSectionRawMutex,
-    StateTransitionCommand,
-    10,
-> = Channel::new();
+// pub static INCOMING_STATE_TRANSITION_COMMANDS: Channel<
+//     CriticalSectionRawMutex,
+//     StateTransitionCommand,
+//     10,
+// > = Channel::new();
 
 /// Stores incoming state transition requests received from CAN.
 /// Only used by the main control board running the state_machine task.
-pub static INCOMING_STATE_TRANSITION_REQUESTS: Channel<
-    CriticalSectionRawMutex,
-    StateTransitionRequest,
-    10,
-> = Channel::new();
+// pub static INCOMING_STATE_TRANSITION_REQUESTS: Channel<
+//     CriticalSectionRawMutex,
+//     StateTransitionRequest,
+//     10,
+// > = Channel::new();
 
 /// Stores heartbeat messages coming in from other boards that we need to respond to.
 pub static INCOMING_HEARTBEATS: Channel<CriticalSectionRawMutex, Heartbeat, 10> = Channel::new();
@@ -66,17 +66,17 @@ pub async fn can_receiver(mut rx: CanRx<'static>) {
         defmt::debug!("Received CAN message: {:?}", can_message);
 
         match can_message {
-            CanMessage::StateTransitionCommand(state_transition_command) => {
-                state_transition_commands_sender
-                    .send(state_transition_command)
-                    .await;
-            }
-            // Requests will only be used on the primary board running the state_machine task.
-            CanMessage::StateTransitionRequest(state_transition) => {
-                state_transition_requests_sender
-                    .send(state_transition)
-                    .await;
-            }
+            // CanMessage::StateTransitionCommand(state_transition_command) => {
+            //     state_transition_commands_sender
+            //         .send(state_transition_command)
+            //         .await;
+            // }
+            // // Requests will only be used on the primary board running the state_machine task.
+            // CanMessage::StateTransitionRequest(state_transition) => {
+            //     state_transition_requests_sender
+            //         .send(state_transition)
+            //         .await;
+            // }
             CanMessage::Heartbeat(heartbeat) => {
                 defmt::debug!("Received heartbeat: {:?}", heartbeat);
                 incoming_heartbeat_sender.send(heartbeat).await;

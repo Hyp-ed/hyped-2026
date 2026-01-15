@@ -1,4 +1,4 @@
-#[derive(Debug, Clone, Copy, PartialEq, defmt::Format)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, defmt::Format)]
 pub enum Board {
     Telemetry = 0,
     Navigation = 1,
