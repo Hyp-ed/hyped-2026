@@ -148,18 +148,22 @@ pub enum Event {
 
     // Completion
     BrakesClamped {
-        actuator_pressure_bar: Pressure,
+        from: Board,
     },
 
     BrakesUnclamped {
-        actuator_pressure_bar: Pressure,
+        from: Board,
     },
 
     LateralSuspensionRetracted {
-        actuator_pressure_bar: Pressure,
+        from: Board,
     },
 
     LateralSuspensionExtended {
+        from: Board,
+    },
+    DynamicsStatus {
+        from: Board,
         actuator_pressure_bar: Pressure,
     },
 

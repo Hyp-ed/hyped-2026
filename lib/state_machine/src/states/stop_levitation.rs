@@ -16,15 +16,24 @@ impl StateMachine {
     }
     pub(crate) async fn react_stop_levitation(&mut self, event: Event) {
         match event {
-            Event::LateralSuspensionExtended {
-                actuator_pressure_bar,
-            } => {
+            Event::LateralSuspensionExtended { from } => {
                 info!(
-                    "Lateral suspension extended: pressure={}bar at {}ms",
-                    actuator_pressure_bar.0,
+                    "Lateral suspension extended: board={} at {}ms",
+                    from,
                     Instant::now().as_millis(),
                 );
                 EVENT_BUS.sender().send(Event::StopLevitationCommand).await;
+            }
+            Event::DynamicsStatus {
+                from,
+                actuator_pressure_bar,
+            } => {
+                info!(
+                    "Dynamics Status: board={}, actuator pressure={}bar at {}ms",
+                    from,
+                    actuator_pressure_bar,
+                    Instant::now().as_millis(),
+                )
             }
             Event::LevitationStopped { from } => {
                 info!("Levitation stopped on board={}", from);

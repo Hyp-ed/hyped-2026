@@ -28,25 +28,31 @@ pub enum CanMessage {
 
     // Calibration
     StartCalibrationCommand,
-    CalibrationComplete(Board),
+    CalibrationComplete {
+        from: Board,
+    },
 
     // Electronics
     StartPrechargeCommand,
     StartDischargeCommand,
-    PrechargeStarted(Board),
-    DischargeStarted(Board),
+    PrechargeStarted {
+        from: Board,
+    },
+    DischargeStarted {
+        from: Board,
+    },
 
     // Includes Data
     PrechargeComplete {
-        board: Board,
+        from: Board,
         voltage: Voltage,
     },
     DischargeComplete {
-        board: Board,
+        from: Board,
         voltage: Voltage,
     },
     PrechargeFailed {
-        board: Board,
+        from: Board,
         reason: Reason,
     },
 
@@ -55,18 +61,18 @@ pub enum CanMessage {
     StopLevitationCommand,
     LevitationSystemsReady,
     LevitationStarted {
-        board: Board,
+        from: Board,
     },
     LevitationStopped {
-        board: Board,
+        from: Board,
     },
     LevitationStatus {
-        board: Board,
+        from: Board,
         current_ma: Current,
         airgap_μm: Airgap,
     },
     LevitationFailed {
-        board: Board,
+        from: Board,
         reason: Reason,
     },
 
@@ -78,19 +84,19 @@ pub enum CanMessage {
 
     // TODO: moved pressure to DynamicsStatus, so send that event when needed
     BrakesClamped {
-        board: Board,
+        from: Board,
     },
     BrakesUnclamped {
-        board: Board,
+        from: Board,
     },
     LateralSuspensionRetracted {
-        board: Board,
+        from: Board,
     },
     LateralSuspensionExtended {
-        board: Board,
+        from: Board,
     },
     DynamicsStatus {
-        board: Board,
+        from: Board,
         actuator_pressure_bar: Pressure,
     },
 
@@ -110,7 +116,7 @@ pub enum CanMessage {
         force_n: Force, // calculated thrust force
     },
     PropulsionFailed {
-        board: Board,
+        from: Board,
         reason: Reason,
     },
 }
@@ -138,9 +144,8 @@ impl From<CanMessage> for HypedCanFrame {
                 );
                 HypedCanFrame::new(can_id.into(), CanData::Heartbeat(heartbeat.to).into())
             }
-            CanMessage::Emergency(board, reason) => {
-                let can_id =
-                    CanId::new(board, CanDataType::Emergency, MessageIdentifier::Emergency);
+            CanMessage::Emergency(from, reason) => {
+                let can_id = CanId::new(from, CanDataType::Emergency, MessageIdentifier::Emergency);
                 HypedCanFrame::new(can_id.into(), CanData::Emergency(reason).into())
             }
 
@@ -153,9 +158,9 @@ impl From<CanMessage> for HypedCanFrame {
                 );
                 HypedCanFrame::new(can_id.into(), [0u8; 8])
             }
-            CanMessage::CalibrationComplete(board) => {
+            CanMessage::CalibrationComplete { from } => {
                 let can_id: CanId = CanId::new(
-                    board,
+                    from,
                     CanDataType::U32,
                     MessageIdentifier::Event(EventId::CalibrationComplete),
                 );
@@ -179,43 +184,43 @@ impl From<CanMessage> for HypedCanFrame {
                 );
                 HypedCanFrame::new(can_id.into(), [0u8; 8])
             }
-            CanMessage::PrechargeStarted(board) => {
+            CanMessage::PrechargeStarted { from } => {
                 let can_id: CanId = CanId::new(
-                    board,
+                    from,
                     CanDataType::U32,
                     MessageIdentifier::Event(EventId::PrechargeStarted),
                 );
                 HypedCanFrame::new(can_id.into(), [0u8; 8])
             }
-            CanMessage::DischargeStarted(board) => {
+            CanMessage::DischargeStarted { from } => {
                 let can_id: CanId = CanId::new(
-                    board,
+                    from,
                     CanDataType::U32,
                     MessageIdentifier::Event(EventId::DischargeStarted),
                 );
                 HypedCanFrame::new(can_id.into(), [0u8; 8])
             }
-            CanMessage::PrechargeFailed { board, reason } => {
+            CanMessage::PrechargeFailed { from, reason } => {
                 let can_id: CanId = CanId::new(
-                    board,
+                    from,
                     CanDataType::U8,
                     MessageIdentifier::Event(EventId::PrechargeFailed),
                 );
                 let data = CanData::U8(reason as u8).into();
                 HypedCanFrame::new(can_id.into(), data)
             }
-            CanMessage::PrechargeComplete { board, voltage } => {
+            CanMessage::PrechargeComplete { from, voltage } => {
                 let can_id = CanId::new(
-                    board,
+                    from,
                     CanDataType::U16,
                     MessageIdentifier::Event(EventId::PrechargeComplete),
                 );
                 let data = CanData::U16(voltage.0).into();
                 HypedCanFrame::new(can_id.into(), data)
             }
-            CanMessage::DischargeComplete { board, voltage } => {
+            CanMessage::DischargeComplete { from, voltage } => {
                 let can_id = CanId::new(
-                    board,
+                    from,
                     CanDataType::U16,
                     MessageIdentifier::Event(EventId::DischargeComplete),
                 );
@@ -248,38 +253,38 @@ impl From<CanMessage> for HypedCanFrame {
                 );
                 HypedCanFrame::new(can_id.into(), [0u8; 8])
             }
-            CanMessage::LevitationStarted { board } => {
+            CanMessage::LevitationStarted { from } => {
                 let can_id: CanId = CanId::new(
-                    board,
+                    from,
                     CanDataType::U32,
                     MessageIdentifier::Event(EventId::LevitationStarted),
                 );
                 HypedCanFrame::new(can_id.into(), [0u8; 8])
             }
-            CanMessage::LevitationStopped { board } => {
+            CanMessage::LevitationStopped { from } => {
                 let can_id: CanId = CanId::new(
-                    board,
+                    from,
                     CanDataType::U32,
                     MessageIdentifier::Event(EventId::LevitationStopped),
                 );
                 HypedCanFrame::new(can_id.into(), [0u8; 8])
             }
             CanMessage::LevitationStatus {
-                board,
+                from,
                 current_ma,
                 airgap_μm,
             } => {
                 let can_id: CanId = CanId::new(
-                    board,
+                    from,
                     CanDataType::TwoU16,
                     MessageIdentifier::Event(EventId::LevitationStatus),
                 );
                 let data: [u8; 8] = CanData::TwoU16([current_ma.0, airgap_μm.0]).into();
                 HypedCanFrame::new(can_id.into(), data)
             }
-            CanMessage::LevitationFailed { board, reason } => {
+            CanMessage::LevitationFailed { from, reason } => {
                 let can_id: CanId = CanId::new(
-                    board,
+                    from,
                     CanDataType::U8,
                     MessageIdentifier::Event(EventId::LevitationFailed),
                 );
@@ -321,44 +326,44 @@ impl From<CanMessage> for HypedCanFrame {
                 HypedCanFrame::new(can_id.into(), [0u8; 8])
             }
 
-            CanMessage::BrakesClamped { board } => {
+            CanMessage::BrakesClamped { from } => {
                 let can_id: CanId = CanId::new(
-                    board,
+                    from,
                     CanDataType::U32,
                     MessageIdentifier::Event(EventId::BrakesClamped),
                 );
                 HypedCanFrame::new(can_id.into(), [0u8; 8])
             }
-            CanMessage::BrakesUnclamped { board } => {
+            CanMessage::BrakesUnclamped { from } => {
                 let can_id: CanId = CanId::new(
-                    board,
+                    from,
                     CanDataType::U32,
                     MessageIdentifier::Event(EventId::BrakesUnclamped),
                 );
                 HypedCanFrame::new(can_id.into(), [0u8; 8])
             }
-            CanMessage::LateralSuspensionExtended { board } => {
+            CanMessage::LateralSuspensionExtended { from } => {
                 let can_id: CanId = CanId::new(
-                    board,
+                    from,
                     CanDataType::U32,
                     MessageIdentifier::Event(EventId::LateralSuspensionExtended),
                 );
                 HypedCanFrame::new(can_id.into(), [0u8; 8])
             }
-            CanMessage::LateralSuspensionRetracted { board } => {
+            CanMessage::LateralSuspensionRetracted { from } => {
                 let can_id: CanId = CanId::new(
-                    board,
+                    from,
                     CanDataType::U32,
                     MessageIdentifier::Event(EventId::LateralSuspensionRetracted),
                 );
                 HypedCanFrame::new(can_id.into(), [0u8; 8])
             }
             CanMessage::DynamicsStatus {
-                board,
+                from,
                 actuator_pressure_bar,
             } => {
                 let can_id: CanId = CanId::new(
-                    board,
+                    from,
                     CanDataType::U16,
                     MessageIdentifier::Event(EventId::DynamicsStatus),
                 );
@@ -429,9 +434,9 @@ impl From<CanMessage> for HypedCanFrame {
                 );
                 HypedCanFrame::new(can_id.into(), [0u8; 8])
             }
-            CanMessage::PropulsionFailed { board, reason } => {
+            CanMessage::PropulsionFailed { from, reason } => {
                 let can_id: CanId = CanId::new(
-                    board,
+                    from,
                     CanDataType::U8,
                     MessageIdentifier::Event(EventId::PropulsionFailed),
                 );
@@ -447,7 +452,7 @@ impl From<HypedCanFrame> for CanMessage {
     fn from(frame: HypedCanFrame) -> Self {
         let can_id: CanId = frame.can_id.into();
         let message_identifier = can_id.message_identifier;
-        let board = can_id.board;
+        let from = can_id.board;
 
         match message_identifier {
             // Existing
@@ -455,7 +460,7 @@ impl From<HypedCanFrame> for CanMessage {
                 let reading: CanData = frame.data.into();
                 let measurement_reading = MeasurementReading {
                     reading,
-                    board,
+                    board: from,
                     measurement_id,
                 };
                 CanMessage::MeasurementReading(measurement_reading)
@@ -464,7 +469,7 @@ impl From<HypedCanFrame> for CanMessage {
                 let reading: CanData = frame.data.into();
                 match reading {
                     CanData::Heartbeat(to) => {
-                        let heartbeat = Heartbeat::new(to, board);
+                        let heartbeat = Heartbeat::new(to, from);
                         CanMessage::Heartbeat(heartbeat)
                     }
                     _ => panic!("Invalid CanData for Heartbeat"),
@@ -473,7 +478,7 @@ impl From<HypedCanFrame> for CanMessage {
             MessageIdentifier::Emergency => {
                 let reading: CanData = frame.data.into();
                 match reading {
-                    CanData::Emergency(reason) => CanMessage::Emergency(board, reason),
+                    CanData::Emergency(reason) => CanMessage::Emergency(from, reason),
                     _ => panic!("Invalid CanData for Emergency"),
                 }
             }
@@ -483,7 +488,7 @@ impl From<HypedCanFrame> for CanMessage {
                 CanMessage::StartCalibrationCommand
             }
             MessageIdentifier::Event(EventId::CalibrationComplete) => {
-                CanMessage::CalibrationComplete(board)
+                CanMessage::CalibrationComplete { from }
             }
 
             // Electronics
@@ -494,16 +499,17 @@ impl From<HypedCanFrame> for CanMessage {
                 CanMessage::StartDischargeCommand
             }
             MessageIdentifier::Event(EventId::PrechargeStarted) => {
-                CanMessage::PrechargeStarted(board)
+                CanMessage::PrechargeStarted { from }
             }
             MessageIdentifier::Event(EventId::DischargeStarted) => {
-                CanMessage::DischargeStarted(board)
+                CanMessage::DischargeStarted { from }
             }
+
             MessageIdentifier::Event(EventId::PrechargeComplete) => {
                 let reading: CanData = frame.data.into();
                 match reading {
                     CanData::U16(voltage) => CanMessage::PrechargeComplete {
-                        board,
+                        from,
                         voltage: Voltage(voltage),
                     },
                     _ => panic!("Invalid CanData for PrechargeComplete"),
@@ -513,7 +519,7 @@ impl From<HypedCanFrame> for CanMessage {
                 let reading: CanData = frame.data.into();
                 match reading {
                     CanData::U16(voltage) => CanMessage::DischargeComplete {
-                        board,
+                        from,
                         voltage: Voltage(voltage),
                     },
                     _ => panic!("Invalid CanData for DischargeComplete"),
@@ -523,7 +529,7 @@ impl From<HypedCanFrame> for CanMessage {
                 let reading: CanData = frame.data.into();
                 match reading {
                     CanData::U8(reason_u8) => CanMessage::PrechargeFailed {
-                        board,
+                        from,
                         reason: Reason::try_from(reason_u8).unwrap(),
                     },
                     _ => panic!("Invalid CanData for PrechargeFailed"),
@@ -538,7 +544,7 @@ impl From<HypedCanFrame> for CanMessage {
                 CanMessage::StopLevitationCommand
             }
             MessageIdentifier::Event(EventId::LevitationStarted) => {
-                CanMessage::LevitationStarted { board }
+                CanMessage::LevitationStarted { from }
             }
             MessageIdentifier::Event(EventId::LevitationSystemsReady) => {
                 CanMessage::LevitationSystemsReady
@@ -547,7 +553,7 @@ impl From<HypedCanFrame> for CanMessage {
                 let reading: CanData = frame.data.into();
                 match reading {
                     CanData::TwoU16([current_ma, airgap_μm]) => CanMessage::LevitationStatus {
-                        board,
+                        from,
                         current_ma: Current(current_ma),
                         airgap_μm: Airgap(airgap_μm),
                     },
@@ -556,13 +562,13 @@ impl From<HypedCanFrame> for CanMessage {
             }
 
             MessageIdentifier::Event(EventId::LevitationStopped) => {
-                CanMessage::LevitationStopped { board }
+                CanMessage::LevitationStopped { from }
             }
             MessageIdentifier::Event(EventId::LevitationFailed) => {
                 let reading: CanData = frame.data.into();
                 match reading {
                     CanData::U8(reason_u8) => CanMessage::LevitationFailed {
-                        board,
+                        from,
                         reason: Reason::try_from(reason_u8).unwrap(),
                     },
                     _ => panic!("Invalid CanData for LevitationFailed"),
@@ -580,21 +586,21 @@ impl From<HypedCanFrame> for CanMessage {
             MessageIdentifier::Event(EventId::ExtendLateralSuspensionCommand) => {
                 CanMessage::ExtendLateralSuspensionCommand
             }
-            MessageIdentifier::Event(EventId::BrakesClamped) => CanMessage::BrakesClamped { board },
+            MessageIdentifier::Event(EventId::BrakesClamped) => CanMessage::BrakesClamped { from },
             MessageIdentifier::Event(EventId::BrakesUnclamped) => {
-                CanMessage::BrakesUnclamped { board }
+                CanMessage::BrakesUnclamped { from }
             }
             MessageIdentifier::Event(EventId::LateralSuspensionRetracted) => {
-                CanMessage::LateralSuspensionRetracted { board }
+                CanMessage::LateralSuspensionRetracted { from }
             }
             MessageIdentifier::Event(EventId::LateralSuspensionExtended) => {
-                CanMessage::LateralSuspensionExtended { board }
+                CanMessage::LateralSuspensionExtended { from }
             }
             MessageIdentifier::Event(EventId::DynamicsStatus) => {
                 let reading: CanData = frame.data.into();
                 match reading {
                     CanData::U16(pressure) => CanMessage::DynamicsStatus {
-                        board,
+                        from,
                         actuator_pressure_bar: Pressure(pressure),
                     },
                     _ => panic!("Invalid CanData for DynamicsStatus"),
@@ -644,7 +650,7 @@ impl From<HypedCanFrame> for CanMessage {
                 let reading: CanData = frame.data.into();
                 match reading {
                     CanData::U8(reason_u8) => CanMessage::PropulsionFailed {
-                        board,
+                        from,
                         reason: Reason::try_from(reason_u8).unwrap(),
                     },
                     _ => panic!("Invalid CanData for PropulsionFailed"),

@@ -22,22 +22,28 @@ impl StateMachine {
 
     pub(crate) async fn react_emergency(&mut self, event: Event) {
         match event {
-            Event::BrakesClamped {
-                actuator_pressure_bar,
-            } => {
+            Event::BrakesClamped { from } => {
                 info!(
-                    "Emergency brakes engaged: pressure={}bar at {}ms",
-                    actuator_pressure_bar.0,
+                    "Emergency brakes engaged: board={} at {}ms",
+                    from,
                     Instant::now().as_millis(),
                 );
             }
-
-            Event::LateralSuspensionExtended {
+            Event::DynamicsStatus {
+                from,
                 actuator_pressure_bar,
             } => {
                 info!(
-                    "Emergency suspension extended: pressure={}bar at {}ms",
-                    actuator_pressure_bar.0,
+                    "Dynamics Status: board={}, actuator pressure={}bar at {}ms",
+                    from,
+                    actuator_pressure_bar,
+                    Instant::now().as_millis(),
+                )
+            }
+            Event::LateralSuspensionExtended { from } => {
+                info!(
+                    "Emergency suspension extended: board={} at {}ms",
+                    from,
                     Instant::now().as_millis(),
                 );
             }

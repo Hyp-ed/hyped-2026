@@ -22,14 +22,23 @@ impl StateMachine {
                     .send(Event::RetractLateralSuspensionCommand)
                     .await;
             }
-            Event::LateralSuspensionRetracted {
+            Event::LateralSuspensionRetracted { from } => {
+                info!(
+                    "Lateral suspension retracted: board={} at {}ms",
+                    from,
+                    Instant::now().as_millis(),
+                );
+            }
+            Event::DynamicsStatus {
+                from,
                 actuator_pressure_bar,
             } => {
                 info!(
-                    "Lateral suspension retracted: pressure={}bar at {}ms",
-                    actuator_pressure_bar.0,
+                    "Dynamics Status: board={}, actuator pressure={}bar at {}ms",
+                    from,
+                    actuator_pressure_bar,
                     Instant::now().as_millis(),
-                );
+                )
             }
             Event::LevitationStatus {
                 from,
@@ -40,8 +49,8 @@ impl StateMachine {
                 let target_airgap_μm = Airgap(5000);
                 let dist_to_target = airgap_μm.distance_to(target_airgap_μm);
                 info!(
-                    "Status: current={}mA, distance to target airgap={}μm",
-                    current_ma.0, dist_to_target
+                    "Status: board={}, current={}mA, distance to target airgap={}μm",
+                    from, current_ma.0, dist_to_target
                 );
 
                 if dist_to_target < 5000 {

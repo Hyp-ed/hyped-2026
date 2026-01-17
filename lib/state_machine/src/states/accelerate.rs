@@ -4,8 +4,6 @@ use hyped_communications::{bus::EVENT_BUS, events::Event};
 use hyped_core::logging::{debug, info};
 
 impl StateMachine {
-    // --------- ACCELERATE ---------
-
     pub(crate) async fn entry_accelerate(&mut self) {
         info!("Pod is accelerating");
         EVENT_BUS
