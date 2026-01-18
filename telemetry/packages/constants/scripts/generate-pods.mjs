@@ -5,7 +5,25 @@ import { fileURLToPath } from 'node:url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const configPath = path.join(__dirname, '..', '..', '..', 'config', 'pods.yaml');
+// Find config directory more reliably - look for it starting from script location
+function findConfigDir() {
+    let currentDir = __dirname;
+
+    // Go up until we find a directory containing 'config'
+    for (let i = 0; i < 5; i++) {
+        const configPath = path.join(currentDir, 'config', 'pods.yaml');
+        if (fs.existsSync(configPath)) {
+        return configPath;
+        }
+        currentDir = path.join(currentDir, '..');
+    }
+
+    throw new Error('Could not find config/pods.yaml');
+}
+  
+const configPath = findConfigDir();
+console.log(`Reading config from: ${configPath}`);
+  
 const yamlContent = fs.readFileSync(configPath, 'utf8');
 
 const output = `// Auto-generated - DO NOT EDIT

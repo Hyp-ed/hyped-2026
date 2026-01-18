@@ -43,7 +43,7 @@ export const PodConnectionStatus = ({ podId }: { podId: PodId }) => {
 		),
 	};
 
-	const podName = pods[podId].name;
+	const podName = pods[podId].label;
 
 	return (
 		<Card>

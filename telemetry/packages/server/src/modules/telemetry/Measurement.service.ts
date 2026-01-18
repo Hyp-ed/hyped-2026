@@ -1,7 +1,7 @@
-import type { InfluxService } from '@/modules/influx/Influx.service';
+import { InfluxService } from '@/modules/influx/Influx.service';
 import { Logger } from '@/modules/logger/Logger.decorator';
-import type { RealtimeTelemetryDataGateway } from '@/modules/openmct/data/realtime/RealtimeTelemetryData.gateway';
-import type { FaultService } from '@/modules/openmct/faults/Fault.service';
+import { RealtimeTelemetryDataGateway } from '@/modules/openmct/data/realtime/RealtimeTelemetryData.gateway';
+import { FaultService } from '@/modules/openmct/faults/Fault.service';
 import { pods } from '@hyped/telemetry-constants';
 import { Point } from '@influxdata/influxdb-client';
 import { Injectable, type LoggerService } from '@nestjs/common';

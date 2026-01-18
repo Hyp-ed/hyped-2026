@@ -7,11 +7,12 @@ import {
 import {
 	ALL_POD_STATES,
 	type ModeType,
+	type PodId,
 	podIds,
-	
 	type PodStateType,
 	pods,
 } from '@hyped/telemetry-constants';
+
 import { FAILURE_STATES } from '@hyped/telemetry-constants';
 import { http } from 'openmct/core/http';
 import { createContext, useContext, useEffect, useState } from 'react';
@@ -79,12 +80,12 @@ const PodsContext = createContext<PodsContextType | null>(null);
  * @param podIds The array of pod IDs to create the pods state object from.
  * @returns The pods state object.
  */
-function createPodsStateFromIds(podIds: typeof podIds): PodsStateType {
+function createPodsStateFromIds(ids: readonly PodId[]): PodsStateType {
 	const podsContext: PodsStateType = {};
-	for (const podId of podIds) {
+	for (const podId of ids) {
 		podsContext[podId] = {
 			id: podId,
-			name: pods[podId].name,
+			name: pods[podId].label,
 			operationMode: pods[podId].mode,
 			connectionStatus: POD_CONNECTION_STATUS.CONNECTED,
 			podState: ALL_POD_STATES.UNKNOWN,

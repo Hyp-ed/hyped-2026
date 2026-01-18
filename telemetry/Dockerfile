@@ -20,7 +20,8 @@ COPY telemetry/pnpm-workspace.yaml ./
 COPY telemetry/patches ./patches
 COPY telemetry/turbo.json ./
 RUN pnpm install --frozen-lockfile
-RUN pnpm --filter=e2e-tests exec playwright install --with-deps
+
+COPY telemetry/packages ./packages
 
 # Expose ports
 EXPOSE 5173
