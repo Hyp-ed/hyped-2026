@@ -1,7 +1,7 @@
 use crate::{state_enum::State, state_machine::StateMachine};
 use embassy_time::Instant;
 use hyped_communications::{bus::EVENT_BUS, events::Event};
-use hyped_core::logging::{debug, info};
+use hyped_core::logging::{debug, info, warn};
 
 impl StateMachine {
     pub(crate) async fn entry_accelerate(&mut self) {
@@ -37,6 +37,10 @@ impl StateMachine {
                 Calculated propulsion force: {}N",
                     force_n.0
                 )
+            }
+            Event::EmergencyStopOperatorCommand => {
+                warn!("EMERGENCY STOP PRESSED");
+                self.transition_to(State::Emergency).await;
             }
             // TODO: need navigation logic here
             // If reaching end of track, brake

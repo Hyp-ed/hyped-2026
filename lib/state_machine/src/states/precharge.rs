@@ -39,7 +39,7 @@ impl StateMachine {
                     return;
                 }
 
-                self.boards_precharged.insert(from);
+                let _ = self.boards_precharged.insert(from);
 
                 // TODO do we need to check specific boards?
                 // TODO should it be == or >= here?

@@ -19,7 +19,7 @@ impl StateMachine {
             Event::CalibrationComplete { from } => {
                 info!("Board {:?} calibrated", from);
                 // Track which boards are calibrated
-                self.boards_calibrated.insert(from);
+                let _ = self.boards_calibrated.insert(from);
 
                 // Check if all are done
                 if self.boards_calibrated.len() >= self.total_boards as usize {

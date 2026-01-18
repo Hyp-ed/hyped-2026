@@ -26,7 +26,7 @@ impl StateMachine {
                     Instant::now().as_millis(),
                     voltage_cv,
                 );
-                self.boards_discharged.insert(from);
+                let _ = self.boards_discharged.insert(from);
 
                 // TODO do we need to check specific boards?
                 // TODO should it be == or >= here?
