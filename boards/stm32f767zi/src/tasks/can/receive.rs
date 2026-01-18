@@ -99,7 +99,7 @@ pub async fn can_receiver(mut rx: CanRx<'static>) {
                 event_sender.send(Event::DischargeComplete{ from, voltage_cv: voltage }).await;
             }
             CanMessage::PrechargeFailed {from, reason} => {
-                defmt::debug!("Board={} has failed to precharge due to {}",from,reason.0);
+                defmt::debug!("Board={} has failed to precharge due to {}",from,reason);
                 event_sender.send(Event::PrechargeFailed{ from, reason }).await;
             }
 
@@ -130,7 +130,7 @@ pub async fn can_receiver(mut rx: CanRx<'static>) {
                 event_sender.send(Event::LevitationStatus{ from, airgap_μm, current_ma }).await;
             }
             CanMessage::LevitationFailed {from, reason} => {
-                defmt::debug!("Board={} has failed to levitate due to {}",from,reason.0);
+                defmt::debug!("Board={} has failed to levitate due to {}",from,reason);
                 event_sender.send(Event::LevitationFailed{ from, reason: reason }).await;
             }
             
@@ -203,10 +203,9 @@ pub async fn can_receiver(mut rx: CanRx<'static>) {
                 event_sender.send(Event::PropulsionForce{ force_n }).await;
             }
             CanMessage::PropulsionFailed{from, reason} => {
-                defmt::debug!("Propulsion failed: board={}, reason={}",from,reason.0);
+                defmt::debug!("Propulsion failed: board={}, reason={}",from,reason);
                 event_sender.send(Event::PropulsionFailed{ from, reason }).await;
             }
-            _ => {}
         }
     }
 }

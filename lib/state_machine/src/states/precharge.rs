@@ -51,10 +51,8 @@ impl StateMachine {
                     self.transition_to(State::ReadyForLevitation).await;
                 }
             }
-            Event::PrechargeFailed {
-                from: board,
-                reason,
-            } => {
+            Event::PrechargeFailed { from, reason } => {
+                info!("Board={}, reason={}", from, reason)
                 // TODO decide if we need this
             }
             _ => {

@@ -60,7 +60,9 @@ impl StateMachine {
                     self.transition_to(State::Ready).await;
                 }
             }
-            Event::LevitationStopped { from } => {} // TODO decide if we need this
+            Event::LevitationStopped { from } => {
+                info!("Board={}", from)
+            } // TODO decide if we need this
             _ => {
                 debug!("Event {} is ignored in current state", event)
             }

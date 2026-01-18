@@ -1,5 +1,5 @@
 use crate::{state_enum::State, state_machine::StateMachine};
-use hyped_communications::{bus::EVENT_BUS, events::Event};
+use hyped_communications::events::Event;
 use hyped_core::logging::{debug, info};
 
 impl StateMachine {

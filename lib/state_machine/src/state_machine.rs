@@ -71,7 +71,7 @@ impl StateMachine {
         match event {
             // Emergency
             Event::Emergency { from, reason } => {
-                warn!("EMERGENCY: from {:?} reason={}", from, reason.0);
+                warn!("EMERGENCY: from {:?} reason={}", from, reason);
                 self.transition_to(State::Emergency).await;
                 return;
             }

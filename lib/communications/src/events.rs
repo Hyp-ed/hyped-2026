@@ -1,5 +1,7 @@
 use crate::boards::Board;
-//use hyped_state_machine::states::State;
+pub use crate::emergency::Reason;
+
+//use hyped_state_machine::state_enum::State;
 
 /// Nature classification for events (compact codes).
 // #[derive(Debug, Clone, Copy, PartialEq, defmt::Format)]
@@ -44,9 +46,6 @@ pub struct Temperature(pub u8); // celsius
 
 #[derive(Debug, Clone, Copy, PartialEq, defmt::Format)]
 pub struct Force(pub u16); // newtons
-
-#[derive(Debug, Clone, Copy, PartialEq, defmt::Format)]
-pub struct Reason(pub u8); // reason
 
 #[derive(Debug, Clone, defmt::Format)]
 pub enum Event {
