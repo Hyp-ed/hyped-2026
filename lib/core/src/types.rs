@@ -29,11 +29,7 @@ pub struct Airgap(pub u16); // micrometers
 // Calculate absolute distance between two airgaps
 impl Airgap {
     pub fn distance_to(&self, other: Airgap) -> u16 {
-        if self.0 > other.0 {
-            self.0 - other.0
-        } else {
-            other.0 - self.0
-        }
+        self.0.abs_diff(other.0)
     }
 }
 

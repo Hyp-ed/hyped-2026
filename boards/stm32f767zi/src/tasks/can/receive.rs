@@ -65,7 +65,7 @@ pub async fn can_receiver(mut rx: CanRx<'static>) {
              
             // Calibration
             CanMessage::StartCalibrationCommand => {
-                defmt::debug!("Recieved Start Calibration Command");
+                defmt::debug!("Received Start Calibration Command");
                 event_sender.send(Event::StartCalibrationCommand).await;
             }
             CanMessage::CalibrationComplete { from }=> {
@@ -75,11 +75,11 @@ pub async fn can_receiver(mut rx: CanRx<'static>) {
 
             // Electronics
             CanMessage::StartPrechargeCommand => {
-                defmt::debug!("Start Precharge Command recieved");
+                defmt::debug!("Start Precharge Command received");
                 event_sender.send(Event::StartPrechargeCommand).await;
             }
             CanMessage::StartDischargeCommand => {
-                defmt::debug!("Start Discharge Command recieved");
+                defmt::debug!("Start Discharge Command received");
                 event_sender.send(Event::StartDischargeCommand).await;
             }
             CanMessage::PrechargeStarted { from } => {
@@ -131,7 +131,7 @@ pub async fn can_receiver(mut rx: CanRx<'static>) {
             }
             CanMessage::LevitationFailed {from, reason} => {
                 defmt::debug!("Board={} has failed to levitate due to {}",from,reason);
-                event_sender.send(Event::LevitationFailed{ from, reason: reason }).await;
+                event_sender.send(Event::LevitationFailed{ from, reason }).await;
             }
             
             // Dynamics
