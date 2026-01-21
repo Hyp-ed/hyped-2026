@@ -1,4 +1,4 @@
-use crate::state_enum::State;
+use crate::state::State;
 use heapless::FnvIndexSet;
 use hyped_communications::{boards::Board, bus::EVENT_BUS, events::Event};
 use hyped_core::logging::{debug, info, warn};

@@ -1,5 +1,6 @@
-use crate::{state_enum::State, state_machine::StateMachine};
-use hyped_communications::events::{Airgap, Event};
+use crate::{state::State, state_machine::StateMachine};
+use hyped_communications::events::Event;
+use hyped_core::types::Airgap;
 
 use hyped_core::logging::{debug, info, warn};
 

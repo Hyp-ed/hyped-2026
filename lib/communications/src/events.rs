@@ -1,51 +1,6 @@
 use crate::boards::Board;
 pub use crate::emergency::Reason;
-
-//use hyped_state_machine::state_enum::State;
-
-/// Nature classification for events (compact codes).
-// #[derive(Debug, Clone, Copy, PartialEq, defmt::Format)]
-// #[repr(u8)]
-// pub enum Nature {
-//     MinorChange = 0,
-//     MajorChange = 1,
-//     DirEmergency = 2,
-// }
-
-#[derive(Debug, Clone, Copy, PartialEq, defmt::Format)]
-pub struct Airgap(pub u16); // micrometers
-
-// Calculate absolute distance between two airgaps
-impl Airgap {
-    pub fn distance_to(&self, other: Airgap) -> u16 {
-        if self.0 > other.0 {
-            self.0 - other.0
-        } else {
-            other.0 - self.0
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, defmt::Format)]
-pub struct Current(pub u16); // milliamps
-
-#[derive(Debug, Clone, Copy, PartialEq, defmt::Format)]
-pub struct Voltage(pub u16); // centivolts
-
-#[derive(Debug, Clone, Copy, PartialEq, defmt::Format)]
-pub struct Pressure(pub u16); // bar
-
-#[derive(Debug, Clone, Copy, PartialEq, defmt::Format)]
-pub struct Velocity(pub u16); // km/h
-
-#[derive(Debug, Clone, Copy, PartialEq, defmt::Format)]
-pub struct Temperature(pub u8); // celsius
-
-// #[derive(Debug, Clone, Copy, PartialEq, defmt::Format)]
-// pub struct Frequency(pub u16); // hertz
-
-#[derive(Debug, Clone, Copy, PartialEq, defmt::Format)]
-pub struct Force(pub u16); // newtons
+use hyped_core::types::{Airgap, Current, Force, Pressure, Temperature, Velocity, Voltage};
 
 #[derive(Debug, Clone, defmt::Format)]
 pub enum Event {
@@ -67,7 +22,6 @@ pub enum Event {
     Heartbeat {
         from: Board,
     },
-    // TODO any others?
 
     // ------ Calibration ------
     StartCalibrationCommand,
@@ -186,8 +140,9 @@ pub enum Event {
         voltage_cv: Voltage,
     },
 
+    // Calculated thrust force
     PropulsionForce {
-        force_n: Force, // calculated thrust force
+        force_n: Force,
     },
 
     PropulsionFailed {

@@ -1,15 +1,7 @@
-//use core::time;
-
-//use defmt::timestamp;
 use hyped_can::HypedCanFrame;
-//, Timestamp};
-//use hyped_state_machine::states::State;
 
-use crate::{
-    boards::Board,
-    emergency::Reason,
-    events::{Airgap, Current, Force, Pressure, Temperature, Velocity, Voltage},
-};
+use crate::{boards::Board, emergency::Reason};
+use hyped_core::types::{Airgap, Current, Force, Pressure, Temperature, Velocity, Voltage};
 
 use super::{
     can_id::CanId,

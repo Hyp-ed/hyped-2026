@@ -1,9 +1,7 @@
-use crate::{state_enum::State, state_machine::StateMachine};
+use crate::{state::State, state_machine::StateMachine};
 use embassy_time::Instant;
-use hyped_communications::{
-    bus::EVENT_BUS,
-    events::{Airgap, Event},
-};
+use hyped_communications::{bus::EVENT_BUS, events::Event};
+use hyped_core::types::Airgap;
 
 use hyped_core::logging::{debug, info};
 
