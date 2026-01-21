@@ -777,10 +777,11 @@ name = "hyped_communications"
 version = "0.1.0"
 dependencies = [
  "defmt",
+ "embassy-executor",
+ "embassy-sync 0.6.0",
  "heapless 0.8.0",
  "hyped_can",
  "hyped_core",
- "hyped_state_machine",
 ]
 
 [[package]]
@@ -881,8 +882,11 @@ name = "hyped_state_machine"
 version = "0.1.0"
 dependencies = [
  "defmt",
+ "embassy-executor",
  "embassy-net",
+ "embassy-time",
  "heapless 0.8.0",
+ "hyped_communications",
  "hyped_core",
  "rust-mqtt",
 ]

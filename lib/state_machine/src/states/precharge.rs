@@ -1,4 +1,4 @@
-use crate::{state_enum::State, state_machine::StateMachine};
+use crate::{state::State, state_machine::StateMachine};
 use embassy_time::Instant;
 use hyped_communications::{bus::EVENT_BUS, events::Event};
 use hyped_core::logging::{debug, info, warn};
@@ -39,7 +39,7 @@ impl StateMachine {
                     return;
                 }
 
-                self.boards_precharged.insert(from);
+                let _ = self.boards_precharged.insert(from);
 
                 // TODO do we need to check specific boards?
                 // TODO should it be == or >= here?
@@ -51,10 +51,8 @@ impl StateMachine {
                     self.transition_to(State::ReadyForLevitation).await;
                 }
             }
-            Event::PrechargeFailed {
-                from: board,
-                reason,
-            } => {
+            Event::PrechargeFailed { from, reason } => {
+                info!("Board={}, reason={}", from, reason)
                 // TODO decide if we need this
             }
             _ => {

@@ -1,4 +1,4 @@
-use crate::{state_enum::State, state_machine::StateMachine};
+use crate::{state::State, state_machine::StateMachine};
 use embassy_time::Instant;
 use hyped_communications::{bus::EVENT_BUS, events::Event};
 use hyped_core::logging::{debug, info, warn};
@@ -13,14 +13,23 @@ impl StateMachine {
 
     pub(crate) async fn react_ready_for_levitation(&mut self, event: Event) {
         match event {
-            Event::BrakesUnclamped {
+            Event::BrakesUnclamped { from } => {
+                info!(
+                    "Brakes unclamped: board={} at {}ms",
+                    from,
+                    Instant::now().as_millis(),
+                );
+            }
+            Event::DynamicsStatus {
+                from,
                 actuator_pressure_bar,
             } => {
                 info!(
-                    "Brakes unclamped: pressure={}bar at {}ms",
-                    actuator_pressure_bar.0,
+                    "Dynamics Status: board={}, actuator pressure={}bar at {}ms",
+                    from,
+                    actuator_pressure_bar,
                     Instant::now().as_millis(),
-                );
+                )
             }
             Event::LevitationSystemsReady => {
                 info!("Levitation systems ready, awaiting operator command");

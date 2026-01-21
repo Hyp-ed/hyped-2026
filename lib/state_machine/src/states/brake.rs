@@ -1,4 +1,4 @@
-use crate::{state_enum::State, state_machine::StateMachine};
+use crate::{state::State, state_machine::StateMachine};
 use embassy_time::Instant;
 use hyped_communications::{bus::EVENT_BUS, events::Event};
 use hyped_core::logging::{debug, info};
@@ -20,12 +20,10 @@ impl StateMachine {
             Event::PropulsionBrakingStarted => {
                 info!("Braking started at {}ms", Instant::now().as_millis(),);
             }
-            Event::BrakesClamped {
-                actuator_pressure_bar,
-            } => {
+            Event::BrakesClamped { from } => {
                 info!(
-                    "Brakes clamped: pressure={}bar at {}ms",
-                    actuator_pressure_bar.0,
+                    "Brakes clamped: board={} at {}ms",
+                    from,
                     Instant::now().as_millis(),
                 );
             }
