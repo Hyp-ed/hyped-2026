@@ -13,7 +13,6 @@ use super::{
 
 #[derive(PartialEq, Debug, Clone, defmt::Format)]
 pub enum CanMessage {
-    // Existing
     MeasurementReading(MeasurementReading),
     Heartbeat(Heartbeat),
     Emergency(Board, Reason),
@@ -74,7 +73,6 @@ pub enum CanMessage {
     RetractLateralSuspensionCommand,
     ExtendLateralSuspensionCommand,
 
-    // TODO: moved pressure to DynamicsStatus, so send that event when needed
     BrakesClamped {
         from: Board,
     },
@@ -656,7 +654,6 @@ impl From<HypedCanFrame> for CanMessage {
 mod tests {
     use hyped_can::HypedCanFrame;
     use hyped_core::config::MeasurementId;
-    //use hyped_state_machine::states::State;
 
     use crate::{
         boards::Board, data::CanData, heartbeat::Heartbeat, measurements::MeasurementReading,

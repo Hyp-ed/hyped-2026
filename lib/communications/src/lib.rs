@@ -1,6 +1,5 @@
 #![no_std]
 
-pub mod actions;
 pub mod boards;
 pub mod bus;
 pub mod can_id;
