@@ -55,6 +55,7 @@ const NAV_TO_MTC_CMD_ID_EXT: u32 = 0x18FF_0301; // agree this with Navigation (2
 const POD_MASS_KG: f32 = 200.0;           // TODO: set actual pod mass
 const MAX_BRAKE_FORCE_N: f32 = 5000.0;    // TODO: measured clamp braking force
 const BRAKE_MARGIN_M: f32 = 5.0;          // TODO: safety margin distance for brake trigger
+const REACTION_TIME_S: f32 = 1;           // TODO: reaction time for brake message to be processed
 
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, channel::Channel};
 
@@ -242,11 +243,30 @@ async fn braking_system_loop(
 
     let mut latest = NavKinematics::default();
     let mut brakes_engaged = false;
+    
+    // Safety Parameters
     let max_brake_decel = MAX_BRAKE_FORCE_N / POD_MASS_KG; // m/s^2
+    const DATA_TIMEOUT: Duration = Duration::from_millis(100); // Max time to wait for nav data
+
+    brake_solenoid_pin.set_high(); // Unclamp brakes (Ensure brakes start at known state)
 
     loop {
-        let update = nav_rx.receive().await;
-        latest = latest.merge(update);
+        // Receive data with timeout
+        // If not receiving data from Nav for longer than DATA_TIMEOUT, engage brakes
+        match with_timeout(DATA_TIMEOUT, nav_rx.receive()).await {
+            Ok(update) => {
+                latest = latest.merge(update);
+            },
+            Err(_) => {
+                if !brakes_engaged {
+                    defmt::error!("CRITICAL: NAV data timeout! Engaging emergency brakes.")
+                    enqueue_canopen(Messages::QuickStop).await;
+                    brake_solenoid_pin.set_low();
+                    brakes_engaged = true;
+                }
+                continue;
+            }
+        }
 
         let (position, target, velocity) = match (
             latest.position_m,
@@ -254,39 +274,41 @@ async fn braking_system_loop(
             latest.velocity_mps,
         ) {
             (Some(p), Some(t), Some(v)) => (p, t, v),
+            (_, _, Some(v)) if v > 1.0 => {
+                if !brakes_engaged {
+                    defmt::error!("CRITICAL: Lost Position/Target while moving (v={})! Engaging emergency brakes.", v)
+                    enqueue_canopen(Messages::QuickStop).await;
+                    brake_solenoid_pin.set_low();
+                    brakes_engaged = true;
+                }
+                continue;
+            }
             _ => {
                 defmt::debug!("Braking loop waiting for full kinematics (pos/target/vel)");
                 continue;
             }
         };
 
-        let distance_to_target = target - position;
-        if distance_to_target <= 0.0 {
+        // Distance travelled during reaction time (d = v * t)
+        let reaction_dist = velocity * reaction_time_s;
+
+        // Braking distance (d = v^2 / 2a)
+        let physical_braking_distance = (velocity * velocity) / (2.0 * max_brake_decel);
+
+        // Total required buffer distance to fully brake
+        let required_stop_buffer_distance = reaction_dist + physical_braking_distance + SAFETY_MARGIN_M;
+        // SAFETY_MARGIN_M from line 57 (to be implemented)
+
+        let projected_stop_point = position + required_stop_buffer_distance;
+
+        if velocity > 0.1 && projected_stop_point >= target {
             if !brakes_engaged {
                 defmt::warn!(
-                    "Target passed or zero distance (pos={} m, target={} m); engaging brakes + QUICK_STOP",
+                    "BRAKING POINT REACHED: Pos={:.2} m, Vel={:.2}, Target={:.2}, Proj_stop={:.2}",
                     position,
-                    target
-                );
-                enqueue_canopen(Messages::QuickStop).await;
-                brake_solenoid_pin.set_low();
-                brakes_engaged = true;
-            }
-            continue;
-        }
-
-        // Required stopping distance under max braking decel (with margin)
-        let stopping_distance = (velocity * velocity) / (2.0 * max_brake_decel) + BRAKE_MARGIN_M;
-
-        if velocity > 0.1 && distance_to_target <= stopping_distance {
-            if !brakes_engaged {
-                defmt::info!(
-                    "Engaging brakes: pos={} m, target={} m, dist={} m, vel={} m/s, stop_dist={} m",
-                    position,
-                    target,
-                    distance_to_target,
                     velocity,
-                    stopping_distance
+                    target,
+                    projected_stop_point
                 );
                 // Tell motor controller to stop drive before clamping.
                 enqueue_canopen(Messages::QuickStop).await;
@@ -296,10 +318,7 @@ async fn braking_system_loop(
                 brakes_engaged = true;
             }
         } else {
-            // Keep brakes released until within stopping distance.
             if brakes_engaged {
-                defmt::info!("Brakes remain engaged (no auto-release implemented)");
-            } else {
                 brake_solenoid_pin.set_high();
             }
         }
