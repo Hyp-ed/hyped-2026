@@ -5,13 +5,21 @@ use defmt_rtt as _;
 use embassy_executor::Spawner;
 use embassy_stm32::{
     bind_interrupts,
-    can::{Can, Fifo, Id, Rx0InterruptHandler, Rx1InterruptHandler, SceInterruptHandler, TxInterruptHandler},
+    can::{Can, Fifo, Rx0InterruptHandler, Rx1InterruptHandler, SceInterruptHandler, TxInterruptHandler},
     gpio::{Level, Output, OutputType, Speed},
     peripherals::{self, CAN1, CAN2},
-    rng::{self, Rng},
+    rng,
     Config,
 };
 use embassy_time::{Duration, Timer};
+use core::sync::atomic::{AtomicBool, Ordering};
+
+mod motor_control;
+use motor_control::{
+    braking::braking_system_loop,
+    control_loop::motor_control_loop,
+    navigation::NAV_KINEMATICS,
+};
 
 use hyped_boards_stm32f767zi::{
     board_state::{CURRENT_STATE, EMERGENCY, THIS_BOARD},
@@ -48,36 +56,37 @@ bind_interrupts!(struct Irqs {
 
 // NAV -> MotorControl command ID
 const NAV_TO_MTC_CMD_ID_EXT: u32 = 0x18FF_0301; // agree this with Navigation (29-bit Extended ID)
+// Additional NAV -> MTC IDs to remove command byte 
+const NAV_TO_MTC_SPEED_ACCEL_ID_EXT: u32 = 0x18FF_0302; // 8 bytes: speed + accel
+const NAV_TO_MTC_POS_TARGET_ID_EXT: u32  = 0x18FF_0303; // 8 bytes: position + target
 // payload format proposal:4
 //   data[0] command code: 0x01=StartDrive, 0x02=Shutdown, 0x03=QuickStop, 0x04=SwitchOn, 0x05=SetFrequency
 
 // === Braking constants (placeholder values; replace with real pod params) ===
-const POD_MASS_KG: f32 = 200.0;           // TODO: set actual pod mass
-const MAX_BRAKE_FORCE_N: f32 = 5000.0;    // TODO: measured clamp braking force
-const BRAKE_MARGIN_M: f32 = 5.0;          // TODO: safety margin distance for brake trigger
+pub(crate) const POD_MASS_KG: f32 = 200.0;           // TODO: set actual pod mass
+pub(crate) const MAX_BRAKE_FORCE_N: f32 = 5000.0;    // TODO: measured clamp braking force
+pub(crate) const BRAKE_MARGIN_M: f32 = 5.0;          // TODO: safety margin distance for brake trigger
 
-use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, channel::Channel};
+use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, mutex::Mutex};
 
-#[derive(Clone, Copy, Default)]
-struct NavKinematics {
-    position_m: Option<f32>,
-    velocity_mps: Option<f32>,
-    accel_mps2: Option<f32>,
-    target_position_m: Option<f32>,
-}
+pub(crate) static BRAKE_SOLENOID: Mutex<CriticalSectionRawMutex, Option<Output<'static>>> = Mutex::new(None);
+pub(crate) static FORCE_BRAKE: AtomicBool = AtomicBool::new(false);
 
-impl NavKinematics {
-    fn merge(self, update: NavKinematics) -> NavKinematics {
-        NavKinematics {
-            position_m: update.position_m.or(self.position_m),
-            velocity_mps: update.velocity_mps.or(self.velocity_mps),
-            accel_mps2: update.accel_mps2.or(self.accel_mps2),
-            target_position_m: update.target_position_m.or(self.target_position_m),
-        }
+pub(crate) async fn engage_brake_solenoid() {
+    let mut guard = BRAKE_SOLENOID.lock().await;
+    match guard.as_mut() {
+        Some(pin) => pin.set_low(),
+        None => defmt::warn!("Brake solenoid pin not initialised; cannot engage"),
     }
 }
 
-pub static NAV_KINEMATICS: Channel<CriticalSectionRawMutex, NavKinematics, 5> = Channel::new();
+pub(crate) async fn release_brake_solenoid() {
+    let mut guard = BRAKE_SOLENOID.lock().await;
+    match guard.as_mut() {
+        Some(pin) => pin.set_high(),
+        None => defmt::warn!("Brake solenoid pin not initialised; cannot release"),
+    }
+}
 
 #[embassy_executor::main]
 async fn main(spawner: Spawner) -> ! {
@@ -94,6 +103,10 @@ async fn main(spawner: Spawner) -> ! {
     // NOTE: Assumes active-low solenoid: LOW = brakes engaged, HIGH = brakes released.
     // Confirm polarity with pneumatics wiring.
     let brake_solenoid_pin = Output::new(p.PC13, Level::High, OutputType::PushPull, Speed::High);
+    {
+        let mut guard = BRAKE_SOLENOID.lock().await;
+        *guard = Some(brake_solenoid_pin);
+    }
 
 
     // TODO: configure CAN filters so NAV frames are routed to FIFO1
@@ -120,14 +133,12 @@ async fn main(spawner: Spawner) -> ! {
     spawner.must_spawn(state_machine());
 
     spawner.must_spawn(braking_system_loop(
-        brake_solenoid_pin,
         NAV_KINEMATICS.receiver(),
     ));
 
     loop { Timer::after(Duration::from_secs(1)).await; }
 }
 
-// TODO: engage mechanical brakes on emergency (GPIO) once shared brake control is added
 #[embassy_executor::task]
 async fn emergency_handler() {
     let current_state_sender = CURRENT_STATE.sender();
@@ -136,7 +147,9 @@ async fn emergency_handler() {
         if EMERGENCY.receiver().unwrap().get().await {
             defmt::error!("Emergency signal received! Enqueuing QUICK_STOP and halting...");
             // Immediately push a Quick Stop to EMSISO via CAN2
+            FORCE_BRAKE.store(true, Ordering::SeqCst);
             enqueue_canopen(Messages::QuickStop).await;
+            engage_brake_solenoid().await;
 
             current_state_sender.send(State::Emergency);
             Timer::after(Duration::from_millis(200)).await;
@@ -145,163 +158,9 @@ async fn emergency_handler() {
     }
 }
 
-async fn enqueue_canopen(message: Messages) {
+pub(crate) async fn enqueue_canopen(message: Messages) {
     let msg: CanOpenMessage = message.into();
     let frame: HypedCanFrame = msg.into();
     let can_msg: CanMessage = frame.into();
     CAN_SEND.send(can_msg).await;
-}
-
-// Reads frames from CAN1(RX1) which is reserved for the
-// navigation commands. These commands are parsed and converted
-// into CANOpen drive commands that are transmitted to the EMSISO
-// motor controller over CAN2
-#[embassy_executor::task]
-async fn motor_control_loop(mut can1_rx: embassy_stm32::can::Receiver<'_>) {
-    defmt::info!("Motor control loop started (listening on CAN1, sending via CAN2)");
-
-    loop {
-    
-        let env = match can1_rx.read().await {
-            Ok(e) => e,
-            Err(_e) => continue,
-        };
-
-        let can_id = match env.frame.id() {
-            Id::Standard(id) => id.as_raw() as u32,
-            Id::Extended(id) => id.as_raw(),
-        };
-        let data = env.frame.data();
-
-        if can_id != NAV_TO_MTC_CMD_ID_EXT || data.is_empty() { continue; }
-
-        match data[0] {
-            0x01 => { defmt::info!("NAV->MTC: START_DRIVE");    enqueue_canopen(Messages::StartDrive).await; }
-            0x02 => { defmt::info!("NAV->MTC: SHUTDOWN");       enqueue_canopen(Messages::Shutdown).await; }
-            0x03 => { defmt::info!("NAV->MTC: QUICK_STOP");     enqueue_canopen(Messages::QuickStop).await; }
-            0x04 => { defmt::info!("NAV->MTC: SWITCH_ON");      enqueue_canopen(Messages::SwitchOn).await; }
-            0x05 => { 
-                if data.len() < 5 {
-                    defmt::warn!("NAV->MTC: SET_FREQUENCY missing payload");
-                    continue;
-                }
-                let freq = u32::from_le_bytes([data[1], data[2], data[3], data[4]]);
-                defmt::info!("NAV->MTC: SET_FREQUENCY");   
-                enqueue_canopen(Messages::SetFrequency(freq)).await;
-            }
-            0x06 => {
-                if data.len() < 9 {
-                    defmt::warn!("NAV->MTC: SPEED/ACCEL missing payload");
-                    continue;
-                }
-            
-                // speed: bytes 1..4 (LE)
-                let speed = f32::from_le_bytes([data[1], data[2], data[3], data[4]]);
-                // accel: bytes 5..8 (LE)
-                let accel = f32::from_le_bytes([data[5], data[6], data[7], data[8]]);
-            
-                defmt::info!("NAV->MTC: speed={} m/s  accel={} m/s²", speed, accel);
-            
-                NAV_KINEMATICS
-                    .send(NavKinematics {
-                        velocity_mps: Some(speed),
-                        accel_mps2: Some(accel),
-                        ..Default::default()
-                    })
-                    .await;
-            }
-            0x07 => {
-                if data.len() < 9 {
-                    defmt::warn!("NAV->MTC: POSITION payload missing");
-                    continue;
-                }
-                let position = f32::from_le_bytes([data[1], data[2], data[3], data[4]]);
-                let target = f32::from_le_bytes([data[5], data[6], data[7], data[8]]);
-                defmt::info!("NAV->MTC: position={} m, target={} m", position, target);
-
-                NAV_KINEMATICS
-                    .send(NavKinematics {
-                        position_m: Some(position),
-                        target_position_m: Some(target),
-                        ..Default::default()
-                    })
-                    .await;
-            }
-            other => defmt::warn!("Unknown NAV->MTC command byte: {}", other),
-        }
-    }
-}
-
-// Brakes latch once engaged; no auto-release implemented yet.
-#[embassy_executor::task]
-async fn braking_system_loop(
-    mut brake_solenoid_pin: Output<'static>,
-    mut nav_rx: embassy_sync::channel::Receiver<'static, NavKinematics>,
-) {
-    defmt::info!("Braking system active (mechanical brakes via GPIO)");
-
-    let mut latest = NavKinematics::default();
-    let mut brakes_engaged = false;
-    let max_brake_decel = MAX_BRAKE_FORCE_N / POD_MASS_KG; // m/s^2
-
-    loop {
-        let update = nav_rx.receive().await;
-        latest = latest.merge(update);
-
-        let (position, target, velocity) = match (
-            latest.position_m,
-            latest.target_position_m,
-            latest.velocity_mps,
-        ) {
-            (Some(p), Some(t), Some(v)) => (p, t, v),
-            _ => {
-                defmt::debug!("Braking loop waiting for full kinematics (pos/target/vel)");
-                continue;
-            }
-        };
-
-        let distance_to_target = target - position;
-        if distance_to_target <= 0.0 {
-            if !brakes_engaged {
-                defmt::warn!(
-                    "Target passed or zero distance (pos={} m, target={} m); engaging brakes + QUICK_STOP",
-                    position,
-                    target
-                );
-                enqueue_canopen(Messages::QuickStop).await;
-                brake_solenoid_pin.set_low();
-                brakes_engaged = true;
-            }
-            continue;
-        }
-
-        // Required stopping distance under max braking decel (with margin)
-        let stopping_distance = (velocity * velocity) / (2.0 * max_brake_decel) + BRAKE_MARGIN_M;
-
-        if velocity > 0.1 && distance_to_target <= stopping_distance {
-            if !brakes_engaged {
-                defmt::info!(
-                    "Engaging brakes: pos={} m, target={} m, dist={} m, vel={} m/s, stop_dist={} m",
-                    position,
-                    target,
-                    distance_to_target,
-                    velocity,
-                    stopping_distance
-                );
-                // Tell motor controller to stop drive before clamping.
-                enqueue_canopen(Messages::QuickStop).await;
-                enqueue_canopen(Messages::Shutdown).await;
-                // Brake solenoid clamps when driven low (per pneumatics::engage_brakes comments).
-                brake_solenoid_pin.set_low();
-                brakes_engaged = true;
-            }
-        } else {
-            // Keep brakes released until within stopping distance.
-            if brakes_engaged {
-                defmt::info!("Brakes remain engaged (no auto-release implemented)");
-            } else {
-                brake_solenoid_pin.set_high();
-            }
-        }
-    }
 }
