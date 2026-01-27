@@ -2,18 +2,10 @@ use core::str::FromStr;
 use embassy_futures::join::join;
 use heapless::String;
 use hyped_core::{
-    format,
-    format_string::show,
-    mqtt::MqttMessage,
-    mqtt_topics::{MQTT_MEASUREMENT_TOPIC_PREFIX},
+    format, format_string::show, mqtt::MqttMessage, mqtt_topics::MQTT_MEASUREMENT_TOPIC_PREFIX,
 };
 
-use super::{
-    can::{
-        receive::{INCOMING_MEASUREMENTS},
-    },
-    mqtt::{send::MQTT_SEND},
-};
+use super::{can::receive::INCOMING_MEASUREMENTS, mqtt::send::MQTT_SEND};
 
 /// Run functions to send CAN messages to MQTT and vice versa.
 #[embassy_executor::task]
@@ -21,9 +13,9 @@ pub async fn can_to_mqtt() {
     join(
         join(
             send_can_measurement_to_mqtt(),
-            async {} //TODO  Placeholder 
+            async {}, //TODO  Placeholder
         ),
-        async {},  //TODO Placeholder 
+        async {}, //TODO Placeholder
     )
     .await;
 }
