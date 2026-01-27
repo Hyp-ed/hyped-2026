@@ -13,10 +13,35 @@ use hyped_motors::can_open_processor::Messages;
 pub async fn motor_control_loop(mut can1_rx: embassy_stm32::can::Receiver<'_>) {
     defmt::info!("Motor control loop started (Option A: separate CAN IDs)");
 
+    //Used AtomicU32 for better compilation and speed:
+    //CAN_ERROR_COUNT: counts number of errors have occurred, start at 0 and increment on each error
+    //CAN_ERROR_THRESHOLD: constant defining max number of errors before triggering emergency
+    use core::sync::atomic::AtomicU32;
+    static CAN_ERROR_COUNT: AtomicU32 = AtomicU32::new(0);
+    const CAN_ERROR_THESHOLD: u32 = 10;
     loop {
+        // Uses the Embassy receiver directly (no shared can_receiver task for CAN1)
         let env = match can1_rx.read().await {
             Ok(e) => e,
-            Err(_e) => continue,
+            Err(e) => {
+                //Atomically increases error counter by 1 and retrieves previous value, set to Ordering::Relaxed for minimal memory
+                let count = CAN_ERROR_COUNT.fetch_add(1, Ordering::Relaxed);
+                //log error with new count value
+                defmt::warn!(“Error receiving CAN frame on CAN1: {:?}, count: {}“, e, count + 1);
+                //Check threshold, if 10+ errors --> call panic! to send emergency via emergency channel
+                if count >= CAN_ERROR_THRESHOLD {
+                    defmt::error!(“Exceeded CAN error threshold on CAN1, communication failure”);
+                    EMERGENCY.sender().send();
+                    panic!(“Terminating due to CAN communication failure”);
+                }
+                //Try to recover
+                Timer::after(Duration::from_millis(100)).await;
+                continue;
+            },
+            //let env = match can1_rx.read().await {
+            //Ok(e) => e,
+            //Err(_e) => continue,
+            //}
         };
 
         let can_id = match env.frame.id() {
@@ -35,10 +60,37 @@ pub async fn motor_control_loop(mut can1_rx: embassy_stm32::can::Receiver<'_>) {
                 }
 
                 match data[0] {
-                    0x01 => { defmt::info!("NAV->MTC: START_DRIVE"); enqueue_canopen(Messages::StartDrive).await; }
-                    0x02 => { defmt::info!("NAV->MTC: SHUTDOWN");    enqueue_canopen(Messages::Shutdown).await; }
-                    0x03 => { defmt::info!("NAV->MTC: QUICK_STOP");  enqueue_canopen(Messages::QuickStop).await; }
-                    0x04 => { defmt::info!("NAV->MTC: SWITCH_ON");   enqueue_canopen(Messages::SwitchOn).await; }
+                    //log error if start_drive fails to send
+                    0x01 => {
+                        defmt::info!(“NAV→MTC: START_DRIVE”);
+                        if let Err(_) = enqueue_canopen(Messages::StartDrive).await {
+                            defmt::error!(“Failed to send START_DRIVE message”);
+                        };
+                    };
+                    //log error if shutdown fails to send
+                    0x02 => {
+                        defmt::info!(“NAV→MTC: SHUTDOWN”);
+                        if let Err(_) = enqueue_canopen(Messages::Shutdown).await {
+                            defmt::error!(“Failed to send SHUTDOWN message”);
+                            EMERGENCY.sender().send(); // trigger emergency if shutdown fails
+                            panic!(“Terminating due to failed SHUTDOWN message”);
+                        }
+                    }
+                    //log error and trigger emergency if quick-stop fails to send
+                    0x03 => {
+                        defmt::info!(“NAV→MTC: QUICK_STOP”);
+                        if let Err(_) = enqueue_canopen(Messages::QuickStop).await {
+                            defmt::error!(“Failed to send QUICK_STOP message”);
+                            EMERGENCY.sender().send(); // trigger emergency if quick stop fails
+                            panic!(“Terminating due to failed QUICK_STOP message”);
+                        }
+                    }
+                    0x04 => {
+                        defmt::info!(“NAV→MTC: SWITCH_ON”);
+                        if let Err(_) = enqueue_canopen(Messages::SwitchOn).await{
+                            defmt::error!(“Failed to send SWITCH_ON message”);
+                        }
+                    }
 
                     // SetFrequency still lives here, because it’s a command that carries a u32
                     0x05 => {

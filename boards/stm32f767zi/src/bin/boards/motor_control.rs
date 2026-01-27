@@ -156,11 +156,56 @@ async fn emergency_handler() {
             panic!("Emergency stop triggered");
         }
     }
+
+//    loop {
+          //Set up match statement to handle both error and Ok sitches so no panicking on receiving errors
+//        match EMERGENCY.receiver() {
+//        Ok(receiver) => {
+//                if receiver.get().await {
+//                    defmt::error!(“Emergency signal received! Enqueuing QUICK_STOP and halting...“);
+                      // Error handling using if let Err(e)
+//                    if let Err(e) = enqueue_canopen(Messages::QuickStop).await {
+//                        defmt::error!(“Failed to send QUICK_STOP message: {:?}“, e);
+//                    current_state_sender.send(State::Emergency);
+//                    Timer::after(Duration::from_millis(200)).await;
+//                    panic!(“Emergency stop triggered”);
+//                    }
+//                }
+//            }
+              //If receiver fails --> log critical error and immediately halt the program as failsafe
+//            Err(e) => {
+//                defmt::error!(“Failed to get EMERGENCY receiver: {:?}“, e);
+//                panic!(“Emergency monitor failed”)
+//            }
+//        }
+//    }
 }
 
 pub(crate) async fn enqueue_canopen(message: Messages) {
     let msg: CanOpenMessage = message.into();
     let frame: HypedCanFrame = msg.into();
     let can_msg: CanMessage = frame.into();
-    CAN_SEND.send(can_msg).await;
+    //Replaced CAN_SEND.send(can_msg).await and wrapped in match to so function won’t block always if queue full
+    match CAN_SEND.try_send(can_msg) {
+        //If successful, return Ok
+        Ok(_) => Ok(()),
+        //If the queue is full, log a warning and handle based on message criticality
+        Err(e) => {
+            defmt::warn!(“CAN send queue full, message dropped: {:?}“, e);
+            match messages {
+                //If quickstop or shutdown message dropped, return error and let motor_control_loop handle handle emergency
+                Messages::QuickStop | Messages::Shutdown => { Err(())}
+                //If StartDrive message dropped, log a warning but continue operation
+                Messages::StartDrive => {
+                    defmt::warn!(“StartDrive message dropped, but continuing operation.“);
+                    Err(())
+                }
+                //If non-critical messages dropped, log info and continue operation
+                _ => {
+                    defmt::info!(“None-critical CAN message dropped, continuing operation.“);
+                    Err(())
+                }
+            }
+        }
+    }
 }
