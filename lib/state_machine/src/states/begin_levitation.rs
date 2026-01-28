@@ -1,7 +1,6 @@
 use crate::{state::State, state_machine::StateMachine};
 use embassy_time::Instant;
 use hyped_communications::{bus::EVENT_BUS, events::Event};
-use hyped_core::types::Airgap;
 
 use hyped_core::logging::{debug, info};
 
@@ -43,24 +42,21 @@ impl StateMachine {
                 airgap_μm,
                 current_ma,
             } => {
-                // calculate absolute distance
-                let target_airgap_μm = Airgap(5000);
-                let dist_to_target = airgap_μm.distance_to(target_airgap_μm);
                 info!(
-                    "Status: board={}, current={}mA, distance to target airgap={}μm",
-                    from, current_ma.0, dist_to_target
+                    "Levitation Status: board={}, current={}mA, airgap={}μm at {}ms",
+                    from,
+                    current_ma.0,
+                    airgap_μm,
+                    Instant::now().as_millis(),
                 );
-
-                if dist_to_target < 5000 {
-                    // TODO later: 5000μm is a placeholder, check with levitation team for real number
-                    // TODO later: track how long we've been stable before transitioning to ensure its not a fluctuation
-                    info!("Levitation stable, transitioning to Ready");
-                    self.transition_to(State::Ready).await;
-                }
+            }
+            Event::LevitationStable => {
+                info!("Levitation stable, transitioning to Ready");
+                self.transition_to(State::Ready).await;
             }
             Event::LevitationStopped { from } => {
                 info!("Board={}", from)
-            } // TODO decide if we need this
+            }
             _ => {
                 debug!("Event {} is ignored in current state", event)
             }

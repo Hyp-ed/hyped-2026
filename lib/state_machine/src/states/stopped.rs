@@ -4,8 +4,6 @@ use hyped_communications::{bus::EVENT_BUS, events::Event};
 use hyped_core::logging::{debug, info};
 
 impl StateMachine {
-    // --------- STOPPED ---------
-
     pub(crate) async fn entry_stopped(&mut self) {
         info!("Pod is stopped");
         EVENT_BUS.sender().send(Event::StartDischargeCommand).await;
@@ -28,18 +26,14 @@ impl StateMachine {
                 );
                 let _ = self.boards_discharged.insert(from);
 
-                // TODO do we need to check specific boards?
-                // TODO should it be == or >= here?
-                // Can use precharged, since its the same
-                // TODO check: is is only electronics that discharges, or also motor controller?
                 if !self.desired_boards_to_charge.is_empty()
-                    && self.boards_discharged.len() == self.desired_boards_to_charge.len()
+                    && self.boards_discharged.len() >= self.desired_boards_to_charge.len()
                 {
                     info!("Necessary boards discharged");
-                    // TODO implement which boards must be discharged
+                    // TODO: implement which boards must be discharged
                     self.transition_to(State::Idle).await;
-                } // TODO Should we validate that voltage is actually low before transitioning to IDLE or rely on discharge
-            } // TODO Should we validate that voltage is actually low before transitioning to IDLE or rely on dischargeComplete from all boards
+                }
+            }
             _ => {
                 debug!("Event {} is ignored in current state", event)
             }

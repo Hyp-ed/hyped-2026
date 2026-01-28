@@ -13,10 +13,17 @@ impl StateMachine {
     }
     pub(crate) async fn react_accelerate(&mut self, event: Event) {
         match event {
+            // Braking
             Event::BrakeOperatorCommand => {
                 info!("Operator initiated braking");
                 self.transition_to(State::Brake).await;
             }
+            Event::EmergencyStopOperatorCommand => {
+                warn!("EMERGENCY STOP PRESSED");
+                self.transition_to(State::Emergency).await;
+            }
+            // TODO: add an event for end of track braking
+            // Status
             Event::PropulsionAccelerationStarted => {
                 info!("Acceleration started at {}ms", Instant::now().as_millis());
             }
@@ -38,12 +45,6 @@ impl StateMachine {
                     force_n.0
                 )
             }
-            Event::EmergencyStopOperatorCommand => {
-                warn!("EMERGENCY STOP PRESSED");
-                self.transition_to(State::Emergency).await;
-            }
-            // TODO: need navigation logic here
-            // If reaching end of track, brake
             _ => {
                 debug!("Event {} is ignored in current state", event)
             }

@@ -5,8 +5,6 @@ use hyped_communications::{bus::EVENT_BUS, events::Event};
 use hyped_core::logging::{debug, info, warn};
 
 impl StateMachine {
-    // --------- EMERGENCY ---------
-
     pub(crate) async fn entry_emergency(&mut self) {
         warn!("EMERGENCY STATE ENTERED");
         EVENT_BUS.sender().send(Event::ClampBrakesCommand).await;

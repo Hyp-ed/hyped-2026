@@ -24,7 +24,7 @@ impl StateMachine {
         let desired = FnvIndexSet::new();
         // TODO: insert which boards need precharged
         // Electronics
-        // Motor Controller? (stated in requirements needs ~400 volts)
+        // Motor Controller
         // desired.insert(Board::<board>).unwrap();
 
         Self {
@@ -43,7 +43,6 @@ impl StateMachine {
         info!("Transitioning: {:?} -> {:?}", self.current_state, new_state);
         self.current_state = new_state;
         self.entry().await;
-        // Todo can add validation later if needed
     }
 
     // Entry, match on state

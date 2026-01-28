@@ -7,6 +7,7 @@ impl StateMachine {
         info!("Starting calibration");
         // Reset tracking
         self.boards_calibrated.clear();
+
         // Tell boards to start calibration
         EVENT_BUS
             .sender()

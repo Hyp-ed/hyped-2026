@@ -13,7 +13,6 @@ pub async fn event_to_can() -> ! {
 
         let can_message: Option<CanMessage> = match event {
             // Operator Commands
-            // TODO check: local only?
             Event::EmergencyStopOperatorCommand => None,
             Event::CalibrateOperatorCommand => None,
             Event::BeginLevitationOperatorCommand => None,

@@ -142,7 +142,7 @@ impl From<CanMessage> for HypedCanFrame {
             // Calibration
             CanMessage::StartCalibrationCommand => {
                 let can_id: CanId = CanId::new_high_priority(
-                    Board::Telemetry, // TODO: find out if this is right
+                    Board::Telemetry,
                     CanDataType::U32,
                     MessageIdentifier::Event(EventId::StartCalibrationCommand),
                 );
@@ -385,7 +385,7 @@ impl From<CanMessage> for HypedCanFrame {
 
             CanMessage::PropulsionForce { force_n } => {
                 let can_id: CanId = CanId::new(
-                    Board::Telemetry, // TODO placeholder
+                    Board::Telemetry, //TODO: Placeholder, replace with real board later
                     CanDataType::U16,
                     MessageIdentifier::Event(EventId::PropulsionForce),
                 );
@@ -410,7 +410,7 @@ impl From<CanMessage> for HypedCanFrame {
             }
             CanMessage::PropulsionAccelerationStarted => {
                 let can_id: CanId = CanId::new(
-                    Board::Telemetry, //TODO placeholder board for now
+                    Board::Telemetry, //TODO: Placeholder, replace with real board later
                     CanDataType::U32,
                     MessageIdentifier::Event(EventId::PropulsionAccelerationStarted),
                 );
@@ -418,7 +418,7 @@ impl From<CanMessage> for HypedCanFrame {
             }
             CanMessage::PropulsionBrakingStarted => {
                 let can_id: CanId = CanId::new(
-                    Board::Telemetry, //TODO placeholder board for now
+                    Board::Telemetry, //TODO: Placeholder, replace with real board later
                     CanDataType::U32,
                     MessageIdentifier::Event(EventId::PropulsionBrakingStarted),
                 );

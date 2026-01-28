@@ -4,8 +4,6 @@ use hyped_communications::{bus::EVENT_BUS, events::Event};
 use hyped_core::logging::{debug, info};
 
 impl StateMachine {
-    // --------- BRAKE ---------
-
     pub(crate) async fn entry_brake(&mut self) {
         info!("Pod is braking");
         EVENT_BUS
@@ -42,7 +40,6 @@ impl StateMachine {
                 // Check if stopped
                 if velocity_kmh.0 == 0 {
                     info!("Pod has stopped, ready for stop levitation command");
-                    // TODO: auto transition or wait for operator?
                 }
             }
             Event::PropulsionForce { force_n } => {

@@ -4,8 +4,6 @@ use hyped_communications::{bus::EVENT_BUS, events::Event};
 use hyped_core::logging::{debug, info, warn};
 
 impl StateMachine {
-    // --------- READY FOR LEVITATION ---------
-
     pub(crate) async fn entry_ready_for_levitation(&mut self) {
         info!("Pod is ready for levitation");
         EVENT_BUS.sender().send(Event::UnclampBrakesCommand).await;

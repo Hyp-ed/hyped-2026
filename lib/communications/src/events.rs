@@ -85,11 +85,16 @@ pub enum Event {
         from: Board,
     },
 
+    LevitationStable,
+
     // Failure
     LevitationFailed {
         from: Board,
         reason: Reason,
     },
+
+    // ------ Navigation ------
+    EndOfTrackBrakeCommand,
 
     // ------ Dynamics ------
 
