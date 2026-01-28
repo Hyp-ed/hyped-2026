@@ -31,6 +31,10 @@ pub enum EventId {
     LevitationFailed,
     LevitationStatus,
     LevitationSystemsReady,
+    LevitationStable,
+
+    // Navigation
+    EndOfTrackBrake,
 
     // Dynamics
     UnclampBrakesCommand,
@@ -80,6 +84,10 @@ const LEVITATION_STOPPED_ID: u16 = MAX_MESSAGE_IDENTIFIER - 17;
 const LEVITATION_FAILED_ID: u16 = MAX_MESSAGE_IDENTIFIER - 18;
 const LEVITATION_STATUS_ID: u16 = MAX_MESSAGE_IDENTIFIER - 19;
 const LEVITATION_SYSTEMS_READY_ID: u16 = MAX_MESSAGE_IDENTIFIER - 20;
+const LEVITATION_STABLE_ID: u16 = MAX_MESSAGE_IDENTIFIER - 37;
+
+// Navigation
+const END_OF_TRACK_BRAKE_ID: u16 = MAX_MESSAGE_IDENTIFIER - 38;
 
 // Dynamics
 const UNCLAMP_BRAKES_COMMAND_ID: u16 = MAX_MESSAGE_IDENTIFIER - 21;
@@ -125,6 +133,10 @@ impl From<EventId> for u16 {
             EventId::LevitationFailed => LEVITATION_FAILED_ID,
             EventId::LevitationStatus => LEVITATION_STATUS_ID,
             EventId::LevitationSystemsReady => LEVITATION_SYSTEMS_READY_ID,
+            EventId::LevitationStable => LEVITATION_STABLE_ID,
+
+            // Navigation
+            EventId::EndOfTrackBrake => END_OF_TRACK_BRAKE_ID,
 
             // Dynamics
             EventId::UnclampBrakesCommand => UNCLAMP_BRAKES_COMMAND_ID,
@@ -175,6 +187,10 @@ impl TryFrom<u16> for EventId {
             LEVITATION_FAILED_ID => Ok(EventId::LevitationFailed),
             LEVITATION_STATUS_ID => Ok(EventId::LevitationStatus),
             LEVITATION_SYSTEMS_READY_ID => Ok(EventId::LevitationSystemsReady),
+            LEVITATION_STABLE_ID => Ok(EventId::LevitationStable),
+
+            // Navigation
+            END_OF_TRACK_BRAKE_ID => Ok(EventId::EndOfTrackBrake),
 
             // Dynamics
             UNCLAMP_BRAKES_COMMAND_ID => Ok(EventId::UnclampBrakesCommand),
@@ -238,26 +254,6 @@ impl TryFrom<u16> for MessageIdentifier {
 mod tests {
     use super::*;
     use hyped_core::config::MeasurementId;
-
-    // #[test]
-    // fn test_message_identifier_state_transition_command() {
-    //     let message_identifier = MessageIdentifier::StateTransitionCommand;
-    //     let encoded_message_identifier: u16 = message_identifier.clone().into();
-
-    //     let decoded_message_identifier = MessageIdentifier::try_from(encoded_message_identifier)
-    //         .expect("Failed to decode message identifier");
-    //     assert_eq!(message_identifier, decoded_message_identifier);
-    // }
-
-    // #[test]
-    // fn test_message_identifier_state_transition_request() {
-    //     let message_identifier = MessageIdentifier::StateTransitionRequest;
-    //     let encoded_message_identifier: u16 = message_identifier.clone().into();
-
-    //     let decoded_message_identifier = MessageIdentifier::try_from(encoded_message_identifier)
-    //         .expect("Failed to decode message identifier");
-    //     assert_eq!(message_identifier, decoded_message_identifier);
-    // }
 
     #[test]
     fn test_message_identifier_heartbeat() {

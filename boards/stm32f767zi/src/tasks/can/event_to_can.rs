@@ -65,6 +65,10 @@ pub async fn event_to_can() -> ! {
             Event::LevitationFailed { from, reason } => {
                 Some(CanMessage::LevitationFailed { from, reason })
             }
+            Event::LevitationStable => Some(CanMessage::LevitationStable),
+
+            // Navigation
+            Event::EndOfTrackBrakeCommand => Some(CanMessage::EndOfTrackBrake),
 
             // Dynamics
             Event::UnclampBrakesCommand => Some(CanMessage::UnclampBrakesCommand),

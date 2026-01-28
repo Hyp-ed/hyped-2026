@@ -166,6 +166,16 @@ pub async fn can_receiver(mut rx: CanRx<'static>) {
                     .send(Event::LevitationFailed { from, reason })
                     .await;
             }
+            CanMessage::LevitationStable => {
+                defmt::debug!("Levitation Stable");
+                event_sender.send(Event::LevitationStable).await;
+            }
+
+            // Navigation
+            CanMessage::EndOfTrackBrake => {
+                defmt::debug!("End of Track Brake Command Received");
+                event_sender.send(Event::EndOfTrackBrakeCommand).await;
+            }
 
             // Dynamics
             CanMessage::UnclampBrakesCommand => {

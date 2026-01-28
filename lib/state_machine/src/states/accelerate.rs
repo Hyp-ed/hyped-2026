@@ -22,7 +22,10 @@ impl StateMachine {
                 warn!("EMERGENCY STOP PRESSED");
                 self.transition_to(State::Emergency).await;
             }
-            // TODO: add an event for end of track braking
+            Event::EndOfTrackBrakeCommand => {
+                info!("End of track approaching, braking");
+                self.transition_to(State::Brake).await;
+            }
             // Status
             Event::PropulsionAccelerationStarted => {
                 info!("Acceleration started at {}ms", Instant::now().as_millis());

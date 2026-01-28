@@ -66,6 +66,10 @@ pub enum CanMessage {
         from: Board,
         reason: Reason,
     },
+    LevitationStable,
+
+    // Navigation
+    EndOfTrackBrake,
 
     // Dynamics
     UnclampBrakesCommand,
@@ -280,6 +284,24 @@ impl From<CanMessage> for HypedCanFrame {
                 );
                 let data = CanData::U8(reason as u8).into();
                 HypedCanFrame::new(can_id.into(), data)
+            }
+            CanMessage::LevitationStable => {
+                let can_id: CanId = CanId::new(
+                    Board::Telemetry, //TODO: Placeholder, replace with real board later
+                    CanDataType::U32,
+                    MessageIdentifier::Event(EventId::LevitationStable),
+                );
+                HypedCanFrame::new(can_id.into(), [0u8; 8])
+            }
+
+            // Navigation
+            CanMessage::EndOfTrackBrake => {
+                let can_id: CanId = CanId::new(
+                    Board::Telemetry, //TODO: Placeholder, replace with real board later
+                    CanDataType::U32,
+                    MessageIdentifier::Event(EventId::EndOfTrackBrake),
+                );
+                HypedCanFrame::new(can_id.into(), [0u8; 8])
             }
 
             // Dynamics
@@ -564,6 +586,10 @@ impl From<HypedCanFrame> for CanMessage {
                     _ => panic!("Invalid CanData for LevitationFailed"),
                 }
             }
+            MessageIdentifier::Event(EventId::LevitationStable) => CanMessage::LevitationStable,
+
+            // Navigation
+            MessageIdentifier::Event(EventId::EndOfTrackBrake) => CanMessage::EndOfTrackBrake,
 
             // Dynamics
             MessageIdentifier::Event(EventId::UnclampBrakesCommand) => {
