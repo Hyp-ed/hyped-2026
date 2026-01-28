@@ -45,9 +45,6 @@ impl StateMachine {
                     self.transition_to(State::ReadyForLevitation).await;
                 }
             }
-            Event::PrechargeFailed { from, reason } => {
-                info!("Board={}, reason={}", from, reason)
-            }
             _ => {
                 debug!("Event {} is ignored in current state", event)
             }

@@ -53,12 +53,6 @@ pub enum Event {
         voltage_cv: Voltage,
     },
 
-    // Failure
-    PrechargeFailed {
-        from: Board,
-        reason: Reason,
-    },
-
     // ------ Levitation ------
 
     // Ready check
@@ -86,12 +80,6 @@ pub enum Event {
     },
 
     LevitationStable,
-
-    // Failure
-    LevitationFailed {
-        from: Board,
-        reason: Reason,
-    },
 
     // ------ Navigation ------
     EndOfTrackBrakeCommand,
@@ -125,8 +113,6 @@ pub enum Event {
         actuator_pressure_bar: Pressure,
     },
 
-    // TODO Failure events?
-
     // ------ Propulsion ------
 
     // Commands from FSM
@@ -148,10 +134,5 @@ pub enum Event {
     // Calculated thrust force
     PropulsionForce {
         force_n: Force,
-    },
-
-    PropulsionFailed {
-        from: Board,
-        reason: Reason,
     },
 }

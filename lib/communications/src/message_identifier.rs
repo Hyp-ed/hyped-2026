@@ -21,14 +21,12 @@ pub enum EventId {
     DischargeStarted,
     PrechargeComplete,
     DischargeComplete,
-    PrechargeFailed,
 
     // Levitation
     StartLevitationCommand,
     StopLevitationCommand,
     LevitationStarted,
     LevitationStopped,
-    LevitationFailed,
     LevitationStatus,
     LevitationSystemsReady,
     LevitationStable,
@@ -54,7 +52,6 @@ pub enum EventId {
     PropulsionBrakingStarted,
     PropulsionStatus,
     PropulsionForce,
-    PropulsionFailed,
 }
 
 // 12 bits
@@ -72,19 +69,18 @@ const START_PRECHARGE_COMMAND_ID: u16 = MAX_MESSAGE_IDENTIFIER - 7;
 const START_DISCHARGE_COMMAND_ID: u16 = MAX_MESSAGE_IDENTIFIER - 8;
 const PRECHARGE_STARTED_ID: u16 = MAX_MESSAGE_IDENTIFIER - 9;
 const PRECHARGE_COMPLETE_ID: u16 = MAX_MESSAGE_IDENTIFIER - 10;
-const PRECHARGE_FAILED_ID: u16 = MAX_MESSAGE_IDENTIFIER - 11;
 const DISCHARGE_STARTED_ID: u16 = MAX_MESSAGE_IDENTIFIER - 12;
 const DISCHARGE_COMPLETE_ID: u16 = MAX_MESSAGE_IDENTIFIER - 13;
+// 11 is free
 
 // Levitation
 const START_LEVITATION_COMMAND_ID: u16 = MAX_MESSAGE_IDENTIFIER - 14;
 const STOP_LEVITATION_COMMAND_ID: u16 = MAX_MESSAGE_IDENTIFIER - 15;
 const LEVITATION_STARTED_ID: u16 = MAX_MESSAGE_IDENTIFIER - 16;
 const LEVITATION_STOPPED_ID: u16 = MAX_MESSAGE_IDENTIFIER - 17;
-const LEVITATION_FAILED_ID: u16 = MAX_MESSAGE_IDENTIFIER - 18;
-const LEVITATION_STATUS_ID: u16 = MAX_MESSAGE_IDENTIFIER - 19;
-const LEVITATION_SYSTEMS_READY_ID: u16 = MAX_MESSAGE_IDENTIFIER - 20;
-const LEVITATION_STABLE_ID: u16 = MAX_MESSAGE_IDENTIFIER - 37;
+const LEVITATION_STATUS_ID: u16 = MAX_MESSAGE_IDENTIFIER - 18;
+const LEVITATION_SYSTEMS_READY_ID: u16 = MAX_MESSAGE_IDENTIFIER - 19;
+const LEVITATION_STABLE_ID: u16 = MAX_MESSAGE_IDENTIFIER - 20;
 
 // Navigation
 const END_OF_TRACK_BRAKE_ID: u16 = MAX_MESSAGE_IDENTIFIER - 38;
@@ -107,7 +103,6 @@ const PROPULSION_ACCELERATION_STARTED_ID: u16 = MAX_MESSAGE_IDENTIFIER - 32;
 const PROPULSION_BRAKING_STARTED_ID: u16 = MAX_MESSAGE_IDENTIFIER - 33;
 const PROPULSION_STATUS_ID: u16 = MAX_MESSAGE_IDENTIFIER - 34;
 const PROPULSION_FORCE_ID: u16 = MAX_MESSAGE_IDENTIFIER - 35;
-const PROPULSION_FAILED_ID: u16 = MAX_MESSAGE_IDENTIFIER - 36;
 
 impl From<EventId> for u16 {
     fn from(val: EventId) -> Self {
@@ -121,7 +116,6 @@ impl From<EventId> for u16 {
             EventId::StartDischargeCommand => START_DISCHARGE_COMMAND_ID,
             EventId::PrechargeStarted => PRECHARGE_STARTED_ID,
             EventId::PrechargeComplete => PRECHARGE_COMPLETE_ID,
-            EventId::PrechargeFailed => PRECHARGE_FAILED_ID,
             EventId::DischargeStarted => DISCHARGE_STARTED_ID,
             EventId::DischargeComplete => DISCHARGE_COMPLETE_ID,
 
@@ -130,7 +124,6 @@ impl From<EventId> for u16 {
             EventId::StopLevitationCommand => STOP_LEVITATION_COMMAND_ID,
             EventId::LevitationStarted => LEVITATION_STARTED_ID,
             EventId::LevitationStopped => LEVITATION_STOPPED_ID,
-            EventId::LevitationFailed => LEVITATION_FAILED_ID,
             EventId::LevitationStatus => LEVITATION_STATUS_ID,
             EventId::LevitationSystemsReady => LEVITATION_SYSTEMS_READY_ID,
             EventId::LevitationStable => LEVITATION_STABLE_ID,
@@ -156,7 +149,6 @@ impl From<EventId> for u16 {
             EventId::PropulsionBrakingStarted => PROPULSION_BRAKING_STARTED_ID,
             EventId::PropulsionStatus => PROPULSION_STATUS_ID,
             EventId::PropulsionForce => PROPULSION_FORCE_ID,
-            EventId::PropulsionFailed => PROPULSION_FAILED_ID,
         }
     }
 }
@@ -175,7 +167,6 @@ impl TryFrom<u16> for EventId {
             START_DISCHARGE_COMMAND_ID => Ok(EventId::StartDischargeCommand),
             PRECHARGE_STARTED_ID => Ok(EventId::PrechargeStarted),
             PRECHARGE_COMPLETE_ID => Ok(EventId::PrechargeComplete),
-            PRECHARGE_FAILED_ID => Ok(EventId::PrechargeFailed),
             DISCHARGE_STARTED_ID => Ok(EventId::DischargeStarted),
             DISCHARGE_COMPLETE_ID => Ok(EventId::DischargeComplete),
 
@@ -184,7 +175,6 @@ impl TryFrom<u16> for EventId {
             STOP_LEVITATION_COMMAND_ID => Ok(EventId::StopLevitationCommand),
             LEVITATION_STARTED_ID => Ok(EventId::LevitationStarted),
             LEVITATION_STOPPED_ID => Ok(EventId::LevitationStopped),
-            LEVITATION_FAILED_ID => Ok(EventId::LevitationFailed),
             LEVITATION_STATUS_ID => Ok(EventId::LevitationStatus),
             LEVITATION_SYSTEMS_READY_ID => Ok(EventId::LevitationSystemsReady),
             LEVITATION_STABLE_ID => Ok(EventId::LevitationStable),
@@ -212,7 +202,6 @@ impl TryFrom<u16> for EventId {
             PROPULSION_BRAKING_STARTED_ID => Ok(EventId::PropulsionBrakingStarted),
             PROPULSION_STATUS_ID => Ok(EventId::PropulsionStatus),
             PROPULSION_FORCE_ID => Ok(EventId::PropulsionForce),
-            PROPULSION_FAILED_ID => Ok(EventId::PropulsionFailed),
 
             _ => Err("Invalid EventId"),
         }

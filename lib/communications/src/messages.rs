@@ -42,10 +42,6 @@ pub enum CanMessage {
         from: Board,
         voltage: Voltage,
     },
-    PrechargeFailed {
-        from: Board,
-        reason: Reason,
-    },
 
     // Levitation
     StartLevitationCommand,
@@ -61,10 +57,6 @@ pub enum CanMessage {
         from: Board,
         current_ma: Current,
         airgap_μm: Airgap,
-    },
-    LevitationFailed {
-        from: Board,
-        reason: Reason,
     },
     LevitationStable,
 
@@ -108,10 +100,6 @@ pub enum CanMessage {
     },
     PropulsionForce {
         force_n: Force, // calculated thrust force
-    },
-    PropulsionFailed {
-        from: Board,
-        reason: Reason,
     },
 }
 
@@ -194,15 +182,6 @@ impl From<CanMessage> for HypedCanFrame {
                 );
                 HypedCanFrame::new(can_id.into(), [0u8; 8])
             }
-            CanMessage::PrechargeFailed { from, reason } => {
-                let can_id: CanId = CanId::new(
-                    from,
-                    CanDataType::U8,
-                    MessageIdentifier::Event(EventId::PrechargeFailed),
-                );
-                let data = CanData::U8(reason as u8).into();
-                HypedCanFrame::new(can_id.into(), data)
-            }
             CanMessage::PrechargeComplete { from, voltage } => {
                 let can_id = CanId::new(
                     from,
@@ -274,15 +253,6 @@ impl From<CanMessage> for HypedCanFrame {
                     MessageIdentifier::Event(EventId::LevitationStatus),
                 );
                 let data: [u8; 8] = CanData::TwoU16([current_ma.0, airgap_μm.0]).into();
-                HypedCanFrame::new(can_id.into(), data)
-            }
-            CanMessage::LevitationFailed { from, reason } => {
-                let can_id: CanId = CanId::new(
-                    from,
-                    CanDataType::U8,
-                    MessageIdentifier::Event(EventId::LevitationFailed),
-                );
-                let data = CanData::U8(reason as u8).into();
                 HypedCanFrame::new(can_id.into(), data)
             }
             CanMessage::LevitationStable => {
@@ -446,15 +416,6 @@ impl From<CanMessage> for HypedCanFrame {
                 );
                 HypedCanFrame::new(can_id.into(), [0u8; 8])
             }
-            CanMessage::PropulsionFailed { from, reason } => {
-                let can_id: CanId = CanId::new(
-                    from,
-                    CanDataType::U8,
-                    MessageIdentifier::Event(EventId::PropulsionFailed),
-                );
-                let data = CanData::U8(reason as u8).into();
-                HypedCanFrame::new(can_id.into(), data)
-            }
         }
     }
 }
@@ -537,16 +498,6 @@ impl From<HypedCanFrame> for CanMessage {
                     _ => panic!("Invalid CanData for DischargeComplete"),
                 }
             }
-            MessageIdentifier::Event(EventId::PrechargeFailed) => {
-                let reading: CanData = frame.data.into();
-                match reading {
-                    CanData::U8(reason_u8) => CanMessage::PrechargeFailed {
-                        from,
-                        reason: Reason::try_from(reason_u8).unwrap(),
-                    },
-                    _ => panic!("Invalid CanData for PrechargeFailed"),
-                }
-            }
 
             // Levitation
             MessageIdentifier::Event(EventId::StartLevitationCommand) => {
@@ -575,16 +526,6 @@ impl From<HypedCanFrame> for CanMessage {
 
             MessageIdentifier::Event(EventId::LevitationStopped) => {
                 CanMessage::LevitationStopped { from }
-            }
-            MessageIdentifier::Event(EventId::LevitationFailed) => {
-                let reading: CanData = frame.data.into();
-                match reading {
-                    CanData::U8(reason_u8) => CanMessage::LevitationFailed {
-                        from,
-                        reason: Reason::try_from(reason_u8).unwrap(),
-                    },
-                    _ => panic!("Invalid CanData for LevitationFailed"),
-                }
             }
             MessageIdentifier::Event(EventId::LevitationStable) => CanMessage::LevitationStable,
 
@@ -660,16 +601,6 @@ impl From<HypedCanFrame> for CanMessage {
                         force_n: Force(force),
                     },
                     _ => panic!("Invalid CanData for PropulsionForce"),
-                }
-            }
-            MessageIdentifier::Event(EventId::PropulsionFailed) => {
-                let reading: CanData = frame.data.into();
-                match reading {
-                    CanData::U8(reason_u8) => CanMessage::PropulsionFailed {
-                        from,
-                        reason: Reason::try_from(reason_u8).unwrap(),
-                    },
-                    _ => panic!("Invalid CanData for PropulsionFailed"),
                 }
             }
         }

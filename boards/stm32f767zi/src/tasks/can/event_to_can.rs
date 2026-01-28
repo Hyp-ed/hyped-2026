@@ -43,9 +43,6 @@ pub async fn event_to_can() -> ! {
                 from,
                 voltage: voltage_cv,
             }),
-            Event::PrechargeFailed { from, reason } => {
-                Some(CanMessage::PrechargeFailed { from, reason })
-            }
 
             // Levitation
             Event::LevitationSystemsReady => Some(CanMessage::LevitationSystemsReady),
@@ -62,9 +59,7 @@ pub async fn event_to_can() -> ! {
                 airgap_μm,
             }),
             Event::LevitationStopped { from } => Some(CanMessage::LevitationStopped { from }),
-            Event::LevitationFailed { from, reason } => {
-                Some(CanMessage::LevitationFailed { from, reason })
-            }
+
             Event::LevitationStable => Some(CanMessage::LevitationStable),
 
             // Navigation
@@ -115,9 +110,6 @@ pub async fn event_to_can() -> ! {
                 voltage_cv,
             }),
             Event::PropulsionForce { force_n } => Some(CanMessage::PropulsionForce { force_n }),
-            Event::PropulsionFailed { from, reason } => {
-                Some(CanMessage::PropulsionFailed { from, reason })
-            }
         };
 
         if let Some(msg) = can_message {

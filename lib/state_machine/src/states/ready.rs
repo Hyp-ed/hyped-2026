@@ -28,10 +28,6 @@ impl StateMachine {
                     from, current_ma, airgap_μm
                 );
             }
-            Event::LevitationFailed { from, reason } => {
-                warn!("Levitation failed: reason={}, board={}", reason, from);
-                self.transition_to(State::Emergency).await;
-            }
             // Abort
             Event::EmergencyStopOperatorCommand => {
                 warn!("EMERGENCY STOP PRESSED");
