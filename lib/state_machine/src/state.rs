@@ -7,14 +7,20 @@ pub enum State {
     Idle = 0,
     Calibrate = 1,
     Precharge = 2,
+
+    // Levitation run
     ReadyForLevitation = 3,
     BeginLevitation = 4,
-    Ready = 5,
-    Accelerate = 6,
-    Brake = 7,
-    StopLevitation = 8,
-    Stopped = 9,
-    Emergency = 10,
+    Levitating = 5,
+    StopLevitation = 6,
+
+    // Propulsion run
+    ReadyForPropulsion = 7,
+    Accelerate = 8,
+    Brake = 9,
+
+    Stopped = 10,
+    Emergency = 11,
 }
 
 impl From<State> for u8 {
@@ -31,13 +37,19 @@ impl TryFrom<u8> for State {
             0x00 => Ok(State::Idle),
             0x01 => Ok(State::Calibrate),
             0x02 => Ok(State::Precharge),
+
+            // Levitation
             0x03 => Ok(State::ReadyForLevitation),
             0x04 => Ok(State::BeginLevitation),
-            0x05 => Ok(State::Ready),
-            0x06 => Ok(State::Accelerate),
-            0x07 => Ok(State::Brake),
-            0x08 => Ok(State::StopLevitation),
-            0x09 => Ok(State::Stopped),
+            0x05 => Ok(State::Levitating),
+            0x06 => Ok(State::StopLevitation),
+
+            // Propulsion
+            0x07 => Ok(State::ReadyForPropulsion),
+            0x08 => Ok(State::Accelerate),
+            0x09 => Ok(State::Brake),
+
+            0x010 => Ok(State::Stopped),
             0x0A => Ok(State::Emergency),
             _ => Err("Invalid state"),
         }
@@ -50,12 +62,17 @@ impl From<State> for &str {
             State::Idle => "idle",
             State::Calibrate => "calibrate",
             State::Precharge => "precharge",
+
+            // Levitation
             State::ReadyForLevitation => "ready_for_levitation",
             State::BeginLevitation => "begin_levitation",
-            State::Ready => "ready",
+            State::Levitating => "levitating",
+            State::StopLevitation => "stop_levitation",
+
+            State::ReadyForPropulsion => "ready_for_propulsion",
             State::Accelerate => "accelerate",
             State::Brake => "brake",
-            State::StopLevitation => "stop_levitation",
+
             State::Stopped => "stopped",
             State::Emergency => "emergency",
         }
@@ -70,12 +87,18 @@ impl FromStr for State {
             "idle" => Ok(State::Idle),
             "calibrate" => Ok(State::Calibrate),
             "precharge" => Ok(State::Precharge),
+
+            // Levitation
             "ready_for_levitation" => Ok(State::ReadyForLevitation),
             "begin_levitation" => Ok(State::BeginLevitation),
-            "ready" => Ok(State::Ready),
+            "levitating" => Ok(State::Levitating),
+            "stop_levitation" => Ok(State::StopLevitation),
+
+            // Propulsion
+            "ready_for_propulsion" => Ok(State::ReadyForPropulsion),
             "accelerate" => Ok(State::Accelerate),
             "brake" => Ok(State::Brake),
-            "stop_levitation" => Ok(State::StopLevitation),
+
             "stopped" => Ok(State::Stopped),
             "emergency" => Ok(State::Emergency),
             _ => Err("Invalid state"),

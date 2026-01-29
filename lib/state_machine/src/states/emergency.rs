@@ -1,4 +1,4 @@
-use crate::state_machine::StateMachine;
+use crate::{state::State, state_machine::StateMachine};
 //state_enum::State,
 use embassy_time::Instant;
 use hyped_communications::{bus::EVENT_BUS, events::Event};
@@ -46,7 +46,24 @@ impl StateMachine {
                     Instant::now().as_millis(),
                 );
             }
-            // TODO decide what to do here
+            Event::PropulsionStatus {
+                current_ma,
+                velocity_kmh,
+                temperature_c,
+                voltage_cv,
+            } => {
+                info!(
+                    "Propulsion status: {}mA, {}km/h, {}°C, {}cV",
+                    current_ma.0, velocity_kmh.0, temperature_c.0, voltage_cv.0,
+                );
+                info!("Braking: velocity={}km/h", velocity_kmh.0);
+
+                // Check if stopped
+                if velocity_kmh.0 == 0 {
+                    info!("Pod has stopped, transitioning to Stopped");
+                    self.transition_to(State::Stopped).await;
+                }
+            }
             _ => {
                 debug!("Event {} is ignored in current state", event)
             }

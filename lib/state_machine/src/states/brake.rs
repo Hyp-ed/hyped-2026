@@ -24,6 +24,7 @@ impl StateMachine {
                     from,
                     Instant::now().as_millis(),
                 );
+                self.brakes_clamped = true;
             }
             Event::PropulsionStatus {
                 current_ma,
@@ -39,7 +40,8 @@ impl StateMachine {
 
                 // Check if stopped
                 if velocity_kmh.0 == 0 {
-                    info!("Pod has stopped, ready for stop levitation command");
+                    info!("Pod has stopped, transitioning to Stopped");
+                    self.transition_to(State::Stopped).await;
                 }
             }
             Event::PropulsionForce { force_n } => {
@@ -48,10 +50,6 @@ impl StateMachine {
                 Calculated propulsion force: {}N",
                     force_n.0
                 )
-            }
-            Event::StopLevitationOperatorCommand => {
-                info!("Stop levitation pressed");
-                self.transition_to(State::StopLevitation).await;
             }
             _ => {
                 debug!("Event {} is ignored in current state", event)

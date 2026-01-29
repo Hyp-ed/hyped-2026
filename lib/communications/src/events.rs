@@ -11,6 +11,8 @@ pub enum Event {
     AccelerateOperatorCommand,      // Ready -> Accelerate
     BrakeOperatorCommand,           // Accelerate -> Brake
     StopLevitationOperatorCommand,  // Brake -> Stop Levitating
+    StartLevitationRunCommand,      // Start a levitation run
+    StartPropulsionRunCommand,      // Start a propulsion run
 
     // ------ Emergency Events ------
     Emergency {

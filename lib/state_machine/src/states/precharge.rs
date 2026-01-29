@@ -42,8 +42,24 @@ impl StateMachine {
                 {
                     info!("Necessary boards precharged");
                     // TODO: implement which boards must be precharged
+                    self.ready_for_run = true;
+                }
+            }
+            Event::StartLevitationRunCommand => {
+                if self.ready_for_run {
+                    info!("Starting Levitation run");
                     self.transition_to(State::ReadyForLevitation).await;
                 }
+            }
+            Event::StartPropulsionRunCommand => {
+                if self.ready_for_run {
+                    info!("Starting Propulsion run");
+                    self.transition_to(State::ReadyForPropulsion).await;
+                }
+            }
+            Event::EmergencyStopOperatorCommand => {
+                warn!("EMERGENCY STOP PRESSED");
+                self.transition_to(State::Emergency).await;
             }
             _ => {
                 debug!("Event {} is ignored in current state", event)

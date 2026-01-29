@@ -17,6 +17,7 @@ impl StateMachine {
                     from,
                     Instant::now().as_millis(),
                 );
+                self.brakes_clamped = false;
             }
             Event::DynamicsStatus {
                 from,
@@ -34,11 +35,15 @@ impl StateMachine {
                 self.levitation_systems_ready = true;
             }
             Event::BeginLevitationOperatorCommand => {
-                if self.levitation_systems_ready {
+                if self.levitation_systems_ready && !self.brakes_clamped {
                     self.transition_to(State::BeginLevitation).await;
                 } else {
                     warn!("Cannot start levitation, systems not ready");
                 }
+            }
+            Event::EmergencyStopOperatorCommand => {
+                warn!("EMERGENCY STOP PRESSED");
+                self.transition_to(State::Emergency).await;
             }
             _ => {
                 debug!("Event {} is ignored in current state", event)

@@ -2,7 +2,7 @@ use crate::{state::State, state_machine::StateMachine};
 use embassy_time::Instant;
 use hyped_communications::{bus::EVENT_BUS, events::Event};
 
-use hyped_core::logging::{debug, info};
+use hyped_core::logging::{debug, info, warn};
 
 impl StateMachine {
     pub(crate) async fn entry_begin_levitation(&mut self) {
@@ -52,10 +52,14 @@ impl StateMachine {
             }
             Event::LevitationStable => {
                 info!("Levitation stable, transitioning to Ready");
-                self.transition_to(State::Ready).await;
+                self.transition_to(State::Levitating).await;
             }
             Event::LevitationStopped { from } => {
                 info!("Board={}", from)
+            }
+            Event::EmergencyStopOperatorCommand => {
+                warn!("EMERGENCY STOP PRESSED");
+                self.transition_to(State::Emergency).await;
             }
             _ => {
                 debug!("Event {} is ignored in current state", event)
