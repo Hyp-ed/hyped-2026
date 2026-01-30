@@ -76,7 +76,7 @@ impl From<u32> for CanId {
         }
     }
 }
-
+"""
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -103,5 +103,25 @@ mod tests {
         let encoded_can_id: u32 = can_id.clone().into();
 
         assert_eq!(can_id, CanId::from(encoded_can_id));
+    }
+}
+"""
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn it_works() {
+        let can_id = CanID::new_high_priority(
+            Board::Test,
+            CanDataType::u32,
+            MessageIdentifier::Event(EventID::TestEvent), // TODO: Define test events
+        );
+        let encoded_can_id: u32 = can_id.clone().into();
+
+        assert_eq!(can_id, CanID::from(encoded_can_id));
+
+
     }
 }

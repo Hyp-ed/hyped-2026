@@ -210,3 +210,60 @@ pub enum Event {
     },
     // TODO decide whether to handle failure here or as an emergency
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use crate::boards::Board;
+    use crate::emergency::Reason;
+    #[test]
+    fn test_emergency_stop_command() {
+        let event = Event::EmergencyStopOperatorCommand;
+        match event {
+            Event::EmergencyStopOperatorCommand => {}
+            _ => panic!("Expected EmergencyStopOperatorCommand event"),
+        }
+    }
+    #[test]
+    fn test_calibrate_operator_command() {
+        let event = Event::CalibrateOperatorCommand;
+        match event {
+            Event::CalibrateOperatorCommand => {}
+            _ => panic!("Expected CalibrateOperatorCommand event"),
+        }
+    }
+    #[test]
+    fn test_begin_levitation_operator_command() {
+        let event = Event::BeginLevitationOperatorCommand;
+        match event {
+            Event::BeginLevitationOperatorCommand => {}
+            _ => panic!("Expected BeginLevitationOperatorCommand event"),
+        }
+    }
+
+    #[test]
+    fn test_accelerate_operator_command() {
+        let event = Event::AccelerateOperatorCommand;
+        match event {
+            Event::AccelerateOperatorCommand => {}
+            _ => panic!("Expected AccelerateOperatorCommand event"),
+        }
+    }
+    #[test]
+    fn test_brake_operator_command() {
+        let event = Event::BrakeOperatorCommand;
+        match event {
+            Event::BrakeOperatorCommand => {}
+            _ => panic!("Expected BrakeOperatorCommand event"),
+        }
+    }
+    #[test]
+    fn test_stop_levitation_operator_command() {
+        let event = Event::StopLevitationOperatorCommand;
+        match event {
+            Event::StopLevitationOperatorCommand => {}
+            _ => panic!("Expected StopLevitationOperatorCommand event"),
+        }
+    }
+}
