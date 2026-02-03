@@ -9,9 +9,9 @@ impl StateMachine {
 
     pub(crate) async fn react_idle(&mut self, event: Event) {
         match event {
-            Event::CalibrateOperatorCommand => {
+            Event::PrechargeOperatorCommand => {
                 info!("Calibrate command received");
-                self.transition_to(State::Calibrate).await;
+                self.transition_to(State::Precharge).await;
             }
             _ => {
                 debug!("Event {} is ignored in current state", event)

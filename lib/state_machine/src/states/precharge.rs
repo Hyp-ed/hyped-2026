@@ -35,23 +35,22 @@ impl StateMachine {
                     return;
                 }
 
-                let _ = self.boards_precharged.insert(from);
+                // TODO Logic: Check relays activate in this order
+                // 1. Shutdown relay
+                // 2. Battery precharge
+                // 3. Motor controller precharge
+                // 4. If discharge -> trigger emergency
+                //let _ = self.boards_precharged.insert(from);
 
-                if !self.desired_boards_to_charge.is_empty()
-                    && self.boards_precharged.len() >= self.desired_boards_to_charge.len()
+                //if !self.desired_boards_to_charge.is_empty()
+                //  && self.boards_precharged.len() >= self.desired_boards_to_charge.len()
                 {
                     info!("Necessary boards precharged");
                     // TODO: implement which boards must be precharged
                     self.ready_for_run = true;
                 }
             }
-            Event::StartLevitationRunCommand => {
-                if self.ready_for_run {
-                    info!("Starting Levitation run");
-                    self.transition_to(State::ReadyForLevitation).await;
-                }
-            }
-            Event::StartPropulsionRunCommand => {
+            Event::StartRunOperatorCommand => {
                 if self.ready_for_run {
                     info!("Starting Propulsion run");
                     self.transition_to(State::ReadyForPropulsion).await;

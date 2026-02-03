@@ -24,10 +24,11 @@ impl StateMachine {
                     Instant::now().as_millis(),
                     voltage_cv,
                 );
-                let _ = self.boards_discharged.insert(from);
+                // TODO: Check discharge relay is opened
+                //let _ = self.boards_discharged.insert(from);
 
-                if !self.desired_boards_to_charge.is_empty()
-                    && self.boards_discharged.len() >= self.desired_boards_to_charge.len()
+                //if !self.desired_boards_to_charge.is_empty()
+                //   && self.boards_discharged.len() >= self.desired_boards_to_charge.len()
                 {
                     info!("Necessary boards discharged");
                     // TODO: implement which boards must be discharged

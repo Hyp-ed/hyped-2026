@@ -6,13 +6,10 @@ use hyped_core::types::{Airgap, Current, Force, Pressure, Temperature, Velocity,
 pub enum Event {
     // ------ Operator Commands ------
     EmergencyStopOperatorCommand,
-    CalibrateOperatorCommand,       // Idle -> Calibrating
-    BeginLevitationOperatorCommand, // Ready for levitation -> Begin Levitation
-    AccelerateOperatorCommand,      // Ready -> Accelerate
-    BrakeOperatorCommand,           // Accelerate -> Brake
-    StopLevitationOperatorCommand,  // Brake -> Stop Levitating
-    StartLevitationRunCommand,      // Start a levitation run
-    StartPropulsionRunCommand,      // Start a propulsion run
+    PrechargeOperatorCommand,  // Idle -> Precharge
+    AccelerateOperatorCommand, // ReadyForPropulsion -> Accelerate
+    BrakeOperatorCommand,      // Accelerate -> Brake
+    StartRunOperatorCommand,   // Start a run (Propulsion Only)
 
     // ------ Emergency Events ------
     Emergency {

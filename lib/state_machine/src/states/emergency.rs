@@ -63,6 +63,7 @@ impl StateMachine {
                     info!("Pod has stopped, transitioning to Stopped");
                     self.transition_to(State::Stopped).await;
                 }
+                // Change to manual
             }
             _ => {
                 debug!("Event {} is ignored in current state", event)
