@@ -5,7 +5,7 @@ import { ACTIVE_STATES } from '@hyped/telemetry-constants';
 import type {
 	LaunchTimeResponse,
 	StateResponse,
-} from '@hyped/telemetry-types/dist/server/responses';
+} from '@hyped/telemetry-types';
 import { flux } from '@influxdata/influxdb-client';
 import { HttpException, Injectable, type LoggerService } from '@nestjs/common';
 import { INFLUX_TELEMETRY_BUCKET } from '../core/config';

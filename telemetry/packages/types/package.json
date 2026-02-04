@@ -2,18 +2,18 @@
 	"name": "@hyped/telemetry-types",
 	"private": true,
 	"version": "0.0.0",
-	"main": "./dist/index.js",
-	"types": "./dist/index.d.ts",
+	"main": "./dist/cjs/index.js",
+	"types": "./dist/types/index.d.ts",
+	"module": "./dist/esm/index.js",
 	"exports": {
 	  ".": {
-		"types": "./dist/index.d.ts",
-		"import": "./dist/index.js",
-		"require": "./dist/index.js",
-		"default": "./dist/index.js"
+		"types": "./dist/types/index.d.ts",
+		"import": "./dist/esm/index.js",
+		"require": "./dist/cjs/index.js"
 	  }
 	},
 	"scripts": {
-	  "build": "tsc",
+	  "build": "rm -rf dist && tsc --module commonjs --moduleResolution node --outDir dist/cjs --declaration false --declarationMap false && tsc --module esnext --outDir dist/esm --declaration --declarationDir dist/types",
 	  "watch": "tsc -w",
 	  "lint": "biome lint .",
 	  "lint:fix": "biome check --write ."

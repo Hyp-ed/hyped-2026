@@ -7,7 +7,7 @@ import type {
 	OpenMctFault,
 	Unpacked,
 } from '@hyped/telemetry-types';
-import type { HistoricalFaults } from '@hyped/telemetry-types/dist/openmct/openmct-fault.types';
+import type { HistoricalFaults } from '@hyped/telemetry-types';
 import { Point } from '@influxdata/influxdb-client';
 import { Injectable, type LoggerService } from '@nestjs/common';
 import { HistoricalFaultDataService } from './data/historical/HistoricalFaultData.service';

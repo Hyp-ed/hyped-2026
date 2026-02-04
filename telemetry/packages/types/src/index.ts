@@ -17,6 +17,7 @@ export type {
 export type { 
 	OpenMctFault,
 	HistoricalFaults,
+	OpenMctHistoricalFaults,
 } from './openmct/openmct-fault.types.js';
 export type { Unpacked } from './utils/Unpacked.js';
 export type {

@@ -9,7 +9,7 @@ import type {
 	LaunchTimeResponse,
 	LevitationHeight,
 	StateResponse,
-} from '@hyped/telemetry-types/dist/server/responses';
+} from '@hyped/telemetry-types';
 import { Controller, Get, HttpException, Param, Query } from '@nestjs/common';
 import { PublicDataService } from './PublicData.service';
 
