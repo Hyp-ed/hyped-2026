@@ -18,7 +18,7 @@ export const MeasurementSchema = z.object({
 	id: z.string(),
 	label: z.string(),
 	unit: z.string(),
-	type: z.string(),
+	kind: z.string(),
 	format: z.enum(['float', 'integer']),
 	limits: MeasurementLimitsSchema,
 });
@@ -28,6 +28,7 @@ export type Measurement = z.infer<typeof MeasurementSchema>;
 export const StatusSchema = z.object({
 	id: z.string(),
 	label: z.string(),
+	kind: z.string(),
 	format: z.literal('enum'),
 	values: z.array(
 		z.object({

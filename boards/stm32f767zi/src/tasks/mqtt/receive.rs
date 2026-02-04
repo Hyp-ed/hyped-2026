@@ -1,3 +1,4 @@
+use super::send::MQTT_SEND;
 use crate::log::log;
 use core::str::FromStr;
 use defmt_rtt as _;
@@ -75,6 +76,15 @@ pub async fn mqtt_receive(
                     // Ignore heartbeat and log messages
                     Ok(MqttTopic::Heartbeat) => {}
                     Ok(MqttTopic::Logs) => {}
+                    Ok(MqttTopic::LatencyRequest) => {
+                        // Immediately respond to latency requests
+                        MQTT_SEND
+                            .send(MqttMessage::new(
+                                MqttTopic::LatencyResponse,
+                                String::from_str(message).unwrap(),
+                            ))
+                            .await;
+                    }
                     Ok(topic) => {
                         // Send message to channel so that it can be consumed by other tasks
                         MQTT_RECEIVE

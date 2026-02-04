@@ -1,9 +1,9 @@
 import { INFLUX_FAULTS_BUCKET } from '@/core/config';
 import type { InfluxRow } from '@/modules/common/types/InfluxRow';
-import type { InfluxService } from '@/modules/influx/Influx.service';
+import { InfluxService } from '@/modules/influx/Influx.service';
 import { Logger } from '@/modules/logger/Logger.decorator';
 import type { OpenMctFault } from '@hyped/telemetry-types';
-import type { HistoricalFaults } from '@hyped/telemetry-types/dist/openmct/openmct-fault.types';
+import type { HistoricalFaults } from '@hyped/telemetry-types';
 import { fluxString } from '@influxdata/influxdb-client';
 import { HttpException, Injectable, type LoggerService } from '@nestjs/common';
 

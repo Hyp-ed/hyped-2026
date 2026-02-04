@@ -1,5 +1,5 @@
 import { Controller, Param, Post } from '@nestjs/common';
-import type { WarningsService } from './Warnings.service';
+import { WarningsService } from './Warnings.service';
 
 @Controller('pods/:podId/warnings')
 export class WarningsController {

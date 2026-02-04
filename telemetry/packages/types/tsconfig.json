@@ -1,7 +1,10 @@
 {
 	"extends": "@hyped/tsconfig/base.json",
 	"compilerOptions": {
-		"outDir": "./dist",
+		"outDir": "dist",
+		"module": "ESNext",
+		"moduleResolution": "bundler",
+		"declaration": true,
 		"noEmit": false
 	},
 	"include": ["src"],

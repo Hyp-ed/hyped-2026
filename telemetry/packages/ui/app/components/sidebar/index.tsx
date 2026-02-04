@@ -3,7 +3,7 @@ import { useCurrentPod } from '@/context/pods';
 import { log } from '@/lib/logger';
 import { cn } from '@/lib/utils';
 import { VIEWS, VIEW_KEYS, type ViewOption } from '@/views';
-import { POD_IDS } from '@hyped/telemetry-constants';
+import { podIds } from '@hyped/telemetry-constants';
 import { useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { Latency } from './latency';
@@ -48,7 +48,7 @@ export const Sidebar = ({
 				</div>
 				<div className="flex flex-col justify-start">
 					<p className="font-bold text-xl">Controls</p>
-					{POD_IDS.map((podId) => (
+					{podIds.map((podId) => (
 						<PodControls
 							key={podId}
 							podId={podId}

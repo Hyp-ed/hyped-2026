@@ -1,6 +1,6 @@
-import type { OpenMctHistoricalFaults } from '@hyped/telemetry-types/dist/openmct/openmct-fault.types';
+import type { OpenMctHistoricalFaults } from '@hyped/telemetry-types';
 import { Controller, Get, Param } from '@nestjs/common';
-import type { HistoricalFaultDataService } from './HistoricalFaultData.service';
+import { HistoricalFaultDataService } from './HistoricalFaultData.service';
 
 @Controller('openmct/faults/historical')
 export class HistoricalFaultsDataController {
