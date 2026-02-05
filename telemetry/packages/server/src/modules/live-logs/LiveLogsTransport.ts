@@ -11,7 +11,7 @@ export class LiveLogsTransport extends Transport {
 
 	private socket: Socket<DefaultEventsMap, DefaultEventsMap>;
 
-	// iniitalise the socket connection to the server
+	// initialise the socket connection to the server
 	init() {
 		const socket = io('http://localhost:3000', {
 			path: '/live-logs',

@@ -73,11 +73,11 @@ pub async fn mqtt_receive(
                 let topic: Result<MqttTopic, &str> = topic_str.parse();
 
                 match topic {
-                    // Ignore heartbeat and log messages
+                    // Ignore heartbeat, log and latency response messages
                     Ok(MqttTopic::Heartbeat) => {}
                     Ok(MqttTopic::Logs) => {}
+                    Ok(MqttTopic::LatencyResponse) => {}
                     Ok(MqttTopic::LatencyRequest) => {
-                        // Immediately respond to latency requests
                         MQTT_SEND
                             .send(MqttMessage::new(
                                 MqttTopic::LatencyResponse,
@@ -85,16 +85,17 @@ pub async fn mqtt_receive(
                             ))
                             .await;
                     }
-                    Ok(topic) => {
-                        // Send message to channel so that it can be consumed by other tasks
+                    Ok(MqttTopic::State) => {
+                        // Only forward STATE messages (commands) to the internal channel
                         MQTT_RECEIVE
                             .send(MqttMessage::new(
-                                topic,
+                                MqttTopic::State,
                                 String::from_str(message)
                                     .expect("Failed to convert message to string"),
                             ))
                             .await;
                     }
+                    Ok(_) => {}
                     Err(_) => {
                         // Log warning for unknown topic
                         log(
