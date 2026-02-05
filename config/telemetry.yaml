@@ -10,6 +10,6 @@ mqtt:
     port: 1883
   receiver:
     client_id: 'telemetry_receiver'
-    subscribe_topic: 'hyped/poddington/#'
+    subscribe_topic: 'hyped/the_podigal_son/#'
   sender:
     client_id: 'telemetry_sender'
