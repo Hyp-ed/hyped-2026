@@ -56,8 +56,12 @@ impl From<MqttTopic> for String<100> {
                 .unwrap(),
             MqttTopic::Heartbeat => topic.push_str("hyped/poddington/heartbeat").unwrap(),
             MqttTopic::Logs => topic.push_str("hyped/poddington/logs").unwrap(),
-            MqttTopic::LatencyRequest => topic.push_str("hyped/poddington/latency/request").unwrap(),
-            MqttTopic::LatencyResponse => topic.push_str("hyped/poddington/latency/response").unwrap(),
+            MqttTopic::LatencyRequest => {
+                topic.push_str("hyped/poddington/latency/request").unwrap()
+            }
+            MqttTopic::LatencyResponse => {
+                topic.push_str("hyped/poddington/latency/response").unwrap()
+            }
             MqttTopic::Debug => topic.push_str("debug").unwrap(),
             MqttTopic::Test => topic.push_str("test").unwrap(),
             MqttTopic::Measurement(measurement_id) => {
