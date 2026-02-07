@@ -39,5 +39,7 @@ async fn main(spawner: Spawner) -> ! {
         );
     }
 
-    loop {}
+    loop {
+        core::hint::spin_loop();
+    }
 }
