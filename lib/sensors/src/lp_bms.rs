@@ -2,7 +2,9 @@ use core::task::Poll;
 
 /// Driver for the TinyBMS s516 30A Battery Management System using CAN.
 /// Used to monitor battery status and health.
+/// For now it is assumed that the BMS communicates with another bus
 use defmt::Format;
+use embassy_stm32::can::CanRx;
 use embassy_time::{Duration, Instant};
 use hyped_can::{CanError, HypedCanFrame, HypedCanRx, HypedCanTx};
 
@@ -17,8 +19,8 @@ pub struct BatteryData {
     pub cell_voltages_mv: heapless::Vec<u16, 32>,
 }
 
-pub struct Bms<'a, T: HypedCanTx + HypedCanRx + 'a> {
-    can: &'a mut T,
+pub struct Bms {
+    can: CanRx<'static>,
 }
 
 pub struct ReadResponseFuture<'a, T: HypedCanTx + HypedCanRx + 'a> {
@@ -51,10 +53,13 @@ impl<'a, T: HypedCanTx + HypedCanRx> core::future::Future for ReadResponseFuture
     }
 }
 
+pub const BMS_NODE_ID: u8 = 0x01;
+pub const BMS_REQUEST_ID: u32 = 0x400 | BMS_NODE_ID as u32;
+pub const BMS_RESPONSE_ID: u32 = 0x500 | BMS_NODE_ID as u32;
+
 impl<'a, T: HypedCanTx + HypedCanRx> Bms<'a, T> {
-    const NODE_ID: u8 = 0x01;
-    const REQUEST_ID: u32 = 0x400 | Self::NODE_ID as u32;
-    const RESPONSE_ID: u32 = 0x500 | Self::NODE_ID as u32;
+    const REQUEST_ID: u32 = 0x400 | BMS_NODE_ID as u32;
+    const RESPONSE_ID: u32 = 0x500 | BMS_NODE_ID as u32;
 
     fn send_simple_request(&mut self, cmd: u8) -> Result<(), CanError> {
         let frame = HypedCanFrame::new(Self::REQUEST_ID, [cmd, 0, 0, 0, 0, 0, 0, 0]);
@@ -112,7 +117,7 @@ impl<'a, T: HypedCanTx + HypedCanRx> Bms<'a, T> {
         let start = Instant::now();
         loop {
             if Instant::now() - start > Duration::from_millis(1000) {
-                return Err(CanError::Timeout);
+                return Err(CanError::Full);
             }
 
             match self.can.read_frame() {
@@ -154,4 +159,8 @@ impl<'a, T: HypedCanTx + HypedCanRx> Bms<'a, T> {
             cell_voltages_mv,
         })
     }
+}
+
+impl<'a, T: HypedCanTx + HypedCanRx> Bms<'a, T> {
+    pub fn init(&mut self) {}
 }

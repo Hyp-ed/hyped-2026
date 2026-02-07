@@ -66,8 +66,22 @@ pub async fn can_receiver(
 
         let id = envelope.frame.id();
         let can_id = match id {
-            Id::Standard(id) => id.as_raw() as u32, // 11-bit ID
-            Id::Extended(id) => id.as_raw(),        // 29-bit ID
+            Id::Standard(id) => {
+                let raw_id = id.as_raw() as u32;
+
+                // TODO: figure out if this can bus is in the main can bus
+                // // is this a bms message
+                // if raw_id == BMS_RESPONSE_ID {
+                //     INCOMING_BMS_MESSAGES.sender().send(());
+                //
+                //     send_log!(log_sender, "Received BMS: {:#?}", envelope);
+                //
+                //     continue 'recv_loop;
+                // }
+
+                raw_id
+            } // 11-bit ID
+            Id::Extended(id) => id.as_raw(), // 29-bit ID
         };
         let mut data = [0u8; 8];
         data.copy_from_slice(envelope.frame.data());
@@ -77,7 +91,6 @@ pub async fn can_receiver(
         defmt::debug!("Received CAN message: {:?}", can_message);
 
         // Log it to the SD Card
-        // TODO: make sure the length of the message fits in
         send_log!(log_sender, "Received: {:#?}", can_message);
 
         match can_message {
