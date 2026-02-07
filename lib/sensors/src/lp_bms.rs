@@ -39,7 +39,7 @@ impl<'a, T: HypedCanTx + HypedCanRx> core::future::Future for ReadResponseFuture
         let envelope = this.can.read_frame()?;
         if envelope.frame.can_id == this.response_id && envelope.frame.data[1] == this.expected_cmd
         {
-            return Poll::Ready(Ok(envelope.frame.data));
+            Poll::Ready(Ok(envelope.frame.data))
         } else {
             let elapsed = Instant::now() - this.start;
             if elapsed > Duration::from_millis(1000) {
@@ -98,9 +98,9 @@ impl<'a, T: HypedCanTx + HypedCanRx> Bms<'a, T> {
     pub async fn read_temperatures(&mut self) -> Result<[i16; 3], CanError> {
         self.send_simple_request(0x1B)?;
         let mut temps = [0i16; 3];
-        for i in 0..3 {
+        for temp in &mut temps {
             let data = self.read_response(0x1B).await?;
-            temps[i] = i16::from_le_bytes([data[2], data[3]]);
+            *temp = i16::from_le_bytes([data[2], data[3]]);
         }
         Ok(temps)
     }
