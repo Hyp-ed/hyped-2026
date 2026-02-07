@@ -3,6 +3,15 @@ pods:
     label: 'Poddington'
     mode: 'LEVITATION_ONLY'
     measurements:
+      lp_bms: 
+        label: 'LpBms'
+        kind: 'bms'
+        unit: 'C'
+        format: 'float'
+        limits:
+          critical:
+            low: -150
+            high: 150
       accelerometer_1:
         label: 'Accelerometer 1'
         kind: 'acceleration'

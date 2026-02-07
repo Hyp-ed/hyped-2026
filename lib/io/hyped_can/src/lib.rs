@@ -5,7 +5,7 @@
 /// https://docs.embassy.dev/embassy-stm32/git/stm32f767zi/can/enum.TryWriteError.html
 /// https://docs.embassy.dev/embassy-stm32/git/stm32f767zi/can/enum.TryReadError.html,
 /// and https://docs.embassy.dev/embassy-stm32/git/stm32f767zi/can/enums/enum.FrameCreateError.html
-#[derive(Debug)]
+#[derive(Debug, defmt::Format)]
 pub enum CanError {
     Stuff,
     Timeout,

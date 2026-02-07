@@ -67,8 +67,6 @@ pub async fn can_receiver(
         let id = envelope.frame.id();
         let can_id = match id {
             Id::Standard(id) => {
-                let raw_id = id.as_raw() as u32;
-
                 // TODO: figure out if this can bus is in the main can bus
                 // // is this a bms message
                 // if raw_id == BMS_RESPONSE_ID {
@@ -79,7 +77,7 @@ pub async fn can_receiver(
                 //     continue 'recv_loop;
                 // }
 
-                raw_id
+                id.as_raw() as u32
             } // 11-bit ID
             Id::Extended(id) => id.as_raw(), // 29-bit ID
         };

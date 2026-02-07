@@ -80,10 +80,7 @@ impl Bms {
         assert_eq!(frame.data()[0], expected_cmd);
 
         let mut result = [0u8; 8];
-
-        for i in 0..frame.data().len() {
-            result[i] = frame.data()[i];
-        }
+        result[..frame.data().len()].copy_from_slice(frame.data());
 
         Ok(result)
     }

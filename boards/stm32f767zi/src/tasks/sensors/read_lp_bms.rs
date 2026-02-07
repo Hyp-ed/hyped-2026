@@ -9,7 +9,7 @@ use hyped_sensors::lp_bms::{BatteryData, Bms};
 /// Task to periodically read data from the LP BMS and send it over CAN
 #[embassy_executor::task]
 pub async fn read_lp_bms(
-    bms: Bms,
+    mut bms: Bms,
     measurement_id: MeasurementId,
     latest_bms_sender: Sender<'static, CriticalSectionRawMutex, Option<BatteryData>, 1>,
 ) -> ! {
@@ -56,7 +56,7 @@ pub async fn read_lp_bms(
                     .await;
 
                 // Send each temperature
-                for (i, temp) in battery_data.temperatures_c.iter().enumerate() {
+                for temp in battery_data.temperatures_c.iter() {
                     can_sender
                         .send(CanMessage::MeasurementReading(MeasurementReading::new(
                             CanData::I16(*temp),
@@ -67,7 +67,7 @@ pub async fn read_lp_bms(
                 }
 
                 // Send each cell voltage
-                for (i, cell_mv) in battery_data.cell_voltages_mv.iter().enumerate() {
+                for cell_mv in battery_data.cell_voltages_mv.iter() {
                     can_sender
                         .send(CanMessage::MeasurementReading(MeasurementReading::new(
                             CanData::U16(*cell_mv),

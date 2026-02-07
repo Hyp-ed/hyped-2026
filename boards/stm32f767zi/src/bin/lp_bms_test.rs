@@ -6,7 +6,7 @@ use embassy_executor::Spawner;
 use embassy_stm32::{
     bind_interrupts,
     can::{Can, Rx0InterruptHandler, Rx1InterruptHandler, SceInterruptHandler, TxInterruptHandler},
-    peripherals::CAN1,
+    peripherals::{CAN1, CAN2},
 };
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, watch::Watch};
 use hyped_boards_stm32f767zi::{
@@ -21,7 +21,6 @@ use hyped_boards_stm32f767zi::{
         state_machine::state_updater,
     },
 };
-use hyped_can::{HypedCanRx, HypedCanTx};
 use hyped_communications::boards::Board;
 use hyped_core::config::MeasurementId;
 use hyped_sensors::lp_bms::{BatteryData, Bms};
@@ -34,13 +33,20 @@ bind_interrupts!(struct Irqs {
     CAN1_TX => TxInterruptHandler<CAN1>;
 });
 
+bind_interrupts!(struct Irqs2 {
+    CAN2_RX0 => Rx0InterruptHandler<CAN2>;
+    CAN2_RX1 => Rx1InterruptHandler<CAN2>;
+    CAN2_SCE => SceInterruptHandler<CAN2>;
+    CAN2_TX => TxInterruptHandler<CAN2>;
+});
+
 /// Used to keep the latest BMS data.
 pub static CURRENT_BMS_DATA: Watch<CriticalSectionRawMutex, Option<BatteryData>, 1> = Watch::new();
 
 #[embassy_executor::main]
 async fn main(spawner: Spawner) -> ! {
     THIS_BOARD
-        .init(Board::BmsTester)
+        .init(Board::Test)
         .expect("Failed to initialize board");
 
     let p = embassy_stm32::init(Default::default());
@@ -53,13 +59,13 @@ async fn main(spawner: Spawner) -> ! {
     let mut receiver = CURRENT_BMS_DATA.receiver().unwrap();
 
     // TODO: adjust based on can setup
-    let (bms_can_tx, bms_can_rx) = Can::new(p.CAN2, p.PD0, p.PD1, Irqs).split();
+    let (bms_can_tx, bms_can_rx) = Can::new(p.CAN2, p.PB12, p.PB13, Irqs2).split();
 
     // Construct the BMS driver using the CAN peripheral.
-    let mut bms = Bms::new(can_tx, can_rx);
+    let bms = Bms::new(bms_can_rx, bms_can_tx);
 
     spawner.must_spawn(read_lp_bms(
-        &mut bms,
+        bms,
         MeasurementId::LpBms,
         CURRENT_BMS_DATA.sender(),
     ));
