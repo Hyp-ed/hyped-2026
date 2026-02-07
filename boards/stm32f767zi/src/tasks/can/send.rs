@@ -1,14 +1,25 @@
 use embassy_stm32::can::{CanTx, ExtendedId, Frame, Id};
-use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, channel::Channel};
+use embassy_sync::{
+    blocking_mutex::raw::{CriticalSectionRawMutex, ThreadModeRawMutex},
+    channel::{Channel, Sender},
+};
 use hyped_can::HypedCanFrame;
 use hyped_communications::messages::CanMessage;
+
+use crate::{
+    sdmmc::logging::{LogBufWriter, MESSAGE_SIZE_RAW},
+    send_log,
+};
 
 /// Channel for sending CAN messages.
 pub static CAN_SEND: Channel<CriticalSectionRawMutex, CanMessage, 10> = Channel::new();
 
 /// Task that sends CAN messages from a channel.
 #[embassy_executor::task]
-pub async fn can_sender(mut tx: CanTx<'static>) {
+pub async fn can_sender(
+    mut tx: CanTx<'static>,
+    log_sender: Option<Sender<'static, ThreadModeRawMutex, [u8; MESSAGE_SIZE_RAW], 4>>,
+) {
     let can_sender = CAN_SEND.receiver();
 
     // Clear the tx buffer
@@ -20,6 +31,9 @@ pub async fn can_sender(mut tx: CanTx<'static>) {
 
         defmt::debug!("Sending CAN message: {:?}", message);
 
+        // Log it to the SD Card
+        // TODO: make sure the length of the message fits in
+        send_log!(log_sender, "Sent: {:#?}", message);
         let can_frame: HypedCanFrame = message.into();
 
         let id = Id::Extended(ExtendedId::new(can_frame.can_id).unwrap());

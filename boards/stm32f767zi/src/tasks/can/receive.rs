@@ -1,5 +1,8 @@
 use embassy_stm32::can::{CanRx, Id};
-use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, channel::Channel};
+use embassy_sync::{
+    blocking_mutex::raw::{CriticalSectionRawMutex, ThreadModeRawMutex},
+    channel::{Channel, Sender},
+};
 use hyped_can::HypedCanFrame;
 use hyped_communications::{
     heartbeat::Heartbeat,
@@ -8,7 +11,11 @@ use hyped_communications::{
     state_transition::{StateTransitionCommand, StateTransitionRequest},
 };
 
-use crate::board_state::EMERGENCY;
+use crate::{
+    board_state::EMERGENCY,
+    sdmmc::logging::{LogBufWriter, MESSAGE_SIZE_RAW},
+    send_log,
+};
 
 use defmt_rtt as _;
 use panic_probe as _;
@@ -39,7 +46,10 @@ pub static INCOMING_MEASUREMENTS: Channel<CriticalSectionRawMutex, MeasurementRe
 /// Task that receives CAN messages and puts them into a channel.
 /// Currently only supports `StateTransitionCommand`, `StateTransitionRequest` and `Heartbeat` messages.
 #[embassy_executor::task]
-pub async fn can_receiver(mut rx: CanRx<'static>) {
+pub async fn can_receiver(
+    mut rx: CanRx<'static>,
+    log_sender: Option<Sender<'static, ThreadModeRawMutex, [u8; MESSAGE_SIZE_RAW], 4>>,
+) {
     let emergency_sender = EMERGENCY.sender();
     let state_transition_commands_sender = INCOMING_STATE_TRANSITION_COMMANDS.sender();
     let state_transition_requests_sender = INCOMING_STATE_TRANSITION_REQUESTS.sender();
@@ -53,6 +63,7 @@ pub async fn can_receiver(mut rx: CanRx<'static>) {
             continue;
         }
         let envelope = envelope.unwrap();
+
         let id = envelope.frame.id();
         let can_id = match id {
             Id::Standard(id) => id.as_raw() as u32, // 11-bit ID
@@ -64,6 +75,10 @@ pub async fn can_receiver(mut rx: CanRx<'static>) {
 
         let can_message: CanMessage = can_frame.into();
         defmt::debug!("Received CAN message: {:?}", can_message);
+
+        // Log it to the SD Card
+        // TODO: make sure the length of the message fits in
+        send_log!(log_sender, "Received: {:#?}", can_message);
 
         match can_message {
             CanMessage::StateTransitionCommand(state_transition_command) => {

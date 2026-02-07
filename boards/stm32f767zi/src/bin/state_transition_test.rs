@@ -38,8 +38,8 @@ async fn main(spawner: Spawner) -> ! {
     let p = embassy_stm32::init(Default::default());
 
     let (can_tx, can_rx) = Can::new(p.CAN1, p.PD0, p.PD1, Irqs).split();
-    spawner.must_spawn(can_receiver(can_rx));
-    spawner.must_spawn(can_sender(can_tx));
+    spawner.must_spawn(can_receiver(can_rx, None));
+    spawner.must_spawn(can_sender(can_tx, None));
 
     spawner.must_spawn(state_updater());
 

@@ -76,8 +76,8 @@ async fn main(spawner: Spawner) -> ! {
     default_can_config!(can);
     can.enable().await;
     let (can_tx, can_rx) = can.split();
-    spawner.must_spawn(can_receiver(can_rx));
-    spawner.must_spawn(can_sender(can_tx));
+    spawner.must_spawn(can_receiver(can_rx, None));
+    spawner.must_spawn(can_sender(can_tx, None));
 
     spawner.must_spawn(emergency_handler());
     spawner.must_spawn(send_heartbeat(Board::Telemetry));

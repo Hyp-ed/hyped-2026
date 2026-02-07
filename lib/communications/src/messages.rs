@@ -1,8 +1,6 @@
 use hyped_can::HypedCanFrame;
 use hyped_state_machine::states::State;
 
-use crate::{boards::Board, emergency::Reason, state_transition::StateTransitionCommand};
-
 use super::{
     can_id::CanId,
     data::{CanData, CanDataType},
@@ -11,6 +9,7 @@ use super::{
     message_identifier::MessageIdentifier,
     state_transition::StateTransitionRequest,
 };
+use crate::{boards::Board, emergency::Reason, state_transition::StateTransitionCommand};
 
 #[derive(PartialEq, Debug, Clone, defmt::Format)]
 pub enum CanMessage {
