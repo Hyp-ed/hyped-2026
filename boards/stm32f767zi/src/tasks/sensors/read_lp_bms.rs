@@ -1,9 +1,7 @@
-use crate::{board_state::THIS_BOARD, io::Stm32f767ziCan, tasks::can::send::CAN_SEND};
+use crate::{board_state::THIS_BOARD, tasks::can::send::CAN_SEND};
 use defmt::warn;
-use embassy_stm32::can::CanTx;
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, watch::Sender};
 use embassy_time::{Duration, Timer};
-use hyped_can::{HypedCanRx, HypedCanTx};
 use hyped_communications::{data::CanData, measurements::MeasurementReading, messages::CanMessage};
 use hyped_core::config::{MeasurementId, SENSORS_CONFIG};
 use hyped_sensors::lp_bms::{BatteryData, Bms};
@@ -11,7 +9,7 @@ use hyped_sensors::lp_bms::{BatteryData, Bms};
 /// Task to periodically read data from the LP BMS and send it over CAN
 #[embassy_executor::task]
 pub async fn read_lp_bms(
-    bms: &mut Bms<'static, (CanTx<Stm32f767ziCan>, CanRx<Stm32f767ziCan>)>,
+    bms: Bms,
     measurement_id: MeasurementId,
     latest_bms_sender: Sender<'static, CriticalSectionRawMutex, Option<BatteryData>, 1>,
 ) -> ! {

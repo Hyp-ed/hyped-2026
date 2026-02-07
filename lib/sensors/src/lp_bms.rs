@@ -41,6 +41,10 @@ impl Bms {
     const REQUEST_ID: u32 = 0x400 | Self::NODE_ID as u32;
     const RESPONSE_ID: u32 = 0x500 | Self::NODE_ID as u32;
 
+    pub fn new(can_rx: CanRx<'static>, can_tx: CanTx<'static>) -> Self {
+        Self { can_rx, can_tx }
+    }
+
     async fn send_simple_request(&mut self, cmd: u8) -> Result<(), CanError> {
         self.can_tx
             .write(

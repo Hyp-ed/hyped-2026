@@ -52,8 +52,11 @@ async fn main(spawner: Spawner) -> ! {
     // Create a sender to pass to the BMS reading task, and a receiver for reading the values back.
     let mut receiver = CURRENT_BMS_DATA.receiver().unwrap();
 
+    // TODO: adjust based on can setup
+    let (bms_can_tx, bms_can_rx) = Can::new(p.CAN2, p.PD0, p.PD1, Irqs).split();
+
     // Construct the BMS driver using the CAN peripheral.
-    let mut bms = Bms::new(&mut (can_tx, can_rx));
+    let mut bms = Bms::new(can_tx, can_rx);
 
     spawner.must_spawn(read_lp_bms(
         &mut bms,
