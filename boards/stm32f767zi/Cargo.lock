@@ -871,6 +871,7 @@ dependencies = [
  "defmt",
  "embassy-stm32",
  "embassy-sync 0.6.0",
+ "embassy-sync 0.6.1",
  "embassy-time",
  "heapless 0.8.0",
  "hyped_adc",

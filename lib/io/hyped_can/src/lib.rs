@@ -8,7 +8,6 @@
 #[derive(Debug, defmt::Format)]
 pub enum CanError {
     Stuff,
-    Timeout,
     Form,
     Acknowledge,
     BitRecessive,

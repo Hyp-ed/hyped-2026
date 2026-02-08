@@ -15,6 +15,7 @@ embassy-stm32 = { version = "0.1.0", features = [
 embassy-sync = { version = "0.6", features = [
     "defmt",
 ], git = "https://github.com/embassy-rs/embassy", rev = "92326f10b5be1d6fdc6bd414eb0656e3890bd825" }
+
 embassy-executor = { version = "0.6.0", features = [
     "task-arena-size-32768",
     "arch-cortex-m",

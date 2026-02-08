@@ -6,7 +6,7 @@ use embassy_executor::Spawner;
 use embassy_stm32::{
     bind_interrupts,
     can::{Can, Rx0InterruptHandler, Rx1InterruptHandler, SceInterruptHandler, TxInterruptHandler},
-    peripherals::{CAN1, CAN2},
+    peripherals::CAN1,
 };
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, watch::Watch};
 use hyped_boards_stm32f767zi::{
@@ -14,8 +14,8 @@ use hyped_boards_stm32f767zi::{
     tasks::{
         can::{
             board_heartbeat::{heartbeat_listener, send_heartbeat},
-            receive::can_receiver,
-            send::can_sender,
+            receive::{can_receiver, INCOMING_BMS_MESSAGES},
+            send::{can_sender, BMS_SEND},
         },
         sensors::read_lp_bms::read_lp_bms,
         state_machine::state_updater,
@@ -31,13 +31,6 @@ bind_interrupts!(struct Irqs {
     CAN1_RX1 => Rx1InterruptHandler<CAN1>;
     CAN1_SCE => SceInterruptHandler<CAN1>;
     CAN1_TX => TxInterruptHandler<CAN1>;
-});
-
-bind_interrupts!(struct Irqs2 {
-    CAN2_RX0 => Rx0InterruptHandler<CAN2>;
-    CAN2_RX1 => Rx1InterruptHandler<CAN2>;
-    CAN2_SCE => SceInterruptHandler<CAN2>;
-    CAN2_TX => TxInterruptHandler<CAN2>;
 });
 
 /// Used to keep the latest BMS data.
@@ -58,11 +51,18 @@ async fn main(spawner: Spawner) -> ! {
     // Create a sender to pass to the BMS reading task, and a receiver for reading the values back.
     let mut receiver = CURRENT_BMS_DATA.receiver().unwrap();
 
-    // TODO: adjust based on can setup
-    let (bms_can_tx, bms_can_rx) = Can::new(p.CAN2, p.PB12, p.PB13, Irqs2).split();
-
     // Construct the BMS driver using the CAN peripheral.
-    let bms = Bms::new(bms_can_rx, bms_can_tx);
+    let bms_receiver: embassy_sync::channel::Receiver<
+        'static,
+        CriticalSectionRawMutex,
+        [u8; 8],
+        10,
+    > = INCOMING_BMS_MESSAGES.receiver();
+
+    let bms_sender: embassy_sync::channel::Sender<'static, CriticalSectionRawMutex, u8, 4> =
+        BMS_SEND.sender();
+
+    let bms = Bms::new(bms_receiver, bms_sender);
 
     spawner.must_spawn(read_lp_bms(
         bms,

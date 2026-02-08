@@ -2,7 +2,11 @@
 /// Used to monitor battery status and health.
 /// For now it is assumed that the BMS communicates with another bus
 use defmt::Format;
-use embassy_stm32::can::{enums::BusError, frame::Header, CanRx, CanTx, Frame, Id, StandardId};
+use embassy_stm32::can::{frame::Header, Frame, StandardId};
+use embassy_sync_stm32::{
+    blocking_mutex::raw::CriticalSectionRawMutex,
+    channel::{Receiver, Sender},
+};
 use hyped_can::CanError;
 
 /// Represents the parsed status from the BMS.
@@ -17,72 +21,38 @@ pub struct BatteryData {
 }
 
 pub struct Bms {
-    can_rx: CanRx<'static>,
-    can_tx: CanTx<'static>,
+    can_rx: Receiver<'static, CriticalSectionRawMutex, [u8; 8], 10>,
+    can_tx: Sender<'static, CriticalSectionRawMutex, u8, 4>,
 }
 
-fn to_can_error(e: BusError) -> CanError {
-    match e {
-        BusError::Crc => CanError::Crc,
-        BusError::Form => CanError::Form,
-        BusError::Stuff => CanError::Stuff,
-        BusError::BusOff => CanError::BusOff,
-        BusError::Software => CanError::Software,
-        BusError::Acknowledge => CanError::Acknowledge,
-        BusError::BitRecessive => CanError::BitRecessive,
-        BusError::BitDominant => CanError::BitDominant,
-        BusError::BusPassive => CanError::BusPassive,
-        BusError::BusWarning => CanError::BusWarning,
-    }
-}
+pub const BMS_NODE_ID: u8 = 0x01;
+pub const BMS_REQUEST_ID: u32 = 0x400 | BMS_NODE_ID as u32;
+pub const BMS_RESPONSE_ID: u32 = 0x500 | BMS_NODE_ID as u32;
 
 impl Bms {
-    const NODE_ID: u8 = 0x01;
-    const REQUEST_ID: u32 = 0x400 | Self::NODE_ID as u32;
-    const RESPONSE_ID: u32 = 0x500 | Self::NODE_ID as u32;
-
-    pub fn new(can_rx: CanRx<'static>, can_tx: CanTx<'static>) -> Self {
+    pub fn new(
+        can_rx: Receiver<'static, CriticalSectionRawMutex, [u8; 8], 10>,
+        can_tx: Sender<'static, CriticalSectionRawMutex, u8, 4>,
+    ) -> Self {
         Self { can_rx, can_tx }
     }
 
+    /// the can task will use the bms frame function to send it
     async fn send_simple_request(&mut self, cmd: u8) -> Result<(), CanError> {
-        self.can_tx
-            .write(
-                &Frame::new(
-                    Header::new(
-                        embassy_stm32::can::Id::Standard(
-                            StandardId::new(Self::REQUEST_ID as u16).ok_or(CanError::Unknown)?,
-                        ),
-                        0,
-                        false,
-                    ),
-                    &[cmd, 0, 0, 0, 0, 0, 0, 0],
-                )
-                .map_err(|_| CanError::Unknown)?,
-            )
-            .await;
+        self.can_tx.send(cmd).await;
 
         Ok(())
     }
 
     async fn read_response(&mut self, expected_cmd: u8) -> Result<[u8; 8], CanError> {
-        let frame = loop {
-            let envelope = self.can_rx.read().await.map_err(to_can_error)?;
-            let id = envelope.frame.id();
-
-            if let Id::Standard(id) = id {
-                if id.as_raw() as u32 == Self::RESPONSE_ID {
-                    break envelope.frame;
-                }
+        let data = loop {
+            let data = self.can_rx.receive().await;
+            if data[0] == expected_cmd {
+                break data;
             }
         };
 
-        assert_eq!(frame.data()[0], expected_cmd);
-
-        let mut result = [0u8; 8];
-        result[..frame.data().len()].copy_from_slice(frame.data());
-
-        Ok(result)
+        Ok(data)
     }
 
     pub async fn read_voltage(&mut self) -> Result<f32, CanError> {
@@ -124,25 +94,15 @@ impl Bms {
         let mut voltages = heapless::Vec::<u16, 32>::new();
 
         loop {
-            match self.can_rx.read().await {
-                Ok(envelope) => {
-                    if let Id::Standard(id) = envelope.frame.id() {
-                        if id.as_raw() as u32 == Self::RESPONSE_ID
-                            && envelope.frame.data()[1] == 0x1C
-                        {
-                            let data = envelope.frame.data();
-                            let val = u16::from_le_bytes([data[2], data[3]]);
-                            voltages.push(val).map_err(|_| CanError::BufferOverflow)?;
-                        } else {
-                            break;
-                        }
-                    } else {
-                        break;
-                    }
-                }
-                Err(e) => return Err(to_can_error(e)),
+            let data = self.can_rx.receive().await;
+            if data[1] == 0x1C {
+                let val = u16::from_le_bytes([data[2], data[3]]);
+                voltages.push(val).map_err(|_| CanError::BufferOverflow)?;
+            } else {
+                break;
             }
         }
+
         Ok(voltages)
     }
 
@@ -163,4 +123,16 @@ impl Bms {
             cell_voltages_mv,
         })
     }
+}
+
+pub fn bms_frame(cmd: u8) -> Option<Frame> {
+    Frame::new(
+        Header::new(
+            embassy_stm32::can::Id::Standard(StandardId::new(BMS_REQUEST_ID as u16)?),
+            0,
+            false,
+        ),
+        &[cmd, 0, 0, 0, 0, 0, 0, 0],
+    )
+    .ok()
 }

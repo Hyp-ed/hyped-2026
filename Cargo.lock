@@ -323,6 +323,20 @@ dependencies = [
 
 [[package]]
 name = "embassy-sync"
+version = "0.6.1"
+source = "git+https://github.com/embassy-rs/embassy?rev=92326f10b5be1d6fdc6bd414eb0656e3890bd825#92326f10b5be1d6fdc6bd414eb0656e3890bd825"
+dependencies = [
+ "cfg-if",
+ "critical-section",
+ "defmt 0.3.100",
+ "embedded-io-async",
+ "futures-sink",
+ "futures-util",
+ "heapless",
+]
+
+[[package]]
+name = "embassy-sync"
 version = "0.6.2"
 source = "git+https://github.com/embassy-rs/embassy#3ad9b73dd52d21cab8357f551fb82e281ff2aaa6"
 dependencies = [
@@ -682,6 +696,7 @@ dependencies = [
  "defmt 0.3.100",
  "embassy-stm32",
  "embassy-sync 0.6.0",
+ "embassy-sync 0.6.1",
  "embassy-time",
  "heapless",
  "hyped_adc",

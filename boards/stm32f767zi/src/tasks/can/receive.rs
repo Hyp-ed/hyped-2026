@@ -10,6 +10,7 @@ use hyped_communications::{
     messages::CanMessage,
     state_transition::{StateTransitionCommand, StateTransitionRequest},
 };
+use hyped_sensors::lp_bms::BMS_RESPONSE_ID;
 
 use crate::{
     board_state::EMERGENCY,
@@ -43,6 +44,8 @@ pub static INCOMING_HEARTBEATS: Channel<CriticalSectionRawMutex, Heartbeat, 10> 
 pub static INCOMING_MEASUREMENTS: Channel<CriticalSectionRawMutex, MeasurementReading, 10> =
     Channel::new();
 
+pub static INCOMING_BMS_MESSAGES: Channel<CriticalSectionRawMutex, [u8; 8], 10> = Channel::new();
+
 /// Task that receives CAN messages and puts them into a channel.
 /// Currently only supports `StateTransitionCommand`, `StateTransitionRequest` and `Heartbeat` messages.
 #[embassy_executor::task]
@@ -55,7 +58,7 @@ pub async fn can_receiver(
     let state_transition_requests_sender = INCOMING_STATE_TRANSITION_REQUESTS.sender();
     let incoming_heartbeat_sender = INCOMING_HEARTBEATS.sender();
 
-    loop {
+    'recv_loop: loop {
         defmt::debug!("Waiting for CAN message");
 
         let envelope = rx.read().await;
@@ -67,15 +70,16 @@ pub async fn can_receiver(
         let id = envelope.frame.id();
         let can_id = match id {
             Id::Standard(id) => {
-                // TODO: figure out if this can bus is in the main can bus
-                // // is this a bms message
-                // if raw_id == BMS_RESPONSE_ID {
-                //     INCOMING_BMS_MESSAGES.sender().send(());
-                //
-                //     send_log!(log_sender, "Received BMS: {:#?}", envelope);
-                //
-                //     continue 'recv_loop;
-                // }
+                // is this a bms message
+                if id.as_raw() as u32 == BMS_RESPONSE_ID {
+                    let mut message = [0u8; 8];
+                    message[0..envelope.frame.data().len()].copy_from_slice(envelope.frame.data());
+                    INCOMING_BMS_MESSAGES.sender().send(message).await;
+
+                    send_log!(log_sender, "Received BMS: {:#?}", envelope);
+
+                    continue 'recv_loop;
+                }
 
                 id.as_raw() as u32
             } // 11-bit ID
