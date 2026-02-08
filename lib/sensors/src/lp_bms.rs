@@ -23,6 +23,10 @@ pub struct BatteryData {
 struct BmsCmd {}
 
 impl BmsCmd {
+    const RESET_OR_CLEAN_EVENT_OR_STATUS: u8 = 0x02;
+    const RESET_BMS: u8 = 0x05;
+    const READ_REGISTERS: u8 = 0x03;
+
     const READ_VOLTAGE: u8 = 0x14;
     const READ_CURRENT: u8 = 0x15;
     const READ_MAX_CELL_VOLTAGE: u8 = 0x16;
@@ -34,6 +38,8 @@ impl BmsCmd {
 pub struct Bms {
     can_rx: Receiver<'static, CriticalSectionRawMutex, [u8; 8], 10>,
     can_tx: Sender<'static, CriticalSectionRawMutex, [u8; 8], 4>,
+
+    cells_count: u16,
 }
 
 pub const BMS_NODE_ID: u8 = 0x01;
@@ -46,12 +52,22 @@ impl Bms {
     const CMD: usize = 1;
     const ERROR: usize = 3;
     const BMS_TEMPERATURE_COUNT: usize = 3;
+    const CELL_COUNT_REGISTER: u8 = 53;
 
     pub fn new(
         can_rx: Receiver<'static, CriticalSectionRawMutex, [u8; 8], 10>,
         can_tx: Sender<'static, CriticalSectionRawMutex, [u8; 8], 4>,
     ) -> Self {
-        Self { can_rx, can_tx }
+        Self {
+            can_rx,
+            can_tx,
+            cells_count: 0,
+        }
+    }
+
+    pub async fn init(&mut self) -> Result<(), CanError> {
+        self.reset().await?;
+        Ok(self.cells_count = self.read_cell_count().await?)
     }
 
     /// the can task will use the bms frame function to send it
@@ -118,6 +134,10 @@ impl Bms {
         let mut voltages = heapless::Vec::<u16, 32>::new();
 
         loop {
+            if voltages.len() >= self.cells_count as usize {
+                break;
+            }
+
             let data = self.can_rx.receive().await;
             if data[1] == BmsCmd::READ_CELL_VOLTAGES {
                 let val = u16::from_le_bytes([data[2], data[3]]);
@@ -128,6 +148,43 @@ impl Bms {
         }
 
         Ok(voltages)
+    }
+
+    pub async fn reset(&mut self) -> Result<(), CanError> {
+        self.can_tx
+            .send([
+                BmsCmd::RESET_OR_CLEAN_EVENT_OR_STATUS,
+                BmsCmd::RESET_BMS,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+            ])
+            .await;
+        self.read_response(BmsCmd::RESET_OR_CLEAN_EVENT_OR_STATUS)
+            .await
+            .map(|_| ())
+    }
+
+    pub async fn read_cell_count(&mut self) -> Result<u16, CanError> {
+        self.can_tx
+            .send([
+                BmsCmd::READ_REGISTERS,
+                Self::CELL_COUNT_REGISTER,
+                0,
+                0,
+                1,
+                0,
+                0,
+                0,
+            ])
+            .await;
+
+        let data = self.read_response(BmsCmd::READ_REGISTERS).await?;
+
+        Ok(u16::from_be_bytes([data[3], data[4]]))
     }
 
     pub async fn read_battery_data(&mut self) -> Result<BatteryData, CanError> {
