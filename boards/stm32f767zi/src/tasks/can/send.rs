@@ -16,7 +16,7 @@ use crate::{
 /// Channel for sending CAN messages.
 pub static CAN_SEND: Channel<CriticalSectionRawMutex, CanMessage, 10> = Channel::new();
 /// Channel for BMS messages since they are different than other CAN messages
-pub static BMS_SEND: Channel<CriticalSectionRawMutex, u8, 4> = Channel::new();
+pub static BMS_SEND: Channel<CriticalSectionRawMutex, [u8; 8], 4> = Channel::new();
 
 /// Task that sends CAN messages from a channel.
 #[embassy_executor::task]

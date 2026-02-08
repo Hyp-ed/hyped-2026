@@ -59,7 +59,7 @@ async fn main(spawner: Spawner) -> ! {
         10,
     > = INCOMING_BMS_MESSAGES.receiver();
 
-    let bms_sender: embassy_sync::channel::Sender<'static, CriticalSectionRawMutex, u8, 4> =
+    let bms_sender: embassy_sync::channel::Sender<'static, CriticalSectionRawMutex, [u8; 8], 4> =
         BMS_SEND.sender();
 
     let bms = Bms::new(bms_receiver, bms_sender);

@@ -20,9 +20,20 @@ pub struct BatteryData {
     pub cell_voltages_mv: heapless::Vec<u16, 32>,
 }
 
+struct BmsCmd {}
+
+impl BmsCmd {
+    const READ_VOLTAGE: u8 = 0x14;
+    const READ_CURRENT: u8 = 0x15;
+    const READ_MAX_CELL_VOLTAGE: u8 = 0x16;
+    const READ_MIN_CELL_VOLTAGE: u8 = 0x17;
+    const READ_TEMPERATURES: u8 = 0x1B;
+    const READ_CELL_VOLTAGES: u8 = 0x1C;
+}
+
 pub struct Bms {
     can_rx: Receiver<'static, CriticalSectionRawMutex, [u8; 8], 10>,
-    can_tx: Sender<'static, CriticalSectionRawMutex, u8, 4>,
+    can_tx: Sender<'static, CriticalSectionRawMutex, [u8; 8], 4>,
 }
 
 pub const BMS_NODE_ID: u8 = 0x01;
@@ -30,16 +41,22 @@ pub const BMS_REQUEST_ID: u32 = 0x400 | BMS_NODE_ID as u32;
 pub const BMS_RESPONSE_ID: u32 = 0x500 | BMS_NODE_ID as u32;
 
 impl Bms {
+    const SUCCESS: u8 = 1;
+    const IS_ERR: usize = 0;
+    const CMD: usize = 1;
+    const ERROR: usize = 3;
+    const BMS_TEMPERATURE_COUNT: usize = 3;
+
     pub fn new(
         can_rx: Receiver<'static, CriticalSectionRawMutex, [u8; 8], 10>,
-        can_tx: Sender<'static, CriticalSectionRawMutex, u8, 4>,
+        can_tx: Sender<'static, CriticalSectionRawMutex, [u8; 8], 4>,
     ) -> Self {
         Self { can_rx, can_tx }
     }
 
     /// the can task will use the bms frame function to send it
     async fn send_simple_request(&mut self, cmd: u8) -> Result<(), CanError> {
-        self.can_tx.send(cmd).await;
+        self.can_tx.send([cmd, 0, 0, 0, 0, 0, 0, 0]).await;
 
         Ok(())
     }
@@ -47,7 +64,12 @@ impl Bms {
     async fn read_response(&mut self, expected_cmd: u8) -> Result<[u8; 8], CanError> {
         let data = loop {
             let data = self.can_rx.receive().await;
-            if data[0] == expected_cmd {
+            if data[Self::CMD] == expected_cmd {
+                if data[Self::IS_ERR] != Self::SUCCESS {
+                    defmt::warn!("BMS task failed with error {:?}", data[Self::ERROR]);
+                    return Err(CanError::Unknown);
+                }
+
                 break data;
             }
         };
@@ -56,46 +78,48 @@ impl Bms {
     }
 
     pub async fn read_voltage(&mut self) -> Result<f32, CanError> {
-        self.send_simple_request(0x14).await?;
-        let data = self.read_response(0x14).await?;
+        self.send_simple_request(BmsCmd::READ_VOLTAGE).await?;
+        let data = self.read_response(BmsCmd::READ_VOLTAGE).await?;
         Ok(f32::from_le_bytes([data[2], data[3], data[4], data[5]]))
     }
 
     pub async fn read_current(&mut self) -> Result<f32, CanError> {
-        self.send_simple_request(0x15).await?;
-        let data = self.read_response(0x15).await?;
+        self.send_simple_request(BmsCmd::READ_CURRENT).await?;
+        let data = self.read_response(BmsCmd::READ_CURRENT).await?;
         Ok(f32::from_le_bytes([data[2], data[3], data[4], data[5]]))
     }
 
     pub async fn read_max_cell_voltage(&mut self) -> Result<u16, CanError> {
-        self.send_simple_request(0x16).await?;
-        let data = self.read_response(0x16).await?;
+        self.send_simple_request(BmsCmd::READ_MAX_CELL_VOLTAGE)
+            .await?;
+        let data = self.read_response(BmsCmd::READ_MAX_CELL_VOLTAGE).await?;
         Ok(u16::from_le_bytes([data[2], data[3]]))
     }
 
     pub async fn read_min_cell_voltage(&mut self) -> Result<u16, CanError> {
-        self.send_simple_request(0x17).await?;
-        let data = self.read_response(0x17).await?;
+        self.send_simple_request(BmsCmd::READ_MIN_CELL_VOLTAGE)
+            .await?;
+        let data = self.read_response(BmsCmd::READ_MIN_CELL_VOLTAGE).await?;
         Ok(u16::from_le_bytes([data[2], data[3]]))
     }
 
     pub async fn read_temperatures(&mut self) -> Result<[i16; 3], CanError> {
-        self.send_simple_request(0x1B).await?;
-        let mut temps = [0i16; 3];
+        self.send_simple_request(BmsCmd::READ_TEMPERATURES).await?;
+        let mut temps = [0i16; Self::BMS_TEMPERATURE_COUNT];
         for temp in &mut temps {
-            let data = self.read_response(0x1B).await?;
+            let data = self.read_response(BmsCmd::READ_TEMPERATURES).await?;
             *temp = i16::from_le_bytes([data[2], data[3]]);
         }
         Ok(temps)
     }
 
     pub async fn read_cell_voltages(&mut self) -> Result<heapless::Vec<u16, 32>, CanError> {
-        self.send_simple_request(0x1C).await?;
+        self.send_simple_request(BmsCmd::READ_CELL_VOLTAGES).await?;
         let mut voltages = heapless::Vec::<u16, 32>::new();
 
         loop {
             let data = self.can_rx.receive().await;
-            if data[1] == 0x1C {
+            if data[1] == BmsCmd::READ_CELL_VOLTAGES {
                 let val = u16::from_le_bytes([data[2], data[3]]);
                 voltages.push(val).map_err(|_| CanError::BufferOverflow)?;
             } else {
@@ -125,14 +149,14 @@ impl Bms {
     }
 }
 
-pub fn bms_frame(cmd: u8) -> Option<Frame> {
+pub fn bms_frame(cmd: [u8; 8]) -> Option<Frame> {
     Frame::new(
         Header::new(
             embassy_stm32::can::Id::Standard(StandardId::new(BMS_REQUEST_ID as u16)?),
             0,
             false,
         ),
-        &[cmd, 0, 0, 0, 0, 0, 0, 0],
+        &cmd,
     )
     .ok()
 }
