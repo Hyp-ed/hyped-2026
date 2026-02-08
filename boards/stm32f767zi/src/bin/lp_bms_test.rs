@@ -9,6 +9,7 @@ use embassy_stm32::{
     peripherals::CAN1,
 };
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, watch::Watch};
+use embassy_time::Duration;
 use hyped_boards_stm32f767zi::{
     board_state::THIS_BOARD,
     tasks::{
@@ -75,8 +76,13 @@ async fn main(spawner: Spawner) -> ! {
 
     loop {
         // Only prints when the BMS data changes.
-        let new_bms_data = receiver.changed().await;
-        if let Some(data) = new_bms_data {
+        let new_bms_data = receiver.changed();
+        // according to the config there should be one every 5 ms, so if there is nothing after
+        // 10ms there is a communication error
+        let new_bms_data =
+            embassy_time::with_timeout(Duration::from_millis(10), new_bms_data).await;
+
+        if let Ok(Some(data)) = new_bms_data {
             defmt::info!(
                 "New BMS data: voltage={}V, current={}A, max_cell_mv={}, min_cell_mv={}, temps={:?}, cell_voltages={:?}",
                 data.voltage,
@@ -86,8 +92,10 @@ async fn main(spawner: Spawner) -> ! {
                 data.temperatures_c,
                 data.cell_voltages_mv
             );
+
+            defmt::info!("Check faults: {:?}", data.check_faults());
         } else {
-            defmt::warn!("BMS data unavailable");
+            defmt::warn!("Temp or Cell Voltage communication failure");
         }
     }
 }

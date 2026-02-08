@@ -20,4 +20,4 @@ sensors:
   accelerometer:
     update_frequency: 200 # Hz
   lp_bms:
-    update_frequency: 100 #Hz
+    update_frequency: 200 #Hz

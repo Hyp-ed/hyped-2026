@@ -1,6 +1,6 @@
 /// Driver for the TinyBMS s516 30A Battery Management System using CAN.
 /// Used to monitor battery status and health.
-/// For now it is assumed that the BMS communicates with another bus
+/// It is connected to the main CAN bus
 use defmt::Format;
 use embassy_stm32::can::{frame::Header, Frame, StandardId};
 use embassy_sync_stm32::{
@@ -218,7 +218,7 @@ pub fn bms_frame(cmd: [u8; 8]) -> Option<Frame> {
     .ok()
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, defmt::Format)]
 pub enum BmsFault {
     // Cell Voltage Faults
     CellVoltageOpenWire(usize), // Cell index
@@ -228,7 +228,7 @@ pub enum BmsFault {
     CellVoltageCommunicationFailure,
 
     // Temperature Faults
-    TempSensorOpenWire(usize), // Sensor index (0=internal, 1=ext1, 2=ext2)
+    TempSensorOpenWire(usize),
     TempSensorShortToSupply(usize),
     TempSensorShortToGnd(usize),
     TempOutOfRange(usize),
@@ -250,6 +250,8 @@ impl BatteryData {
     const TEMP_MAX_SAFE: i16 = 90;
     const TEMP_SHORT_TO_SUPPLY: i16 = 150;
 
+    /// This function checks for faults based on the battery data
+    /// NOTE: it does not check for the communication failures
     pub fn check_faults(&self) -> Option<BmsFault> {
         for (idx, &cell_voltage) in self.cell_voltages_mv.iter().enumerate() {
             if cell_voltage == Self::CELL_VOLTAGE_ZERO {
