@@ -217,3 +217,80 @@ pub fn bms_frame(cmd: [u8; 8]) -> Option<Frame> {
     )
     .ok()
 }
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum BmsFault {
+    // Cell Voltage Faults
+    CellVoltageOpenWire(usize), // Cell index
+    CellVoltageShortToSupply(usize),
+    CellVoltageShortToGnd(usize),
+    CellVoltageOutOfRange(usize),
+    CellVoltageCommunicationFailure,
+
+    // Temperature Faults
+    TempSensorOpenWire(usize), // Sensor index (0=internal, 1=ext1, 2=ext2)
+    TempSensorShortToSupply(usize),
+    TempSensorShortToGnd(usize),
+    TempOutOfRange(usize),
+    TempCommunicationFailure,
+}
+
+impl BatteryData {
+    // unit: millivolts
+    const CELL_VOLTAGE_ZERO: u16 = 0;
+    const CELL_VOLTAGE_SHORT_TO_GND_MAX: u16 = 100;
+    const CELL_VOLTAGE_MIN_SAFE: u16 = 2000;
+    const CELL_VOLTAGE_MAX_SAFE: u16 = 4500;
+    const CELL_VOLTAGE_SHORT_TO_SUPPLY: u16 = 5000;
+
+    // unit: degrees Celsius
+    const TEMP_SENSOR_DISCONNECTED: i16 = -32768;
+    const TEMP_MIN_SAFE: i16 = -40;
+    const TEMP_SHORT_TO_GND_MIN: i16 = -50;
+    const TEMP_MAX_SAFE: i16 = 90;
+    const TEMP_SHORT_TO_SUPPLY: i16 = 150;
+
+    pub fn check_faults(&self) -> Option<BmsFault> {
+        for (idx, &cell_voltage) in self.cell_voltages_mv.iter().enumerate() {
+            if cell_voltage == Self::CELL_VOLTAGE_ZERO {
+                return Some(BmsFault::CellVoltageOpenWire(idx));
+            }
+
+            if cell_voltage > Self::CELL_VOLTAGE_SHORT_TO_SUPPLY {
+                return Some(BmsFault::CellVoltageShortToSupply(idx));
+            }
+
+            if cell_voltage > Self::CELL_VOLTAGE_ZERO
+                && cell_voltage < Self::CELL_VOLTAGE_SHORT_TO_GND_MAX
+            {
+                return Some(BmsFault::CellVoltageShortToGnd(idx));
+            }
+
+            if cell_voltage < Self::CELL_VOLTAGE_MIN_SAFE
+                || cell_voltage > Self::CELL_VOLTAGE_MAX_SAFE
+            {
+                return Some(BmsFault::CellVoltageOutOfRange(idx));
+            }
+        }
+
+        for (idx, &temp_c) in self.temperatures_c.iter().enumerate() {
+            if temp_c == Self::TEMP_SENSOR_DISCONNECTED {
+                return Some(BmsFault::TempSensorOpenWire(idx));
+            }
+
+            if temp_c > Self::TEMP_SHORT_TO_SUPPLY {
+                return Some(BmsFault::TempSensorShortToSupply(idx));
+            }
+
+            if temp_c < Self::TEMP_SHORT_TO_GND_MIN {
+                return Some(BmsFault::TempSensorShortToGnd(idx));
+            }
+
+            if temp_c < Self::TEMP_MIN_SAFE || temp_c > Self::TEMP_MAX_SAFE {
+                return Some(BmsFault::TempOutOfRange(idx));
+            }
+        }
+
+        None
+    }
+}
