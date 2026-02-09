@@ -97,9 +97,7 @@ pub async fn can_receiver(mut rx: CanRx<'static>) {
             }
             CanMessage::VoltageStatus { voltage } => {
                 defmt::debug!("Voltage status: {}cV", voltage.0);
-                event_sender
-                    .send(Event::VoltageStatus { voltage })
-                    .await;
+                event_sender.send(Event::VoltageStatus { voltage }).await;
             }
             CanMessage::PrechargeVoltageOK => {
                 defmt::debug!("Precharge voltage OK");

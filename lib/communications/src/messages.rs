@@ -579,9 +579,7 @@ impl From<HypedCanFrame> for CanMessage {
             MessageIdentifier::Event(EventId::PrechargeVoltageOK) => {
                 CanMessage::PrechargeVoltageOK
             }
-            MessageIdentifier::Event(EventId::DischargeVoltageOK) => {
-                CanMessage::DischargeVoltageOK
-            }
+            MessageIdentifier::Event(EventId::DischargeVoltageOK) => CanMessage::DischargeVoltageOK,
 
             // Relays
             MessageIdentifier::Event(EventId::ShutdownCircuitryRelayOpen) => {
@@ -602,9 +600,7 @@ impl From<HypedCanFrame> for CanMessage {
             MessageIdentifier::Event(EventId::MotorControllerRelayClosed) => {
                 CanMessage::MotorControllerRelayClosed
             }
-            MessageIdentifier::Event(EventId::DischargeRelayOpen) => {
-                CanMessage::DischargeRelayOpen
-            }
+            MessageIdentifier::Event(EventId::DischargeRelayOpen) => CanMessage::DischargeRelayOpen,
             MessageIdentifier::Event(EventId::DischargeRelayClosed) => {
                 CanMessage::DischargeRelayClosed
             }
