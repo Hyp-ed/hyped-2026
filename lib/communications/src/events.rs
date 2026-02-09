@@ -35,22 +35,32 @@ pub enum Event {
     StartDischargeCommand,
 
     // Confirmation
-    PrechargeStarted {
-        from: Board,
-    },
-    DischargeStarted {
-        from: Board,
-    },
+    PrechargeStarted,
+    DischargeStarted,
 
     // Completion
-    PrechargeComplete {
-        from: Board,
-        voltage_cv: Voltage,
-    },
-    DischargeComplete {
-        from: Board,
-        voltage_cv: Voltage,
-    },
+    PrechargeComplete,
+    DischargeComplete,
+
+    PrechargeVoltageOK,
+    // Validate voltage: minimum should be close to 400V (40000 cV target)
+    // Load capacitance reaches 5% of battery voltage, so allow 5% tolerance
+    // TODO: Check this with electronics
+    // if voltage_cv.0 < 38000 {
+    //                 warn!("Precharge voltage too low: {}cV", voltage_cv.0);
+    //                 self.transition_to(State::Emergency).await; // TODO: Emergency or no?
+    //                 return;
+    //             }
+
+    // Relays
+    ShutdownCircuitryRelayOpen,
+    ShutdownCircuitryRelayClosed,
+    BatteryPrechargeRelayOpen,
+    BatteryPrechargeRelayClosed,
+    MotorControllerRelayOpen,
+    MotorControllerRelayClosed,
+    DischargeRelayOpen,
+    DischargeRelayClosed,
 
     // ------ Levitation ------
 

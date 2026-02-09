@@ -1,7 +1,6 @@
 mod accelerate;
 mod begin_levitation;
 mod brake;
-mod calibrate;
 mod emergency;
 mod idle;
 mod levitating;

@@ -10,20 +10,11 @@ impl StateMachine {
     }
     pub(crate) async fn react_stopped(&mut self, event: Event) {
         match event {
-            Event::DischargeStarted { from } => {
-                info!(
-                    "Board {:?} started discharge at {}ms",
-                    from,
-                    Instant::now().as_millis(),
-                );
+            Event::DischargeStarted => {
+                info!("Started discharge at {}ms", Instant::now().as_millis(),);
             }
-            Event::DischargeComplete { from, voltage_cv } => {
-                info!(
-                    "Board {:?} completed discharge at {}ms with a final voltage of {}cV",
-                    from,
-                    Instant::now().as_millis(),
-                    voltage_cv,
-                );
+            Event::DischargeComplete => {
+                info!("Completed discharge at {}ms", Instant::now().as_millis(),);
                 // TODO: Check discharge relay is opened
                 //let _ = self.boards_discharged.insert(from);
 

@@ -6,49 +6,72 @@ use hyped_core::logging::{debug, info, warn};
 impl StateMachine {
     pub(crate) async fn entry_precharge(&mut self) {
         info!("Starting precharge");
+        self.precharge_step = 0;
         EVENT_BUS.sender().send(Event::StartPrechargeCommand).await;
-        // TODO reminder: include motor controller in precharge
     }
 
     pub(crate) async fn react_precharge(&mut self, event: Event) {
         match event {
-            Event::PrechargeStarted { from } => {
-                info!(
-                    "Board {:?} started precharge at {}ms",
-                    from,
-                    Instant::now().as_millis(),
-                );
+            Event::PrechargeStarted => {
+                info!("Started precharge at {}ms", Instant::now().as_millis(),);
             }
-            Event::PrechargeComplete { from, voltage_cv } => {
-                info!(
-                    "Board {:?} completed precharge at {}ms",
-                    from,
-                    Instant::now().as_millis(),
-                );
-
-                // Validate voltage: minimum should be close to 400V (40000 cV target)
-                // Load capacitance reaches 5% of battery voltage, so allow 5% tolerance
-                // TODO: Check this with electronics
-                if voltage_cv.0 < 38000 {
-                    warn!("Precharge voltage too low: {}cV", voltage_cv.0);
-                    self.transition_to(State::Emergency).await; // TODO: Emergency or no?
-                    return;
+            Event::PrechargeComplete => {
+                info!("Completed precharge at {}ms", Instant::now().as_millis(),);
+                if self.precharge_voltage_ok {
+                    self.ready_for_run = true;
+                    info!("Awaiting start run command from operator")
+                } else {
+                    warn!("Precharge voltage not at accepted value")
                 }
-
-                // TODO Logic: Check relays activate in this order
-                // 1. Shutdown relay
-                // 2. Battery precharge
-                // 3. Motor controller precharge
-                // 4. If discharge -> trigger emergency
-                //let _ = self.boards_precharged.insert(from);
-
-                //if !self.desired_boards_to_charge.is_empty()
-                //  && self.boards_precharged.len() >= self.desired_boards_to_charge.len()
-                {
-                    info!("Necessary boards precharged");
-                    // TODO: implement which boards must be precharged
+            }
+            Event::PrechargeVoltageOK => {
+                info!("Precharge voltage has reached accepted value");
+                self.precharge_voltage_ok = true;
+                if self.precharge_step == 3 {
                     self.ready_for_run = true;
                 }
+            }
+            Event::ShutdownCircuitryRelayClosed => {
+                if self.precharge_step == 0 {
+                    self.precharge_step = 1;
+                } else {
+                    warn!("Relays are out of order!");
+                    self.transition_to(State::Emergency).await;
+                }
+            }
+            Event::BatteryPrechargeRelayClosed => {
+                if self.precharge_step == 1 {
+                    self.precharge_step = 2;
+                } else {
+                    warn!("Relays are out of order!");
+                    self.transition_to(State::Emergency).await;
+                }
+            }
+            Event::MotorControllerRelayClosed => {
+                if self.precharge_step == 2 {
+                    self.precharge_step = 3;
+                    info!("Necessary relays for precharge closed");
+                    EVENT_BUS.sender().send(Event::PrechargeComplete).await;
+                } else {
+                    warn!("Relays are out of order!");
+                    self.transition_to(State::Emergency).await;
+                }
+            }
+            Event::DischargeRelayClosed => {
+                warn!("Discharge relay closed unexpectedly");
+                self.transition_to(State::Emergency).await;
+            }
+            Event::ShutdownCircuitryRelayOpen => {
+                warn!("SDC relay opened unexpectedly");
+                self.transition_to(State::Emergency).await;
+            }
+            Event::BatteryPrechargeRelayOpen => {
+                warn!("Battery Precharge relay opened unexpectedly");
+                self.transition_to(State::Emergency).await;
+            }
+            Event::MotorControllerRelayOpen => {
+                warn!("MC relay opened unexpectedly");
+                self.transition_to(State::Emergency).await;
             }
             Event::StartRunOperatorCommand => {
                 if self.ready_for_run {

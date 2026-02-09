@@ -5,13 +5,15 @@ use hyped_core::logging::{debug, info, warn};
 
 pub struct StateMachine {
     pub current_state: State,
-    //pub(crate) boards_calibrated: FnvIndexSet<Board, 8>,
-    //pub(crate) boards_precharged: FnvIndexSet<Board, 8>,
-    //pub(crate) desired_boards_to_charge: FnvIndexSet<Board, 8>,
-    //pub(crate) boards_discharged: FnvIndexSet<Board, 8>,
-    //pub(crate) total_boards: u8,
     pub(crate) ready_for_run: bool,
     pub(crate) brakes_clamped: bool,
+    pub(crate) precharge_voltage_ok: bool,
+
+    //  0 = all relays open, waiting for shutdown relay
+    //  1 = shutdown relay closed, waiting for battery precharge relay
+    //  2 = shutdown & battery preacharge closed, waiting for motor controller relay
+    //  3 = all relays closed
+    pub(crate) precharge_step: u8,
 }
 
 impl Default for StateMachine {
@@ -22,21 +24,12 @@ impl Default for StateMachine {
 
 impl StateMachine {
     pub fn new() -> Self {
-        //let desired = FnvIndexSet::new();
-        // TODO: insert which boards need precharged
-        // Electronics
-        // Motor Controller
-        // desired.insert(Board::<board>).unwrap();
-
         Self {
             current_state: State::Idle,
-            //boards_calibrated: FnvIndexSet::new(),
-            //boards_precharged: FnvIndexSet::new(),
-            //boards_discharged: FnvIndexSet::new(),
-            //desired_boards_to_charge: desired,
-            //total_boards: 5,
             ready_for_run: false,
             brakes_clamped: true,
+            precharge_step: 0,
+            precharge_voltage_ok: false,
         }
     }
 
