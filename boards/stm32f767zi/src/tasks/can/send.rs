@@ -6,12 +6,23 @@ use embassy_sync::{
 };
 use hyped_can::HypedCanFrame;
 use hyped_communications::messages::CanMessage;
-use hyped_sensors::lp_bms::bms_frame;
 
-use crate::{
+ use crate::{
     sdmmc::logging::{LogBufWriter, MESSAGE_SIZE_RAW},
     send_log,
 };
+
+pub fn bms_frame(cmd: [u8; 8]) -> Option<Frame> {
+    Frame::new(
+        Header::new(
+            embassy_stm32::can::Id::Standard(StandardId::new(BMS_REQUEST_ID as u16)?),
+            0,
+            false,
+        ),
+        &cmd,
+    )
+    .ok()
+}
 
 /// Channel for sending CAN messages.
 pub static CAN_SEND: Channel<CriticalSectionRawMutex, CanMessage, 10> = Channel::new();

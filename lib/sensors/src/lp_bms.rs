@@ -2,7 +2,6 @@
 /// Used to monitor battery status and health.
 /// It is connected to the main CAN bus
 use defmt::Format;
-use embassy_stm32::can::{frame::Header, Frame, StandardId};
 use embassy_sync_stm32::{
     blocking_mutex::raw::CriticalSectionRawMutex,
     channel::{Receiver, Sender},
@@ -204,18 +203,6 @@ impl Bms {
             cell_voltages_mv,
         })
     }
-}
-
-pub fn bms_frame(cmd: [u8; 8]) -> Option<Frame> {
-    Frame::new(
-        Header::new(
-            embassy_stm32::can::Id::Standard(StandardId::new(BMS_REQUEST_ID as u16)?),
-            0,
-            false,
-        ),
-        &cmd,
-    )
-    .ok()
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, defmt::Format)]
