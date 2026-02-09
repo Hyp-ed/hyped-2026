@@ -869,7 +869,6 @@ name = "hyped_sensors"
 version = "0.1.0"
 dependencies = [
  "defmt",
- "embassy-stm32",
  "embassy-sync 0.6.0",
  "embassy-sync 0.6.1",
  "embassy-time",

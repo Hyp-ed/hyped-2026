@@ -66,7 +66,8 @@ impl Bms {
 
     pub async fn init(&mut self) -> Result<(), CanError> {
         self.reset().await?;
-        Ok(self.cells_count = self.read_cell_count().await?)
+        self.cells_count = self.read_cell_count().await?;
+        Ok(())
     }
 
     /// the can task will use the bms frame function to send it
@@ -255,8 +256,7 @@ impl BatteryData {
                 return Some(BmsFault::CellVoltageShortToGnd(idx));
             }
 
-            if cell_voltage < Self::CELL_VOLTAGE_MIN_SAFE
-                || cell_voltage > Self::CELL_VOLTAGE_MAX_SAFE
+            if !(Self::CELL_VOLTAGE_MIN_SAFE..=Self::CELL_VOLTAGE_MAX_SAFE).contains(&cell_voltage)
             {
                 return Some(BmsFault::CellVoltageOutOfRange(idx));
             }
@@ -275,7 +275,7 @@ impl BatteryData {
                 return Some(BmsFault::TempSensorShortToGnd(idx));
             }
 
-            if temp_c < Self::TEMP_MIN_SAFE || temp_c > Self::TEMP_MAX_SAFE {
+            if !(Self::TEMP_MIN_SAFE..=Self::TEMP_MAX_SAFE).contains(&temp_c) {
                 return Some(BmsFault::TempOutOfRange(idx));
             }
         }
