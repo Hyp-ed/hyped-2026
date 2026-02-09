@@ -8,12 +8,20 @@ pub struct StateMachine {
     pub(crate) ready_for_run: bool,
     pub(crate) brakes_clamped: bool,
     pub(crate) precharge_voltage_ok: bool,
+    pub(crate) discharge_voltage_ok: bool,
 
+    // Precharge Sequence
     //  0 = all relays open, waiting for shutdown relay
     //  1 = shutdown relay closed, waiting for battery precharge relay
     //  2 = shutdown & battery preacharge closed, waiting for motor controller relay
     //  3 = all relays closed
     pub(crate) precharge_step: u8,
+
+    // Discharge Sequence
+    // 0 = waiting for discharge relay to close
+    // 1 = discharge relay closed, waiting for SDC relay to open
+    // 2 = SDC open → transition to Idle
+    pub(crate) discharge_step: u8,
 }
 
 impl Default for StateMachine {
@@ -29,7 +37,9 @@ impl StateMachine {
             ready_for_run: false,
             brakes_clamped: true,
             precharge_step: 0,
+            discharge_step: 0,
             precharge_voltage_ok: false,
+            discharge_voltage_ok: false,
         }
     }
 

@@ -10,7 +10,7 @@ impl StateMachine {
     pub(crate) async fn react_idle(&mut self, event: Event) {
         match event {
             Event::PrechargeOperatorCommand => {
-                info!("Calibrate command received");
+                info!("Precharge command received");
                 self.transition_to(State::Precharge).await;
             }
             _ => {

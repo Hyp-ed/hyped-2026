@@ -7,6 +7,8 @@ impl StateMachine {
     pub(crate) async fn entry_precharge(&mut self) {
         info!("Starting precharge");
         self.precharge_step = 0;
+        self.precharge_voltage_ok = false;
+        self.ready_for_run = false;
         EVENT_BUS.sender().send(Event::StartPrechargeCommand).await;
     }
 
@@ -15,21 +17,18 @@ impl StateMachine {
             Event::PrechargeStarted => {
                 info!("Started precharge at {}ms", Instant::now().as_millis(),);
             }
+            // Sent from board - board must handle voltage validaiton logic
             Event::PrechargeComplete => {
                 info!("Completed precharge at {}ms", Instant::now().as_millis(),);
-                if self.precharge_voltage_ok {
+                if self.precharge_voltage_ok && self.precharge_step == 3 {
                     self.ready_for_run = true;
                     info!("Awaiting start run command from operator")
                 } else {
                     warn!("Precharge voltage not at accepted value")
                 }
             }
-            Event::PrechargeVoltageOK => {
-                info!("Precharge voltage has reached accepted value");
-                self.precharge_voltage_ok = true;
-                if self.precharge_step == 3 {
-                    self.ready_for_run = true;
-                }
+            Event::VoltageStatus { voltage } => {
+                info!("Voltage {} at {}ms", voltage, Instant::now().as_millis(),);
             }
             Event::ShutdownCircuitryRelayClosed => {
                 if self.precharge_step == 0 {
@@ -51,32 +50,33 @@ impl StateMachine {
                 if self.precharge_step == 2 {
                     self.precharge_step = 3;
                     info!("Necessary relays for precharge closed");
-                    EVENT_BUS.sender().send(Event::PrechargeComplete).await;
                 } else {
                     warn!("Relays are out of order!");
                     self.transition_to(State::Emergency).await;
                 }
             }
-            Event::DischargeRelayClosed => {
-                warn!("Discharge relay closed unexpectedly");
+
+            // Any other change in relays, goto Emergency
+            Event::DischargeRelayClosed
+            | Event::ShutdownCircuitryRelayOpen
+            | Event::BatteryPrechargeRelayOpen
+            | Event::MotorControllerRelayOpen => {
+                warn!("Unexpected relay change during precharge");
                 self.transition_to(State::Emergency).await;
             }
-            Event::ShutdownCircuitryRelayOpen => {
-                warn!("SDC relay opened unexpectedly");
-                self.transition_to(State::Emergency).await;
-            }
-            Event::BatteryPrechargeRelayOpen => {
-                warn!("Battery Precharge relay opened unexpectedly");
-                self.transition_to(State::Emergency).await;
-            }
-            Event::MotorControllerRelayOpen => {
-                warn!("MC relay opened unexpectedly");
-                self.transition_to(State::Emergency).await;
-            }
+
             Event::StartRunOperatorCommand => {
                 if self.ready_for_run {
                     info!("Starting Propulsion run");
                     self.transition_to(State::ReadyForPropulsion).await;
+                }
+            }
+            Event::PrechargeVoltageOK => {
+                self.precharge_voltage_ok = true;
+
+                // In case this event arrives after PrechargeComplete
+                if self.precharge_step == 3 {
+                    self.ready_for_run = true;
                 }
             }
             Event::EmergencyStopOperatorCommand => {

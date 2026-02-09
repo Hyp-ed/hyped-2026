@@ -42,15 +42,13 @@ pub enum Event {
     PrechargeComplete,
     DischargeComplete,
 
+    VoltageStatus {
+        voltage: Voltage,
+    },
+
+    // Voltage checks
     PrechargeVoltageOK,
-    // Validate voltage: minimum should be close to 400V (40000 cV target)
-    // Load capacitance reaches 5% of battery voltage, so allow 5% tolerance
-    // TODO: Check this with electronics
-    // if voltage_cv.0 < 38000 {
-    //                 warn!("Precharge voltage too low: {}cV", voltage_cv.0);
-    //                 self.transition_to(State::Emergency).await; // TODO: Emergency or no?
-    //                 return;
-    //             }
+    DischargeVoltageOK,
 
     // Relays
     ShutdownCircuitryRelayOpen,

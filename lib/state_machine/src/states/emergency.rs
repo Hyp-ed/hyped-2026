@@ -39,6 +39,7 @@ impl StateMachine {
                     Instant::now().as_millis(),
                 )
             }
+
             Event::LateralSuspensionExtended { from } => {
                 info!(
                     "Emergency suspension extended: board={} at {}ms",
@@ -63,8 +64,13 @@ impl StateMachine {
                     info!("Pod has stopped, transitioning to Stopped");
                     self.transition_to(State::Stopped).await;
                 }
-                // Change to manual
+                // TODO: Change to manual
             }
+
+            Event::EmergencyStopOperatorCommand => {
+                info!("Pod already in emergency, ignoring command")
+            }
+
             _ => {
                 debug!("Event {} is ignored in current state", event)
             }

@@ -30,7 +30,7 @@ impl TryFrom<u8> for State {
             0x03 => Ok(State::Accelerate),
             0x04 => Ok(State::Brake),
             0x05 => Ok(State::Stopped),
-            0x0A => Ok(State::Emergency),
+            0x06 => Ok(State::Emergency),
             _ => Err("Invalid state"),
         }
     }
