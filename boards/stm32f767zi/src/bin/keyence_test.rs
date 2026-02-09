@@ -46,8 +46,8 @@ async fn main(spawner: Spawner) -> ! {
     let gpio_pin = Input::new(p.PC13, Pull::Down);
 
     let (can_tx, can_rx) = Can::new(p.CAN1, p.PD0, p.PD1, Irqs).split();
-    spawner.must_spawn(can_receiver(can_rx));
-    spawner.must_spawn(can_sender(can_tx));
+    spawner.must_spawn(can_receiver(can_rx, None));
+    spawner.must_spawn(can_sender(can_tx, None));
 
     // Create a sender to pass to the temperature reading task, and a receiver for reading the values back.
     let mut receiver = CURRENT_KEYENCE_STRIPE_COUNT.receiver().unwrap();

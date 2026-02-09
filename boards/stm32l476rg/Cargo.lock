@@ -788,6 +788,7 @@ dependencies = [
  "embassy-time",
  "heapless",
  "hyped_adc",
+ "hyped_can",
  "hyped_core",
  "hyped_gpio",
  "hyped_i2c",

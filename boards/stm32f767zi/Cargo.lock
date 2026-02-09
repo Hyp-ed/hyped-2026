@@ -73,9 +73,9 @@ checksum = "bef38d45163c2f1dde094a7dfd33ccf595c92905c8f8f4fdc18d06fb1037718a"
 
 [[package]]
 name = "bitflags"
-version = "2.8.0"
+version = "2.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8f68f53c83ab957f72c32642f3868eec03eb974d1fb82e453128456482613d36"
+checksum = "812e12b5285cc515a9c72a5c1d3b6d46a19dac5acfef5265968c166106e31dd3"
 
 [[package]]
 name = "byteorder"
@@ -247,6 +247,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "dvida_serialize"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ef3aff3e3fa3a5363ad01142aec4e10ac6523ad70ef3d358b54777f336fabab7"
+dependencies = [
+ "dvida_serialize_macros",
+]
+
+[[package]]
+name = "dvida_serialize_macros"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "66c619f65d5f92dd1f658b88372526762da9e80ac8748fb05a3820458cac86f7"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "embassy-embedded-hal"
 version = "0.2.0"
 source = "git+https://github.com/embassy-rs/embassy?rev=1c466b81e6af6b34b1f706318cc0870a459550b7#1c466b81e6af6b34b1f706318cc0870a459550b7"
@@ -335,7 +355,7 @@ version = "0.1.0"
 source = "git+https://github.com/embassy-rs/embassy?rev=1c466b81e6af6b34b1f706318cc0870a459550b7#1c466b81e6af6b34b1f706318cc0870a459550b7"
 dependencies = [
  "bit_field",
- "bitflags 2.8.0",
+ "bitflags 2.10.0",
  "cfg-if",
  "cortex-m",
  "cortex-m-rt",
@@ -722,6 +742,7 @@ dependencies = [
  "critical-section",
  "defmt",
  "defmt-rtt",
+ "dvida_serialize",
  "embassy-executor",
  "embassy-futures",
  "embassy-net",
@@ -849,9 +870,11 @@ version = "0.1.0"
 dependencies = [
  "defmt",
  "embassy-sync 0.6.0",
+ "embassy-sync 0.6.1",
  "embassy-time",
  "heapless 0.8.0",
  "hyped_adc",
+ "hyped_can",
  "hyped_core",
  "hyped_gpio",
  "hyped_i2c",
@@ -993,9 +1016,9 @@ dependencies = [
 
 [[package]]
 name = "proc-macro2"
-version = "1.0.93"
+version = "1.0.103"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "60946a68e5f9d28b0dc1c21bb8a97ee7d018a8b322fa57838ba31cc878e22d99"
+checksum = "5ee95bc4ef87b8d5ba32e8b7714ccc834865276eab0aed5c9958d00ec45f49e8"
 dependencies = [
  "unicode-ident",
 ]

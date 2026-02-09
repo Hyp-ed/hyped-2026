@@ -1,5 +1,8 @@
 use embassy_stm32::can::{CanRx, Id};
-use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, channel::Channel};
+use embassy_sync::{
+    blocking_mutex::raw::{CriticalSectionRawMutex, ThreadModeRawMutex},
+    channel::{Channel, Sender},
+};
 use hyped_can::HypedCanFrame;
 use hyped_communications::{
     heartbeat::Heartbeat,
@@ -7,8 +10,13 @@ use hyped_communications::{
     messages::CanMessage,
     state_transition::{StateTransitionCommand, StateTransitionRequest},
 };
+use hyped_sensors::lp_bms::BMS_RESPONSE_ID;
 
-use crate::board_state::EMERGENCY;
+use crate::{
+    board_state::EMERGENCY,
+    sdmmc::logging::{LogBufWriter, MESSAGE_SIZE_RAW},
+    send_log,
+};
 
 use defmt_rtt as _;
 use panic_probe as _;
@@ -36,16 +44,21 @@ pub static INCOMING_HEARTBEATS: Channel<CriticalSectionRawMutex, Heartbeat, 10> 
 pub static INCOMING_MEASUREMENTS: Channel<CriticalSectionRawMutex, MeasurementReading, 10> =
     Channel::new();
 
+pub static INCOMING_BMS_MESSAGES: Channel<CriticalSectionRawMutex, [u8; 8], 10> = Channel::new();
+
 /// Task that receives CAN messages and puts them into a channel.
 /// Currently only supports `StateTransitionCommand`, `StateTransitionRequest` and `Heartbeat` messages.
 #[embassy_executor::task]
-pub async fn can_receiver(mut rx: CanRx<'static>) {
+pub async fn can_receiver(
+    mut rx: CanRx<'static>,
+    log_sender: Option<Sender<'static, ThreadModeRawMutex, [u8; MESSAGE_SIZE_RAW], 4>>,
+) {
     let emergency_sender = EMERGENCY.sender();
     let state_transition_commands_sender = INCOMING_STATE_TRANSITION_COMMANDS.sender();
     let state_transition_requests_sender = INCOMING_STATE_TRANSITION_REQUESTS.sender();
     let incoming_heartbeat_sender = INCOMING_HEARTBEATS.sender();
 
-    loop {
+    'recv_loop: loop {
         defmt::debug!("Waiting for CAN message");
 
         let envelope = rx.read().await;
@@ -53,10 +66,24 @@ pub async fn can_receiver(mut rx: CanRx<'static>) {
             continue;
         }
         let envelope = envelope.unwrap();
+
         let id = envelope.frame.id();
         let can_id = match id {
-            Id::Standard(id) => id.as_raw() as u32, // 11-bit ID
-            Id::Extended(id) => id.as_raw(),        // 29-bit ID
+            Id::Standard(id) => {
+                // is this a bms message
+                if id.as_raw() as u32 == BMS_RESPONSE_ID {
+                    let mut message = [0u8; 8];
+                    message[0..envelope.frame.data().len()].copy_from_slice(envelope.frame.data());
+                    INCOMING_BMS_MESSAGES.sender().send(message).await;
+
+                    send_log!(log_sender, "Received BMS: {:#?}", envelope);
+
+                    continue 'recv_loop;
+                }
+
+                id.as_raw() as u32
+            } // 11-bit ID
+            Id::Extended(id) => id.as_raw(), // 29-bit ID
         };
         let mut data = [0u8; 8];
         data.copy_from_slice(envelope.frame.data());
@@ -64,6 +91,9 @@ pub async fn can_receiver(mut rx: CanRx<'static>) {
 
         let can_message: CanMessage = can_frame.into();
         defmt::debug!("Received CAN message: {:?}", can_message);
+
+        // Log it to the SD Card
+        send_log!(log_sender, "Received: {:#?}", can_message);
 
         match can_message {
             CanMessage::StateTransitionCommand(state_transition_command) => {
