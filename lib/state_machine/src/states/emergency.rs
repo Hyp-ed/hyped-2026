@@ -59,6 +59,7 @@ impl StateMachine {
                 );
                 info!("Braking: velocity={}km/h", velocity_kmh.0);
 
+                // TODO: change from velocity to acceleration
                 // Check if stopped
                 if velocity_kmh.0 == 0 {
                     info!("Pod has stopped, transitioning to Stopped");

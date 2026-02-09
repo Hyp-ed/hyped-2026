@@ -79,39 +79,69 @@ pub async fn can_receiver(mut rx: CanRx<'static>) {
                 defmt::debug!("Start Discharge Command received");
                 event_sender.send(Event::StartDischargeCommand).await;
             }
-            CanMessage::PrechargeStarted { from } => {
-                defmt::debug!("Precharge started on board={}", from);
-                event_sender.send(Event::PrechargeStarted { from }).await;
+            CanMessage::PrechargeStarted => {
+                defmt::debug!("Precharge started");
+                event_sender.send(Event::PrechargeStarted).await;
             }
-            CanMessage::DischargeStarted { from } => {
-                defmt::debug!("Discharge started on board={}", from);
-                event_sender.send(Event::DischargeStarted { from }).await;
+            CanMessage::DischargeStarted => {
+                defmt::debug!("Discharge started");
+                event_sender.send(Event::DischargeStarted).await;
             }
-            CanMessage::PrechargeComplete { from, voltage } => {
-                defmt::debug!(
-                    "Board={} has completed precharge. Final voltage={}cv",
-                    from,
-                    voltage.0
-                );
+            CanMessage::PrechargeComplete => {
+                defmt::debug!("Precharge complete");
+                event_sender.send(Event::PrechargeComplete).await;
+            }
+            CanMessage::DischargeComplete => {
+                defmt::debug!("Discharge complete");
+                event_sender.send(Event::DischargeComplete).await;
+            }
+            CanMessage::VoltageStatus { voltage } => {
+                defmt::debug!("Voltage status: {}cV", voltage.0);
                 event_sender
-                    .send(Event::PrechargeComplete {
-                        from,
-                        voltage_cv: voltage,
-                    })
+                    .send(Event::VoltageStatus { voltage })
                     .await;
             }
-            CanMessage::DischargeComplete { from, voltage } => {
-                defmt::debug!(
-                    "Board={} has completed discharge. Final voltage={}cv",
-                    from,
-                    voltage.0
-                );
-                event_sender
-                    .send(Event::DischargeComplete {
-                        from,
-                        voltage_cv: voltage,
-                    })
-                    .await;
+            CanMessage::PrechargeVoltageOK => {
+                defmt::debug!("Precharge voltage OK");
+                event_sender.send(Event::PrechargeVoltageOK).await;
+            }
+            CanMessage::DischargeVoltageOK => {
+                defmt::debug!("Discharge voltage OK");
+                event_sender.send(Event::DischargeVoltageOK).await;
+            }
+
+            // Relays
+            CanMessage::ShutdownCircuitryRelayOpen => {
+                defmt::debug!("Shutdown circuitry relay open");
+                event_sender.send(Event::ShutdownCircuitryRelayOpen).await;
+            }
+            CanMessage::ShutdownCircuitryRelayClosed => {
+                defmt::debug!("Shutdown circuitry relay closed");
+                event_sender.send(Event::ShutdownCircuitryRelayClosed).await;
+            }
+            CanMessage::BatteryPrechargeRelayOpen => {
+                defmt::debug!("Battery precharge relay open");
+                event_sender.send(Event::BatteryPrechargeRelayOpen).await;
+            }
+            CanMessage::BatteryPrechargeRelayClosed => {
+                defmt::debug!("Battery precharge relay closed");
+                event_sender.send(Event::BatteryPrechargeRelayClosed).await;
+            }
+            CanMessage::MotorControllerRelayOpen => {
+                defmt::debug!("Motor controller relay open");
+                event_sender.send(Event::MotorControllerRelayOpen).await;
+            }
+            CanMessage::MotorControllerRelayClosed => {
+                defmt::debug!("Motor controller relay closed");
+                event_sender.send(Event::MotorControllerRelayClosed).await;
+            }
+            CanMessage::DischargeRelayOpen => {
+                defmt::debug!("Discharge relay open");
+                event_sender.send(Event::DischargeRelayOpen).await;
+            }
+            CanMessage::DischargeRelayClosed => {
+                defmt::debug!("Discharge relay closed");
+                event_sender.send(Event::DischargeRelayClosed).await;
             }
 
             // Levitation

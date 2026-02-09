@@ -21,6 +21,19 @@ pub enum EventId {
     DischargeStarted,
     PrechargeComplete,
     DischargeComplete,
+    VoltageStatus,
+    PrechargeVoltageOK,
+    DischargeVoltageOK,
+
+    // Relays
+    ShutdownCircuitryRelayOpen,
+    ShutdownCircuitryRelayClosed,
+    BatteryPrechargeRelayOpen,
+    BatteryPrechargeRelayClosed,
+    MotorControllerRelayOpen,
+    MotorControllerRelayClosed,
+    DischargeRelayOpen,
+    DischargeRelayClosed,
 
     // Levitation
     StartLevitationCommand,
@@ -104,6 +117,21 @@ const PROPULSION_BRAKING_STARTED_ID: u16 = MAX_MESSAGE_IDENTIFIER - 33;
 const PROPULSION_STATUS_ID: u16 = MAX_MESSAGE_IDENTIFIER - 34;
 const PROPULSION_FORCE_ID: u16 = MAX_MESSAGE_IDENTIFIER - 35;
 
+// Electronics (cont.)
+const VOLTAGE_STATUS_ID: u16 = MAX_MESSAGE_IDENTIFIER - 39;
+const PRECHARGE_VOLTAGE_OK_ID: u16 = MAX_MESSAGE_IDENTIFIER - 40;
+const DISCHARGE_VOLTAGE_OK_ID: u16 = MAX_MESSAGE_IDENTIFIER - 41;
+
+// Relays
+const SHUTDOWN_CIRCUITRY_RELAY_OPEN_ID: u16 = MAX_MESSAGE_IDENTIFIER - 42;
+const SHUTDOWN_CIRCUITRY_RELAY_CLOSED_ID: u16 = MAX_MESSAGE_IDENTIFIER - 43;
+const BATTERY_PRECHARGE_RELAY_OPEN_ID: u16 = MAX_MESSAGE_IDENTIFIER - 44;
+const BATTERY_PRECHARGE_RELAY_CLOSED_ID: u16 = MAX_MESSAGE_IDENTIFIER - 45;
+const MOTOR_CONTROLLER_RELAY_OPEN_ID: u16 = MAX_MESSAGE_IDENTIFIER - 46;
+const MOTOR_CONTROLLER_RELAY_CLOSED_ID: u16 = MAX_MESSAGE_IDENTIFIER - 47;
+const DISCHARGE_RELAY_OPEN_ID: u16 = MAX_MESSAGE_IDENTIFIER - 48;
+const DISCHARGE_RELAY_CLOSED_ID: u16 = MAX_MESSAGE_IDENTIFIER - 49;
+
 impl From<EventId> for u16 {
     fn from(val: EventId) -> Self {
         match val {
@@ -149,6 +177,21 @@ impl From<EventId> for u16 {
             EventId::PropulsionBrakingStarted => PROPULSION_BRAKING_STARTED_ID,
             EventId::PropulsionStatus => PROPULSION_STATUS_ID,
             EventId::PropulsionForce => PROPULSION_FORCE_ID,
+
+            // Electronics (cont.)
+            EventId::VoltageStatus => VOLTAGE_STATUS_ID,
+            EventId::PrechargeVoltageOK => PRECHARGE_VOLTAGE_OK_ID,
+            EventId::DischargeVoltageOK => DISCHARGE_VOLTAGE_OK_ID,
+
+            // Relays
+            EventId::ShutdownCircuitryRelayOpen => SHUTDOWN_CIRCUITRY_RELAY_OPEN_ID,
+            EventId::ShutdownCircuitryRelayClosed => SHUTDOWN_CIRCUITRY_RELAY_CLOSED_ID,
+            EventId::BatteryPrechargeRelayOpen => BATTERY_PRECHARGE_RELAY_OPEN_ID,
+            EventId::BatteryPrechargeRelayClosed => BATTERY_PRECHARGE_RELAY_CLOSED_ID,
+            EventId::MotorControllerRelayOpen => MOTOR_CONTROLLER_RELAY_OPEN_ID,
+            EventId::MotorControllerRelayClosed => MOTOR_CONTROLLER_RELAY_CLOSED_ID,
+            EventId::DischargeRelayOpen => DISCHARGE_RELAY_OPEN_ID,
+            EventId::DischargeRelayClosed => DISCHARGE_RELAY_CLOSED_ID,
         }
     }
 }
@@ -202,6 +245,21 @@ impl TryFrom<u16> for EventId {
             PROPULSION_BRAKING_STARTED_ID => Ok(EventId::PropulsionBrakingStarted),
             PROPULSION_STATUS_ID => Ok(EventId::PropulsionStatus),
             PROPULSION_FORCE_ID => Ok(EventId::PropulsionForce),
+
+            // Electronics (cont.)
+            VOLTAGE_STATUS_ID => Ok(EventId::VoltageStatus),
+            PRECHARGE_VOLTAGE_OK_ID => Ok(EventId::PrechargeVoltageOK),
+            DISCHARGE_VOLTAGE_OK_ID => Ok(EventId::DischargeVoltageOK),
+
+            // Relays
+            SHUTDOWN_CIRCUITRY_RELAY_OPEN_ID => Ok(EventId::ShutdownCircuitryRelayOpen),
+            SHUTDOWN_CIRCUITRY_RELAY_CLOSED_ID => Ok(EventId::ShutdownCircuitryRelayClosed),
+            BATTERY_PRECHARGE_RELAY_OPEN_ID => Ok(EventId::BatteryPrechargeRelayOpen),
+            BATTERY_PRECHARGE_RELAY_CLOSED_ID => Ok(EventId::BatteryPrechargeRelayClosed),
+            MOTOR_CONTROLLER_RELAY_OPEN_ID => Ok(EventId::MotorControllerRelayOpen),
+            MOTOR_CONTROLLER_RELAY_CLOSED_ID => Ok(EventId::MotorControllerRelayClosed),
+            DISCHARGE_RELAY_OPEN_ID => Ok(EventId::DischargeRelayOpen),
+            DISCHARGE_RELAY_CLOSED_ID => Ok(EventId::DischargeRelayClosed),
 
             _ => Err("Invalid EventId"),
         }

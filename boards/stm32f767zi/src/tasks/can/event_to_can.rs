@@ -12,13 +12,12 @@ pub async fn event_to_can() -> ! {
         let event = event_receiver.receive().await;
 
         let can_message: Option<CanMessage> = match event {
-            // Operator Commands
+            // Operator Commands (not sent over CAN)
             Event::EmergencyStopOperatorCommand => None,
-            Event::CalibrateOperatorCommand => None,
-            Event::BeginLevitationOperatorCommand => None,
+            Event::PrechargeOperatorCommand => None,
             Event::AccelerateOperatorCommand => None,
             Event::BrakeOperatorCommand => None,
-            Event::StopLevitationOperatorCommand => None,
+            Event::StartRunOperatorCommand => None,
 
             // Emergency
             Event::Emergency { from, reason } => Some(CanMessage::Emergency(from, reason)),
@@ -33,16 +32,23 @@ pub async fn event_to_can() -> ! {
             // Electronics
             Event::StartPrechargeCommand => Some(CanMessage::StartPrechargeCommand),
             Event::StartDischargeCommand => Some(CanMessage::StartDischargeCommand),
-            Event::PrechargeStarted { from } => Some(CanMessage::PrechargeStarted { from }),
-            Event::DischargeStarted { from } => Some(CanMessage::DischargeStarted { from }),
-            Event::PrechargeComplete { from, voltage_cv } => Some(CanMessage::PrechargeComplete {
-                from,
-                voltage: voltage_cv,
-            }),
-            Event::DischargeComplete { from, voltage_cv } => Some(CanMessage::DischargeComplete {
-                from,
-                voltage: voltage_cv,
-            }),
+            Event::PrechargeStarted => Some(CanMessage::PrechargeStarted),
+            Event::DischargeStarted => Some(CanMessage::DischargeStarted),
+            Event::PrechargeComplete => Some(CanMessage::PrechargeComplete),
+            Event::DischargeComplete => Some(CanMessage::DischargeComplete),
+            Event::VoltageStatus { voltage } => Some(CanMessage::VoltageStatus { voltage }),
+            Event::PrechargeVoltageOK => Some(CanMessage::PrechargeVoltageOK),
+            Event::DischargeVoltageOK => Some(CanMessage::DischargeVoltageOK),
+
+            // Relays
+            Event::ShutdownCircuitryRelayOpen => Some(CanMessage::ShutdownCircuitryRelayOpen),
+            Event::ShutdownCircuitryRelayClosed => Some(CanMessage::ShutdownCircuitryRelayClosed),
+            Event::BatteryPrechargeRelayOpen => Some(CanMessage::BatteryPrechargeRelayOpen),
+            Event::BatteryPrechargeRelayClosed => Some(CanMessage::BatteryPrechargeRelayClosed),
+            Event::MotorControllerRelayOpen => Some(CanMessage::MotorControllerRelayOpen),
+            Event::MotorControllerRelayClosed => Some(CanMessage::MotorControllerRelayClosed),
+            Event::DischargeRelayOpen => Some(CanMessage::DischargeRelayOpen),
+            Event::DischargeRelayClosed => Some(CanMessage::DischargeRelayClosed),
 
             // Levitation
             Event::LevitationSystemsReady => Some(CanMessage::LevitationSystemsReady),
