@@ -576,9 +576,7 @@ impl From<HypedCanFrame> for CanMessage {
                     _ => panic!("Invalid CanData for VoltageStatus"),
                 }
             }
-            MessageIdentifier::Event(EventId::PrechargeVoltageOK) => {
-                CanMessage::PrechargeVoltageOK
-            }
+            MessageIdentifier::Event(EventId::PrechargeVoltageOK) => CanMessage::PrechargeVoltageOK,
             MessageIdentifier::Event(EventId::DischargeVoltageOK) => CanMessage::DischargeVoltageOK,
 
             // Relays
