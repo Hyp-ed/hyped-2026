@@ -35,10 +35,12 @@ use hyped_boards_stm32f767zi::{
         network::net_task,
     },
 };
-use hyped_state_machine::state_machine::{run, StateMachine};
 use hyped_communications::boards::Board;
 use hyped_core::{config::TELEMETRY_CONFIG, log_types::LogLevel};
-use hyped_state_machine::state::State;
+use hyped_state_machine::{
+    state::State,
+    state_machine::{run, StateMachine},
+};
 use panic_probe as _;
 use rand_core::RngCore;
 use static_cell::StaticCell;
