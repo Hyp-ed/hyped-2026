@@ -213,3 +213,47 @@ impl From<CanDataType> for CanData {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn round_trip(data: CanData) {
+        let encoded: [u8; 8] = data.into();
+        let decoded: CanData = encoded.into();
+        assert_eq!(data, decoded);
+    }
+
+    #[test]
+    fn can_data_round_trips_bytes() {
+        round_trip(CanData::Bool(true));
+        round_trip(CanData::TwoU16([12, 34]));
+        round_trip(CanData::F32(12.5));
+        round_trip(CanData::State(7));
+        round_trip(CanData::U32(0xDEADBEEF));
+        round_trip(CanData::Heartbeat(Board::Navigation));
+        round_trip(CanData::Emergency(Reason::MissingHeartbeat));
+    }
+
+    #[test]
+    fn can_data_type_round_trips() {
+        let data_types = [
+            CanDataType::Bool,
+            CanDataType::TwoU16,
+            CanDataType::F32,
+            CanDataType::State,
+            CanDataType::U32,
+            CanDataType::Heartbeat,
+            CanDataType::Emergency,
+        ];
+
+        for data_type in data_types {
+            let encoded: u8 = data_type.into();
+            let decoded = CanDataType::try_from(encoded).expect("decode CanDataType");
+            assert_eq!(data_type, decoded);
+
+            let default_data: CanData = data_type.into();
+            assert_eq!(CanDataType::from(default_data), data_type);
+        }
+    }
+}

@@ -215,8 +215,6 @@ pub enum Event {
 mod tests {
     use super::*;
 
-    use crate::boards::Board;
-    use crate::emergency::Reason;
     #[test]
     fn test_emergency_stop_command() {
         let event = Event::EmergencyStopOperatorCommand;

@@ -138,55 +138,40 @@ impl From<HypedCanFrame> for CanMessage {
 mod tests {
     use hyped_can::HypedCanFrame;
     use hyped_core::config::MeasurementId;
-    use hyped_state_machine::states::State;
 
     use crate::{
-        boards::Board,
-        data::CanData,
-        heartbeat::Heartbeat,
-        measurements::MeasurementReading,
-        messages::CanMessage,
-        state_transition::{StateTransitionCommand, StateTransitionRequest},
+        boards::Board, data::CanData, emergency::Reason, heartbeat::Heartbeat,
+        measurements::MeasurementReading, messages::CanMessage,
     };
 
     #[test]
-    fn it_works() {
+    fn can_message_round_trip_measurement() {
         let measurement_reading = MeasurementReading::new(
-            CanData::F32(0.0),
+            CanData::F32(1.25),
             Board::Telemetry,
             MeasurementId::Acceleration,
         );
         let can_message = CanMessage::MeasurementReading(measurement_reading);
 
         let can_frame: HypedCanFrame = can_message.clone().into();
-        let can_message_from_frame: CanMessage = can_frame.into();
+        let decoded: CanMessage = can_frame.into();
 
-        assert_eq!(can_message, can_message_from_frame)
+        assert_eq!(can_message, decoded)
     }
 
     #[test]
-    fn it_works_state_transition_command() {
-        let state_transition = StateTransitionCommand::new(Board::Test, State::Emergency);
-        let state_transition = CanMessage::StateTransitionCommand(state_transition);
-        let can_frame: HypedCanFrame = state_transition.clone().into();
-        let can_message_from_frame: CanMessage = can_frame.into();
-        assert_eq!(state_transition, can_message_from_frame)
-    }
-
-    #[test]
-    fn it_works_state_transition_request() {
-        let state_transition = StateTransitionRequest::new(Board::Test, State::Emergency);
-        let state_transition = CanMessage::StateTransitionRequest(state_transition);
-        let can_frame: HypedCanFrame = state_transition.clone().into();
-        let can_message_from_frame: CanMessage = can_frame.into();
-        assert_eq!(state_transition, can_message_from_frame)
-    }
-
-    #[test]
-    fn it_works_heartbeat() {
-        let heartbeat = CanMessage::Heartbeat(Heartbeat::new(Board::KeyenceTester, Board::Test));
+    fn can_message_round_trip_heartbeat() {
+        let heartbeat = CanMessage::Heartbeat(Heartbeat::new(Board::Mqtt, Board::Telemetry));
         let can_frame: HypedCanFrame = heartbeat.clone().into();
-        let can_message_from_frame: CanMessage = can_frame.into();
-        assert_eq!(heartbeat, can_message_from_frame)
+        let decoded: CanMessage = can_frame.into();
+        assert_eq!(heartbeat, decoded)
+    }
+
+    #[test]
+    fn can_message_round_trip_emergency() {
+        let message = CanMessage::Emergency(Board::Navigation, Reason::MissingHeartbeat);
+        let can_frame: HypedCanFrame = message.clone().into();
+        let decoded: CanMessage = can_frame.into();
+        assert_eq!(message, decoded)
     }
 }
