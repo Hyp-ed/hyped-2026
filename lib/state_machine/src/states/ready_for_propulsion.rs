@@ -7,7 +7,7 @@ impl StateMachine {
     pub(crate) async fn entry_ready_for_propulsion(&mut self) {
         info!("Pod is ready for propulsion");
         info!("Awaiting accelerate command from operator");
-        // TODO: are brake clamped by default?
+        // TODO: are brakes clamped by default?
         EVENT_BUS.sender().send(Event::UnclampBrakesCommand).await;
     }
 

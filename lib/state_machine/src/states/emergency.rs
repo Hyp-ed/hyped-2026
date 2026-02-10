@@ -58,13 +58,12 @@ impl StateMachine {
                 );
                 info!("Braking: velocity={}km/h", velocity_kmh.0);
 
-                // TODO: change from velocity to acceleration
+                // TODO: confirm if transition logic is correct
                 // Check if stopped
                 if velocity_kmh.0 == 0 {
                     info!("Pod has stopped, transitioning to Stopped");
                     self.transition_to(State::Stopped).await;
                 }
-                // TODO: Change to manual
             }
 
             Event::EmergencyStopOperatorCommand => {

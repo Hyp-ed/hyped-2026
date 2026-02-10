@@ -45,7 +45,7 @@ pub async fn event_to_can() -> ! {
             Event::MotorControllerRelayClosed => Some(CanMessage::MotorControllerRelayClosed),
             Event::DischargeRelayOpen => Some(CanMessage::DischargeRelayOpen),
             Event::DischargeRelayClosed => Some(CanMessage::DischargeRelayClosed),
- 
+
             // Navigation
             Event::EndOfTrackBrakeCommand => Some(CanMessage::EndOfTrackBrake),
 

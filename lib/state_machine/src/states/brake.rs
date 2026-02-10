@@ -38,7 +38,7 @@ impl StateMachine {
                 );
                 info!("Braking: velocity={}km/h", velocity_kmh.0);
 
-                // Check if stopped
+                // TODO: confirm if transition logic is correct
                 if velocity_kmh.0 == 0 {
                     info!("Pod has stopped, transitioning to Stopped");
                     self.transition_to(State::Stopped).await;
