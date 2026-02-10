@@ -12,7 +12,6 @@ impl StateMachine {
             .sender()
             .send(Event::ExtendLateralSuspensionCommand)
             .await;
-        EVENT_BUS.sender().send(Event::StopLevitationCommand).await;
         EVENT_BUS
             .sender()
             .send(Event::StartPropulsionBrakingCommand)

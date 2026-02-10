@@ -13,7 +13,7 @@ pub async fn can_to_mqtt() {
     join(
         join(
             send_can_measurement_to_mqtt(),
-            async {}, //TODO  Placeholder
+            async {}, //TODO Placeholder
         ),
         async {}, //TODO Placeholder
     )

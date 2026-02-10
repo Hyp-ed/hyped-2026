@@ -10,10 +10,6 @@ pub enum MessageIdentifier {
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum EventId {
-    // Calibration
-    StartCalibrationCommand,
-    CalibrationComplete,
-
     // Electronics
     StartPrechargeCommand,
     StartDischargeCommand,
@@ -34,15 +30,6 @@ pub enum EventId {
     MotorControllerRelayClosed,
     DischargeRelayOpen,
     DischargeRelayClosed,
-
-    // Levitation
-    StartLevitationCommand,
-    StopLevitationCommand,
-    LevitationStarted,
-    LevitationStopped,
-    LevitationStatus,
-    LevitationSystemsReady,
-    LevitationStable,
 
     // Navigation
     EndOfTrackBrake,
@@ -73,10 +60,6 @@ const MAX_MESSAGE_IDENTIFIER: u16 = 0xFFF;
 const HEARTBEAT_ID: u16 = MAX_MESSAGE_IDENTIFIER - 1;
 const EMERGENCY_ID: u16 = MAX_MESSAGE_IDENTIFIER - 2;
 
-// Calibration
-const START_CALIBRATION_COMMAND_ID: u16 = MAX_MESSAGE_IDENTIFIER - 3;
-const CALIBRATION_COMPLETE: u16 = MAX_MESSAGE_IDENTIFIER - 4;
-
 // Electronics
 const START_PRECHARGE_COMMAND_ID: u16 = MAX_MESSAGE_IDENTIFIER - 7;
 const START_DISCHARGE_COMMAND_ID: u16 = MAX_MESSAGE_IDENTIFIER - 8;
@@ -84,16 +67,8 @@ const PRECHARGE_STARTED_ID: u16 = MAX_MESSAGE_IDENTIFIER - 9;
 const PRECHARGE_COMPLETE_ID: u16 = MAX_MESSAGE_IDENTIFIER - 10;
 const DISCHARGE_STARTED_ID: u16 = MAX_MESSAGE_IDENTIFIER - 12;
 const DISCHARGE_COMPLETE_ID: u16 = MAX_MESSAGE_IDENTIFIER - 13;
-// 11 is free
 
-// Levitation
-const START_LEVITATION_COMMAND_ID: u16 = MAX_MESSAGE_IDENTIFIER - 14;
-const STOP_LEVITATION_COMMAND_ID: u16 = MAX_MESSAGE_IDENTIFIER - 15;
-const LEVITATION_STARTED_ID: u16 = MAX_MESSAGE_IDENTIFIER - 16;
-const LEVITATION_STOPPED_ID: u16 = MAX_MESSAGE_IDENTIFIER - 17;
-const LEVITATION_STATUS_ID: u16 = MAX_MESSAGE_IDENTIFIER - 18;
-const LEVITATION_SYSTEMS_READY_ID: u16 = MAX_MESSAGE_IDENTIFIER - 19;
-const LEVITATION_STABLE_ID: u16 = MAX_MESSAGE_IDENTIFIER - 20;
+// Note: 3, 4, 11, 14-20 are free
 
 // Navigation
 const END_OF_TRACK_BRAKE_ID: u16 = MAX_MESSAGE_IDENTIFIER - 38;
@@ -135,10 +110,6 @@ const DISCHARGE_RELAY_CLOSED_ID: u16 = MAX_MESSAGE_IDENTIFIER - 49;
 impl From<EventId> for u16 {
     fn from(val: EventId) -> Self {
         match val {
-            // Calibration
-            EventId::StartCalibrationCommand => START_CALIBRATION_COMMAND_ID,
-            EventId::CalibrationComplete => CALIBRATION_COMPLETE,
-
             // Electronics
             EventId::StartPrechargeCommand => START_PRECHARGE_COMMAND_ID,
             EventId::StartDischargeCommand => START_DISCHARGE_COMMAND_ID,
@@ -146,15 +117,6 @@ impl From<EventId> for u16 {
             EventId::PrechargeComplete => PRECHARGE_COMPLETE_ID,
             EventId::DischargeStarted => DISCHARGE_STARTED_ID,
             EventId::DischargeComplete => DISCHARGE_COMPLETE_ID,
-
-            // Levitation
-            EventId::StartLevitationCommand => START_LEVITATION_COMMAND_ID,
-            EventId::StopLevitationCommand => STOP_LEVITATION_COMMAND_ID,
-            EventId::LevitationStarted => LEVITATION_STARTED_ID,
-            EventId::LevitationStopped => LEVITATION_STOPPED_ID,
-            EventId::LevitationStatus => LEVITATION_STATUS_ID,
-            EventId::LevitationSystemsReady => LEVITATION_SYSTEMS_READY_ID,
-            EventId::LevitationStable => LEVITATION_STABLE_ID,
 
             // Navigation
             EventId::EndOfTrackBrake => END_OF_TRACK_BRAKE_ID,
@@ -201,10 +163,6 @@ impl TryFrom<u16> for EventId {
 
     fn try_from(id: u16) -> Result<Self, Self::Error> {
         match id {
-            // Calibration
-            START_CALIBRATION_COMMAND_ID => Ok(EventId::StartCalibrationCommand),
-            CALIBRATION_COMPLETE => Ok(EventId::CalibrationComplete),
-
             // Electronics
             START_PRECHARGE_COMMAND_ID => Ok(EventId::StartPrechargeCommand),
             START_DISCHARGE_COMMAND_ID => Ok(EventId::StartDischargeCommand),
@@ -212,15 +170,6 @@ impl TryFrom<u16> for EventId {
             PRECHARGE_COMPLETE_ID => Ok(EventId::PrechargeComplete),
             DISCHARGE_STARTED_ID => Ok(EventId::DischargeStarted),
             DISCHARGE_COMPLETE_ID => Ok(EventId::DischargeComplete),
-
-            // Levitation
-            START_LEVITATION_COMMAND_ID => Ok(EventId::StartLevitationCommand),
-            STOP_LEVITATION_COMMAND_ID => Ok(EventId::StopLevitationCommand),
-            LEVITATION_STARTED_ID => Ok(EventId::LevitationStarted),
-            LEVITATION_STOPPED_ID => Ok(EventId::LevitationStopped),
-            LEVITATION_STATUS_ID => Ok(EventId::LevitationStatus),
-            LEVITATION_SYSTEMS_READY_ID => Ok(EventId::LevitationSystemsReady),
-            LEVITATION_STABLE_ID => Ok(EventId::LevitationStable),
 
             // Navigation
             END_OF_TRACK_BRAKE_ID => Ok(EventId::EndOfTrackBrake),

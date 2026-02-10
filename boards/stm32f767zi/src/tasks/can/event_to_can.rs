@@ -25,10 +25,6 @@ pub async fn event_to_can() -> ! {
             // Heartbeat (handled by separate heartbeat task)
             Event::Heartbeat { .. } => None,
 
-            // Calibration
-            Event::StartCalibrationCommand => Some(CanMessage::StartCalibrationCommand),
-            Event::CalibrationComplete { from } => Some(CanMessage::CalibrationComplete { from }),
-
             // Electronics
             Event::StartPrechargeCommand => Some(CanMessage::StartPrechargeCommand),
             Event::StartDischargeCommand => Some(CanMessage::StartDischargeCommand),
@@ -49,25 +45,7 @@ pub async fn event_to_can() -> ! {
             Event::MotorControllerRelayClosed => Some(CanMessage::MotorControllerRelayClosed),
             Event::DischargeRelayOpen => Some(CanMessage::DischargeRelayOpen),
             Event::DischargeRelayClosed => Some(CanMessage::DischargeRelayClosed),
-
-            // Levitation
-            Event::LevitationSystemsReady => Some(CanMessage::LevitationSystemsReady),
-            Event::StartLevitationCommand => Some(CanMessage::StartLevitationCommand),
-            Event::StopLevitationCommand => Some(CanMessage::StopLevitationCommand),
-            Event::LevitationStarted { from } => Some(CanMessage::LevitationStarted { from }),
-            Event::LevitationStatus {
-                from,
-                airgap_μm,
-                current_ma,
-            } => Some(CanMessage::LevitationStatus {
-                from,
-                current_ma,
-                airgap_μm,
-            }),
-            Event::LevitationStopped { from } => Some(CanMessage::LevitationStopped { from }),
-
-            Event::LevitationStable => Some(CanMessage::LevitationStable),
-
+ 
             // Navigation
             Event::EndOfTrackBrakeCommand => Some(CanMessage::EndOfTrackBrake),
 

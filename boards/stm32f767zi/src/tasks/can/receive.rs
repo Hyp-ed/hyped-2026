@@ -60,16 +60,6 @@ pub async fn can_receiver(mut rx: CanRx<'static>) {
                 INCOMING_MEASUREMENTS.send(measurement_reading).await;
             }
 
-            // Calibration
-            CanMessage::StartCalibrationCommand => {
-                defmt::debug!("Received Start Calibration Command");
-                event_sender.send(Event::StartCalibrationCommand).await;
-            }
-            CanMessage::CalibrationComplete { from } => {
-                defmt::debug!("Calibration completed on board={}", from);
-                event_sender.send(Event::CalibrationComplete { from }).await;
-            }
-
             // Electronics
             CanMessage::StartPrechargeCommand => {
                 defmt::debug!("Start Precharge Command received");
@@ -140,51 +130,6 @@ pub async fn can_receiver(mut rx: CanRx<'static>) {
             CanMessage::DischargeRelayClosed => {
                 defmt::debug!("Discharge relay closed");
                 event_sender.send(Event::DischargeRelayClosed).await;
-            }
-
-            // Levitation
-            CanMessage::LevitationSystemsReady => {
-                defmt::debug!("Levitation Systems Ready");
-                event_sender.send(Event::LevitationSystemsReady).await;
-            }
-            CanMessage::StartLevitationCommand => {
-                defmt::debug!("Start Levitation Command Received");
-                event_sender.send(Event::StartLevitationCommand).await;
-            }
-            CanMessage::StopLevitationCommand => {
-                defmt::debug!("Stop Levitation Command Received");
-                event_sender.send(Event::StopLevitationCommand).await;
-            }
-            CanMessage::LevitationStarted { from } => {
-                defmt::debug!("Levitation started on board {}", from);
-                event_sender.send(Event::LevitationStarted { from }).await;
-            }
-            CanMessage::LevitationStopped { from } => {
-                defmt::debug!("Levitation stopped on board {}", from);
-                event_sender.send(Event::LevitationStopped { from }).await;
-            }
-            CanMessage::LevitationStatus {
-                from,
-                airgap_μm,
-                current_ma,
-            } => {
-                defmt::debug!(
-                    "Levitation Status: board={}, airgap={}μm, current={}ma",
-                    from,
-                    airgap_μm.0,
-                    current_ma.0
-                );
-                event_sender
-                    .send(Event::LevitationStatus {
-                        from,
-                        airgap_μm,
-                        current_ma,
-                    })
-                    .await;
-            }
-            CanMessage::LevitationStable => {
-                defmt::debug!("Levitation Stable");
-                event_sender.send(Event::LevitationStable).await;
             }
 
             // Navigation

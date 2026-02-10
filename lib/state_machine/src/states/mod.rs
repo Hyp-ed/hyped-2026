@@ -1,11 +1,7 @@
 mod accelerate;
-mod begin_levitation;
 mod brake;
 mod emergency;
 mod idle;
-mod levitating;
 mod precharge;
-mod ready_for_levitation;
 mod ready_for_propulsion;
-mod stop_levitation;
 mod stopped;

@@ -1,6 +1,6 @@
 use crate::boards::Board;
 pub use crate::emergency::Reason;
-use hyped_core::types::{Airgap, Current, Force, Pressure, Temperature, Velocity, Voltage};
+use hyped_core::types::{Current, Force, Pressure, Temperature, Velocity, Voltage};
 
 #[derive(Debug, Clone, defmt::Format)]
 pub enum Event {
@@ -19,12 +19,6 @@ pub enum Event {
 
     // ------ Status Events ------
     Heartbeat {
-        from: Board,
-    },
-
-    // ------ Calibration ------
-    StartCalibrationCommand,
-    CalibrationComplete {
         from: Board,
     },
 
@@ -59,34 +53,6 @@ pub enum Event {
     MotorControllerRelayClosed,
     DischargeRelayOpen,
     DischargeRelayClosed,
-
-    // ------ Levitation ------
-
-    // Ready check
-    LevitationSystemsReady,
-
-    // Commands from FSM
-    StartLevitationCommand,
-    StopLevitationCommand,
-
-    // Confirmation
-    LevitationStarted {
-        from: Board,
-    },
-
-    // Continuous status updates
-    LevitationStatus {
-        from: Board,
-        airgap_μm: Airgap,
-        current_ma: Current,
-    },
-
-    // Completion
-    LevitationStopped {
-        from: Board,
-    },
-
-    LevitationStable,
 
     // ------ Navigation ------
     EndOfTrackBrakeCommand,
