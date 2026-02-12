@@ -8,10 +8,10 @@ impl StateMachine {
     pub(crate) async fn entry_emergency(&mut self) {
         warn!("EMERGENCY STATE ENTERED");
         EVENT_BUS.sender().send(Event::ClampBrakesCommand).await;
-        EVENT_BUS
-            .sender()
-            .send(Event::ExtendLateralSuspensionCommand)
-            .await;
+        // EVENT_BUS
+        //     .sender()
+        //     .send(Event::ExtendLateralSuspensionCommand)
+        //     .await;
         EVENT_BUS
             .sender()
             .send(Event::StartPropulsionBrakingCommand)
@@ -39,13 +39,13 @@ impl StateMachine {
                 )
             }
 
-            Event::LateralSuspensionExtended { from } => {
-                info!(
-                    "Emergency suspension extended: board={} at {}ms",
-                    from,
-                    Instant::now().as_millis(),
-                );
-            }
+            // Event::LateralSuspensionExtended { from } => {
+            //     info!(
+            //         "Emergency suspension extended: board={} at {}ms",
+            //         from,
+            //         Instant::now().as_millis(),
+            //     );
+            // }
             Event::PropulsionStatus {
                 current_ma,
                 velocity_kmh,
@@ -58,7 +58,6 @@ impl StateMachine {
                 );
                 info!("Braking: velocity={}km/h", velocity_kmh.0);
 
-                // TODO: confirm if transition logic is correct
                 // Check if stopped
                 if velocity_kmh.0 == 0 {
                     info!("Pod has stopped, transitioning to Stopped");

@@ -14,11 +14,9 @@ impl StateMachine {
 
     pub(crate) async fn react_precharge(&mut self, event: Event) {
         match event {
-            // TODO: add precharge/discharge timeout
             Event::PrechargeStarted => {
                 info!("Started precharge at {}ms", Instant::now().as_millis(),);
             }
-            // Sent from board - board must handle voltage validation logic
             Event::PrechargeComplete => {
                 info!("Completed precharge at {}ms", Instant::now().as_millis(),);
                 if self.precharge_voltage_ok && self.precharge_step == 3 {
