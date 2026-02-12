@@ -9,6 +9,7 @@ impl StateMachine {
 
     pub(crate) async fn react_idle(&mut self, event: Event) {
         match event {
+            // TODOLater: Add unclamp brakes operator command?
             Event::PrechargeOperatorCommand => {
                 info!("Precharge command received");
                 self.transition_to(State::Precharge).await;
