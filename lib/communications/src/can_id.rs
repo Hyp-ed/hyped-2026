@@ -96,4 +96,17 @@ mod tests {
         assert!(!decoded.priority);
     }
 
+    #[test]
+    fn can_id_round_trip_high_priority() {
+        let can_id = CanId::new_high_priority(
+            Board::Navigation,
+            CanDataType::U32,
+            MessageIdentifier::Measurement(MeasurementId::Acceleration),
+        );
+        let encoded_can_id: u32 = can_id.clone().into();
+
+        let decoded = CanId::from(encoded_can_id);
+        assert_eq!(can_id, decoded);
+        assert!(decoded.priority);
+    }
 }
