@@ -33,12 +33,14 @@ use hyped_boards_stm32f767zi::{
         can_to_mqtt::can_to_mqtt,
         mqtt::{base_station_heartbeat::base_station_heartbeat, mqtt},
         network::net_task,
-        state_machine::state_machine,
     },
 };
 use hyped_communications::boards::Board;
 use hyped_core::{config::TELEMETRY_CONFIG, log_types::LogLevel};
-use hyped_state_machine::states::State;
+use hyped_state_machine::{
+    state::State,
+    state_machine::{run, StateMachine},
+};
 use panic_probe as _;
 use rand_core::RngCore;
 use static_cell::StaticCell;
@@ -83,7 +85,7 @@ async fn main(spawner: Spawner) -> ! {
     spawner.must_spawn(heartbeat_listener(Board::TemperatureTester));
     spawner.must_spawn(send_heartbeat(Board::TemperatureTester));
     // ... add more boards here
-    spawner.must_spawn(state_machine());
+    spawner.must_spawn(run(StateMachine::new()));
 
     loop {
         Timer::after(Duration::from_secs(1)).await;

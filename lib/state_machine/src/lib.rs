@@ -1,4 +1,5 @@
 #![cfg_attr(not(test), no_std)]
 
+pub mod state;
 pub mod state_machine;
-pub mod states;
+mod states;

@@ -5,16 +5,12 @@ use heapless::String;
 #[repr(u8)]
 pub enum State {
     Idle = 0,
-    Calibrate = 1,
-    Precharge = 2,
-    ReadyForLevitation = 3,
-    BeginLevitation = 4,
-    Ready = 5,
-    Accelerate = 6,
-    Brake = 7,
-    StopLevitation = 8,
-    Stopped = 9,
-    Emergency = 10,
+    Precharge = 1,
+    ReadyForPropulsion = 2,
+    Accelerate = 3,
+    Brake = 4,
+    Stopped = 5,
+    Emergency = 6,
 }
 
 impl From<State> for u8 {
@@ -29,16 +25,12 @@ impl TryFrom<u8> for State {
     fn try_from(value: u8) -> Result<Self, Self::Error> {
         match value {
             0x00 => Ok(State::Idle),
-            0x01 => Ok(State::Calibrate),
-            0x02 => Ok(State::Precharge),
-            0x03 => Ok(State::ReadyForLevitation),
-            0x04 => Ok(State::BeginLevitation),
-            0x05 => Ok(State::Ready),
-            0x06 => Ok(State::Accelerate),
-            0x07 => Ok(State::Brake),
-            0x08 => Ok(State::StopLevitation),
-            0x09 => Ok(State::Stopped),
-            0x0A => Ok(State::Emergency),
+            0x01 => Ok(State::Precharge),
+            0x02 => Ok(State::ReadyForPropulsion),
+            0x03 => Ok(State::Accelerate),
+            0x04 => Ok(State::Brake),
+            0x05 => Ok(State::Stopped),
+            0x06 => Ok(State::Emergency),
             _ => Err("Invalid state"),
         }
     }
@@ -48,14 +40,10 @@ impl From<State> for &str {
     fn from(val: State) -> Self {
         match val {
             State::Idle => "idle",
-            State::Calibrate => "calibrate",
             State::Precharge => "precharge",
-            State::ReadyForLevitation => "ready_for_levitation",
-            State::BeginLevitation => "begin_levitation",
-            State::Ready => "ready",
+            State::ReadyForPropulsion => "ready_for_propulsion",
             State::Accelerate => "accelerate",
             State::Brake => "brake",
-            State::StopLevitation => "stop_levitation",
             State::Stopped => "stopped",
             State::Emergency => "emergency",
         }
@@ -68,14 +56,10 @@ impl FromStr for State {
     fn from_str(value: &str) -> Result<Self, Self::Err> {
         match value {
             "idle" => Ok(State::Idle),
-            "calibrate" => Ok(State::Calibrate),
             "precharge" => Ok(State::Precharge),
-            "ready_for_levitation" => Ok(State::ReadyForLevitation),
-            "begin_levitation" => Ok(State::BeginLevitation),
-            "ready" => Ok(State::Ready),
+            "ready_for_propulsion" => Ok(State::ReadyForPropulsion),
             "accelerate" => Ok(State::Accelerate),
             "brake" => Ok(State::Brake),
-            "stop_levitation" => Ok(State::StopLevitation),
             "stopped" => Ok(State::Stopped),
             "emergency" => Ok(State::Emergency),
             _ => Err("Invalid state"),
