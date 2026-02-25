@@ -16,6 +16,7 @@ pub async fn read_lp_bms(
     let can_sender = CAN_SEND.sender();
 
     loop {
+        defmt::info!("reading!");
         match bms.read_battery_data().await {
             Ok(battery_data) => {
                 latest_bms_sender.send(Some(battery_data.clone()));

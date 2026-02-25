@@ -17,7 +17,7 @@ pub fn bms_frame(cmd: [u8; 8]) -> Option<Frame> {
     Frame::new(
         Header::new(
             embassy_stm32::can::Id::Standard(StandardId::new(BMS_REQUEST_ID as u16)?),
-            0,
+            8,
             false,
         ),
         &cmd,
@@ -48,7 +48,7 @@ pub async fn can_sender(
 
         match message {
             Either::First(message) => {
-                defmt::debug!("Sending CAN message: {:?}", message);
+                defmt::info!("Sending CAN message: {:?}", message);
 
                 // Log it to the SD Card
                 send_log!(log_sender, "Sent: {:#?}", message);
@@ -60,13 +60,14 @@ pub async fn can_sender(
                 let frame = Frame::new_data(id, &data).unwrap();
 
                 tx.write(&frame).await;
-                defmt::debug!("CAN message sent: {:?}", frame);
+                defmt::info!("CAN message sent: {:?}", frame);
             }
 
             Either::Second(cmd) => {
+                defmt::info!("Sending BMS msg: {:?}", cmd);
                 if let Some(frame) = bms_frame(cmd) {
                     tx.write(&frame).await;
-                    defmt::debug!("CAN message sent: {:?}", frame);
+                    defmt::info!("CAN message sent: {:?}", frame);
                 }
             }
         }

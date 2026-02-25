@@ -57,6 +57,7 @@ impl Bms {
         can_rx: Receiver<'static, CriticalSectionRawMutex, [u8; 8], 10>,
         can_tx: Sender<'static, CriticalSectionRawMutex, [u8; 8], 4>,
     ) -> Self {
+        defmt::debug!("BMS: creating new instance");
         Self {
             can_rx,
             can_tx,
@@ -65,28 +66,43 @@ impl Bms {
     }
 
     pub async fn init(&mut self) -> Result<(), CanError> {
+        defmt::info!("BMS: initializing");
         self.reset().await?;
         self.cells_count = self.read_cell_count().await?;
+        defmt::info!("BMS: initialized with {} cells", self.cells_count);
         Ok(())
     }
 
-    /// the can task will use the bms frame function to send it
     async fn send_simple_request(&mut self, cmd: u8) -> Result<(), CanError> {
+        defmt::trace!("BMS: sending request cmd=0x{:02X}", cmd);
         self.can_tx.send([cmd, 0, 0, 0, 0, 0, 0, 0]).await;
-
         Ok(())
     }
 
     async fn read_response(&mut self, expected_cmd: u8) -> Result<[u8; 8], CanError> {
+        defmt::trace!("BMS: waiting for response to cmd=0x{:02X}", expected_cmd);
         let data = loop {
             let data = self.can_rx.receive().await;
             if data[Self::CMD] == expected_cmd {
                 if data[Self::IS_ERR] != Self::SUCCESS {
-                    defmt::warn!("BMS task failed with error {:?}", data[Self::ERROR]);
+                    defmt::error!(
+                        "BMS: command 0x{:02X} failed with error code {}",
+                        expected_cmd,
+                        data[Self::ERROR]
+                    );
                     return Err(CanError::Unknown);
                 }
-
+                defmt::trace!(
+                    "BMS: received valid response for cmd=0x{:02X}",
+                    expected_cmd
+                );
                 break data;
+            } else {
+                defmt::debug!(
+                    "BMS: ignoring response for cmd=0x{:02X}, expected 0x{:02X}",
+                    data[Self::CMD],
+                    expected_cmd
+                );
             }
         };
 
@@ -96,36 +112,51 @@ impl Bms {
     pub async fn read_voltage(&mut self) -> Result<f32, CanError> {
         self.send_simple_request(BmsCmd::READ_VOLTAGE).await?;
         let data = self.read_response(BmsCmd::READ_VOLTAGE).await?;
-        Ok(f32::from_le_bytes([data[2], data[3], data[4], data[5]]))
+        let voltage = f32::from_le_bytes([data[2], data[3], data[4], data[5]]);
+        defmt::debug!("BMS: voltage = {}V", voltage);
+        Ok(voltage)
     }
 
     pub async fn read_current(&mut self) -> Result<f32, CanError> {
         self.send_simple_request(BmsCmd::READ_CURRENT).await?;
         let data = self.read_response(BmsCmd::READ_CURRENT).await?;
-        Ok(f32::from_le_bytes([data[2], data[3], data[4], data[5]]))
+        let current = f32::from_le_bytes([data[2], data[3], data[4], data[5]]);
+        defmt::debug!("BMS: current = {}A", current);
+        Ok(current)
     }
 
     pub async fn read_max_cell_voltage(&mut self) -> Result<u16, CanError> {
         self.send_simple_request(BmsCmd::READ_MAX_CELL_VOLTAGE)
             .await?;
         let data = self.read_response(BmsCmd::READ_MAX_CELL_VOLTAGE).await?;
-        Ok(u16::from_le_bytes([data[2], data[3]]))
+        let max_mv = u16::from_le_bytes([data[2], data[3]]);
+        defmt::debug!("BMS: max cell voltage = {}mV", max_mv);
+        Ok(max_mv)
     }
 
     pub async fn read_min_cell_voltage(&mut self) -> Result<u16, CanError> {
         self.send_simple_request(BmsCmd::READ_MIN_CELL_VOLTAGE)
             .await?;
         let data = self.read_response(BmsCmd::READ_MIN_CELL_VOLTAGE).await?;
-        Ok(u16::from_le_bytes([data[2], data[3]]))
+        let min_mv = u16::from_le_bytes([data[2], data[3]]);
+        defmt::debug!("BMS: min cell voltage = {}mV", min_mv);
+        Ok(min_mv)
     }
 
     pub async fn read_temperatures(&mut self) -> Result<[i16; 3], CanError> {
         self.send_simple_request(BmsCmd::READ_TEMPERATURES).await?;
         let mut temps = [0i16; Self::BMS_TEMPERATURE_COUNT];
-        for temp in &mut temps {
+        for (i, temp) in temps.iter_mut().enumerate() {
             let data = self.read_response(BmsCmd::READ_TEMPERATURES).await?;
             *temp = i16::from_le_bytes([data[2], data[3]]);
+            defmt::debug!("BMS: temperature[{}] = {}°C", i, *temp);
         }
+        defmt::debug!(
+            "BMS: temperatures (internal, ext1, ext2) = {}°C, {}°C, {}°C",
+            temps[0],
+            temps[1],
+            temps[2]
+        );
         Ok(temps)
     }
 
@@ -141,16 +172,29 @@ impl Bms {
             let data = self.can_rx.receive().await;
             if data[1] == BmsCmd::READ_CELL_VOLTAGES {
                 let val = u16::from_le_bytes([data[2], data[3]]);
-                voltages.push(val).map_err(|_| CanError::BufferOverflow)?;
+                defmt::trace!("BMS: cell[{}] voltage = {}mV", voltages.len(), val);
+                voltages.push(val).map_err(|_| {
+                    defmt::error!(
+                        "BMS: cell voltage buffer overflow at cell {}",
+                        voltages.len()
+                    );
+                    CanError::BufferOverflow
+                })?;
             } else {
+                defmt::warn!(
+                    "BMS: unexpected cmd 0x{:02X} while reading cell voltages, stopping early",
+                    data[1]
+                );
                 break;
             }
         }
 
+        defmt::debug!("BMS: read {} cell voltages", voltages.len());
         Ok(voltages)
     }
 
     pub async fn reset(&mut self) -> Result<(), CanError> {
+        defmt::info!("BMS: sending reset");
         self.can_tx
             .send([
                 BmsCmd::RESET_OR_CLEAN_EVENT_OR_STATUS,
@@ -165,10 +209,13 @@ impl Bms {
             .await;
         self.read_response(BmsCmd::RESET_OR_CLEAN_EVENT_OR_STATUS)
             .await
-            .map(|_| ())
+            .map(|_| {
+                defmt::info!("BMS: reset acknowledged");
+            })
     }
 
     pub async fn read_cell_count(&mut self) -> Result<u16, CanError> {
+        defmt::debug!("BMS: reading cell count");
         self.can_tx
             .send([
                 BmsCmd::READ_REGISTERS,
@@ -183,11 +230,13 @@ impl Bms {
             .await;
 
         let data = self.read_response(BmsCmd::READ_REGISTERS).await?;
-
-        Ok(u16::from_be_bytes([data[3], data[4]]))
+        let count = u16::from_be_bytes([data[3], data[4]]);
+        defmt::info!("BMS: cell count = {}", count);
+        Ok(count)
     }
 
     pub async fn read_battery_data(&mut self) -> Result<BatteryData, CanError> {
+        defmt::debug!("BMS: reading full battery data");
         let voltage = self.read_voltage().await?;
         let current = self.read_current().await?;
         let max_cell_mv = self.read_max_cell_voltage().await?;
@@ -195,27 +244,33 @@ impl Bms {
         let temperatures_c = self.read_temperatures().await?;
         let cell_voltages_mv = self.read_cell_voltages().await?;
 
-        Ok(BatteryData {
+        let data = BatteryData {
             voltage,
             current,
             max_cell_mv,
             min_cell_mv,
             temperatures_c,
             cell_voltages_mv,
-        })
+        };
+        defmt::info!(
+            "BMS: battery data read complete — {}V, {}A, max_cell={}mV, min_cell={}mV",
+            data.voltage,
+            data.current,
+            data.max_cell_mv,
+            data.min_cell_mv
+        );
+        Ok(data)
     }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, defmt::Format)]
 pub enum BmsFault {
-    // Cell Voltage Faults
-    CellVoltageOpenWire(usize), // Cell index
+    CellVoltageOpenWire(usize),
     CellVoltageShortToSupply(usize),
     CellVoltageShortToGnd(usize),
     CellVoltageOutOfRange(usize),
     CellVoltageCommunicationFailure,
 
-    // Temperature Faults
     TempSensorOpenWire(usize),
     TempSensorShortToSupply(usize),
     TempSensorShortToGnd(usize),
@@ -224,62 +279,93 @@ pub enum BmsFault {
 }
 
 impl BatteryData {
-    // unit: millivolts
     const CELL_VOLTAGE_ZERO: u16 = 0;
     const CELL_VOLTAGE_SHORT_TO_GND_MAX: u16 = 100;
     const CELL_VOLTAGE_MIN_SAFE: u16 = 2000;
     const CELL_VOLTAGE_MAX_SAFE: u16 = 4500;
     const CELL_VOLTAGE_SHORT_TO_SUPPLY: u16 = 5000;
 
-    // unit: degrees Celsius
     const TEMP_SENSOR_DISCONNECTED: i16 = -32768;
     const TEMP_MIN_SAFE: i16 = -40;
     const TEMP_SHORT_TO_GND_MIN: i16 = -50;
     const TEMP_MAX_SAFE: i16 = 90;
     const TEMP_SHORT_TO_SUPPLY: i16 = 150;
 
-    /// This function checks for faults based on the battery data
-    /// NOTE: it does not check for the communication failures
     pub fn check_faults(&self) -> Option<BmsFault> {
         for (idx, &cell_voltage) in self.cell_voltages_mv.iter().enumerate() {
             if cell_voltage == Self::CELL_VOLTAGE_ZERO {
+                defmt::warn!("BMS fault: cell[{}] open wire (voltage = 0mV)", idx);
                 return Some(BmsFault::CellVoltageOpenWire(idx));
             }
-
             if cell_voltage > Self::CELL_VOLTAGE_SHORT_TO_SUPPLY {
+                defmt::warn!(
+                    "BMS fault: cell[{}] short to supply ({}mV > {}mV)",
+                    idx,
+                    cell_voltage,
+                    Self::CELL_VOLTAGE_SHORT_TO_SUPPLY
+                );
                 return Some(BmsFault::CellVoltageShortToSupply(idx));
             }
-
             if cell_voltage > Self::CELL_VOLTAGE_ZERO
                 && cell_voltage < Self::CELL_VOLTAGE_SHORT_TO_GND_MAX
             {
+                defmt::warn!(
+                    "BMS fault: cell[{}] short to GND ({}mV < {}mV)",
+                    idx,
+                    cell_voltage,
+                    Self::CELL_VOLTAGE_SHORT_TO_GND_MAX
+                );
                 return Some(BmsFault::CellVoltageShortToGnd(idx));
             }
-
             if !(Self::CELL_VOLTAGE_MIN_SAFE..=Self::CELL_VOLTAGE_MAX_SAFE).contains(&cell_voltage)
             {
+                defmt::warn!(
+                    "BMS fault: cell[{}] voltage out of safe range ({}mV, safe={}..{}mV)",
+                    idx,
+                    cell_voltage,
+                    Self::CELL_VOLTAGE_MIN_SAFE,
+                    Self::CELL_VOLTAGE_MAX_SAFE
+                );
                 return Some(BmsFault::CellVoltageOutOfRange(idx));
             }
         }
 
         for (idx, &temp_c) in self.temperatures_c.iter().enumerate() {
             if temp_c == Self::TEMP_SENSOR_DISCONNECTED {
+                defmt::warn!("BMS fault: temp sensor[{}] disconnected (open wire)", idx);
                 return Some(BmsFault::TempSensorOpenWire(idx));
             }
-
             if temp_c > Self::TEMP_SHORT_TO_SUPPLY {
+                defmt::warn!(
+                    "BMS fault: temp sensor[{}] short to supply ({}°C > {}°C)",
+                    idx,
+                    temp_c,
+                    Self::TEMP_SHORT_TO_SUPPLY
+                );
                 return Some(BmsFault::TempSensorShortToSupply(idx));
             }
-
             if temp_c < Self::TEMP_SHORT_TO_GND_MIN {
+                defmt::warn!(
+                    "BMS fault: temp sensor[{}] short to GND ({}°C < {}°C)",
+                    idx,
+                    temp_c,
+                    Self::TEMP_SHORT_TO_GND_MIN
+                );
                 return Some(BmsFault::TempSensorShortToGnd(idx));
             }
-
             if !(Self::TEMP_MIN_SAFE..=Self::TEMP_MAX_SAFE).contains(&temp_c) {
+                defmt::warn!(
+                    "BMS fault: temp sensor[{}] out of safe range ({}°C, safe={}..{}°C)",
+                    idx,
+                    temp_c,
+                    Self::TEMP_MIN_SAFE,
+                    Self::TEMP_MAX_SAFE
+                );
                 return Some(BmsFault::TempOutOfRange(idx));
             }
         }
 
+        defmt::trace!("BMS: no faults detected");
         None
     }
 }

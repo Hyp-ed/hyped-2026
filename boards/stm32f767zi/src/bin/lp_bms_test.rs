@@ -63,16 +63,18 @@ async fn main(spawner: Spawner) -> ! {
     let bms_sender: embassy_sync::channel::Sender<'static, CriticalSectionRawMutex, [u8; 8], 4> =
         BMS_SEND.sender();
 
-    let bms = Bms::new(bms_receiver, bms_sender);
+    // spawner.must_spawn(state_updater());
+    // spawner.must_spawn(heartbeat_listener(Board::Telemetry));
+    // spawner.must_spawn(send_heartbeat(Board::Telemetry));
+
+    let mut bms = Bms::new(bms_receiver, bms_sender);
+    bms.init().await.expect("Failed to init");
 
     spawner.must_spawn(read_lp_bms(
         bms,
         MeasurementId::LpBms,
         CURRENT_BMS_DATA.sender(),
     ));
-    spawner.must_spawn(state_updater());
-    spawner.must_spawn(heartbeat_listener(Board::Telemetry));
-    spawner.must_spawn(send_heartbeat(Board::Telemetry));
 
     loop {
         // Only prints when the BMS data changes.
@@ -80,10 +82,11 @@ async fn main(spawner: Spawner) -> ! {
         // according to the config there should be one every 5 ms, so if there is nothing after
         // 10ms there is a communication error
         let new_bms_data =
-            embassy_time::with_timeout(Duration::from_millis(10), new_bms_data).await;
+            embassy_time::with_timeout(Duration::from_millis(100), new_bms_data).await;
 
-        if let Ok(Some(data)) = new_bms_data {
-            defmt::info!(
+        match new_bms_data {
+            Ok(Some(data)) => {
+                defmt::info!(
                 "New BMS data: voltage={}V, current={}A, max_cell_mv={}, min_cell_mv={}, temps={:?}, cell_voltages={:?}",
                 data.voltage,
                 data.current,
@@ -93,9 +96,17 @@ async fn main(spawner: Spawner) -> ! {
                 data.cell_voltages_mv
             );
 
-            defmt::info!("Check faults: {:?}", data.check_faults());
-        } else {
-            defmt::warn!("Temp or Cell Voltage communication failure");
+                defmt::info!("Check faults: {:?}", data.check_faults());
+            }
+            Ok(None) => {
+                defmt::warn!("No data");
+            }
+            Err(_) => {
+                defmt::warn!("Temp or Cell Voltage communication failure: timeout");
+                loop {
+                    core::hint::spin_loop();
+                }
+            }
         }
     }
 }
