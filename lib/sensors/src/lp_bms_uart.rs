@@ -1,19 +1,9 @@
 /// Driver for the TinyBMS s516 30A Battery Management System using UART.
 /// Used to monitor battery status and health.
 /// UART configuration: 115200 baud, 8 data bits, 1 stop bit, no parity, no flow control.
-use defmt::Format;
 use hyped_uart::{HypedUart, UartErr};
 
-/// Represents the parsed status from the BMS.
-#[derive(Debug, PartialEq, Clone, Format)]
-pub struct BatteryData {
-    pub voltage: f32,
-    pub current: f32,
-    pub max_cell_mv: u16,
-    pub min_cell_mv: u16,
-    pub temperatures_c: [i16; 3], // internal, external1, external2
-    pub cell_voltages_mv: heapless::Vec<u16, 32>,
-}
+use crate::lp_bms::BatteryData;
 
 struct BmsCmd {}
 
@@ -391,96 +381,4 @@ pub enum BmsFault {
     TempSensorShortToSupply(usize),
     TempSensorShortToGnd(usize),
     TempOutOfRange(usize),
-}
-
-impl BatteryData {
-    const CELL_VOLTAGE_ZERO: u16 = 0;
-    const CELL_VOLTAGE_SHORT_TO_GND_MAX: u16 = 100;
-    const CELL_VOLTAGE_MIN_SAFE: u16 = 2000;
-    const CELL_VOLTAGE_MAX_SAFE: u16 = 4500;
-    const CELL_VOLTAGE_SHORT_TO_SUPPLY: u16 = 5000;
-
-    const TEMP_SENSOR_DISCONNECTED: i16 = -32768;
-    const TEMP_MIN_SAFE: i16 = -40;
-    const TEMP_SHORT_TO_GND_MIN: i16 = -50;
-    const TEMP_MAX_SAFE: i16 = 90;
-    const TEMP_SHORT_TO_SUPPLY: i16 = 150;
-
-    pub fn check_faults(&self) -> Option<BmsFault> {
-        for (idx, &cell_voltage) in self.cell_voltages_mv.iter().enumerate() {
-            if cell_voltage == Self::CELL_VOLTAGE_ZERO {
-                defmt::warn!("BMS fault: cell[{}] open wire (voltage = 0mV)", idx);
-                return Some(BmsFault::CellVoltageOpenWire(idx));
-            }
-            if cell_voltage > Self::CELL_VOLTAGE_SHORT_TO_SUPPLY {
-                defmt::warn!(
-                    "BMS fault: cell[{}] short to supply ({}mV > {}mV)",
-                    idx,
-                    cell_voltage,
-                    Self::CELL_VOLTAGE_SHORT_TO_SUPPLY
-                );
-                return Some(BmsFault::CellVoltageShortToSupply(idx));
-            }
-            if cell_voltage > Self::CELL_VOLTAGE_ZERO
-                && cell_voltage < Self::CELL_VOLTAGE_SHORT_TO_GND_MAX
-            {
-                defmt::warn!(
-                    "BMS fault: cell[{}] short to GND ({}mV < {}mV)",
-                    idx,
-                    cell_voltage,
-                    Self::CELL_VOLTAGE_SHORT_TO_GND_MAX
-                );
-                return Some(BmsFault::CellVoltageShortToGnd(idx));
-            }
-            if !(Self::CELL_VOLTAGE_MIN_SAFE..=Self::CELL_VOLTAGE_MAX_SAFE).contains(&cell_voltage)
-            {
-                defmt::warn!(
-                    "BMS fault: cell[{}] voltage out of safe range ({}mV, safe={}..{}mV)",
-                    idx,
-                    cell_voltage,
-                    Self::CELL_VOLTAGE_MIN_SAFE,
-                    Self::CELL_VOLTAGE_MAX_SAFE
-                );
-                return Some(BmsFault::CellVoltageOutOfRange(idx));
-            }
-        }
-
-        for (idx, &temp_c) in self.temperatures_c.iter().enumerate() {
-            if temp_c == Self::TEMP_SENSOR_DISCONNECTED {
-                defmt::warn!("BMS fault: temp sensor[{}] disconnected (open wire)", idx);
-                return Some(BmsFault::TempSensorOpenWire(idx));
-            }
-            if temp_c > Self::TEMP_SHORT_TO_SUPPLY {
-                defmt::warn!(
-                    "BMS fault: temp sensor[{}] short to supply ({}°C > {}°C)",
-                    idx,
-                    temp_c,
-                    Self::TEMP_SHORT_TO_SUPPLY
-                );
-                return Some(BmsFault::TempSensorShortToSupply(idx));
-            }
-            if temp_c < Self::TEMP_SHORT_TO_GND_MIN {
-                defmt::warn!(
-                    "BMS fault: temp sensor[{}] short to GND ({}°C < {}°C)",
-                    idx,
-                    temp_c,
-                    Self::TEMP_SHORT_TO_GND_MIN
-                );
-                return Some(BmsFault::TempSensorShortToGnd(idx));
-            }
-            if !(Self::TEMP_MIN_SAFE..=Self::TEMP_MAX_SAFE).contains(&temp_c) {
-                defmt::warn!(
-                    "BMS fault: temp sensor[{}] out of safe range ({}°C, safe={}..{}°C)",
-                    idx,
-                    temp_c,
-                    Self::TEMP_MIN_SAFE,
-                    Self::TEMP_MAX_SAFE
-                );
-                return Some(BmsFault::TempOutOfRange(idx));
-            }
-        }
-
-        defmt::trace!("BMS: no faults detected");
-        None
-    }
 }

@@ -4,6 +4,7 @@ use core::future::Future;
 
 pub use hyped_uart_derive::HypedUart;
 
+#[derive(defmt::Format, Debug)]
 pub enum UartErr {
     Framing,
     Noise,

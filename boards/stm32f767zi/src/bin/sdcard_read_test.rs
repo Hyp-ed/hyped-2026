@@ -10,5 +10,7 @@ async fn main(_spawner: Spawner) -> ! {
 
     hyped_sdmmc.read_logs().await.unwrap();
 
-    loop {}
+    loop {
+        core::hint::spin_loop();
+    }
 }
