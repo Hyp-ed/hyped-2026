@@ -28,6 +28,7 @@ hyped_gpio = { path = "../io/hyped_gpio" }
 hyped_adc = { path = "../io/hyped_adc" }
 hyped_spi = { path = "../io/hyped_spi" }
 hyped_can = { path = "../io/hyped_can" }
+hyped_uart = { path = "../io/hyped_uart" }
 
 
 [dev-dependencies]

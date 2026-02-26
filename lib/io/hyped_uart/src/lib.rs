@@ -8,12 +8,15 @@ pub enum UartErr {
     Overrun,
     Parity,
     BufferTooLong,
+    Unknown,
+    CrcError,
+    BufferOverflow,
 }
 
 pub trait HypedUart: Sized {
-    fn write(buffer: &[u8]) -> impl Future<Output = Result<(), UartErr>> + Send;
-    fn read(buffer: &mut [u8]) -> impl Future<Output = Result<(), UartErr>> + Send;
-    fn flush() -> impl Future<Output = Result<(), UartErr>> + Send;
+    fn write(&mut self, buffer: &[u8]) -> impl Future<Output = Result<(), UartErr>> + Send;
+    fn read(&mut self, buffer: &mut [u8]) -> impl Future<Output = Result<(), UartErr>> + Send;
+    fn flush(&mut self) -> impl Future<Output = Result<(), UartErr>> + Send;
 }
 //
 // pub mod mock_uart {

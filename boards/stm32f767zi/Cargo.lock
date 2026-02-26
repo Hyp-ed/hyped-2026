@@ -879,6 +879,7 @@ dependencies = [
  "hyped_gpio",
  "hyped_i2c",
  "hyped_spi",
+ "hyped_uart",
 ]
 
 [[package]]
@@ -908,6 +909,15 @@ dependencies = [
  "heapless 0.8.0",
  "hyped_core",
  "rust-mqtt",
+]
+
+[[package]]
+name = "hyped_uart"
+version = "0.1.0"
+dependencies = [
+ "defmt",
+ "embassy-sync 0.6.2",
+ "heapless 0.8.0",
 ]
 
 [[package]]
