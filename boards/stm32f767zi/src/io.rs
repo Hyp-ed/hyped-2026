@@ -8,10 +8,15 @@ use embassy_stm32::{
     },
     gpio::{Input, Output},
     i2c::{self, I2c},
-    mode::Blocking,
+    mode::{Async, Blocking},
     spi::{self, Spi},
+    usart::Uart,
 };
-use embassy_sync::blocking_mutex::{raw::NoopRawMutex, Mutex};
+use embassy_sync::blocking_mutex::{
+    raw::{CriticalSectionRawMutex, NoopRawMutex},
+    Mutex,
+};
+
 use heapless::Vec;
 
 use hyped_adc::HypedAdc;
@@ -24,6 +29,7 @@ use hyped_i2c::{HypedI2c, I2cError};
 use hyped_i2c_derive::HypedI2c;
 use hyped_spi::{HypedSpi, SpiError};
 use hyped_spi_derive::HypedSpi;
+use hyped_uart::{HypedUart, UartErr};
 
 #[derive(HypedAdc)]
 pub struct Stm32f767ziAdc<'d, T: Instance> {
@@ -65,4 +71,9 @@ pub struct Stm32f767ziCanRx<'d> {
 #[derive(HypedCanTx)]
 pub struct Stm32f767ziCanTx<'d> {
     can: &'d Mutex<NoopRawMutex, RefCell<&'d mut CanTx<'static>>>,
+}
+
+#[derive(HypedUart)]
+pub struct Stm32f767ziUart<'d> {
+    uart: &'d embassy_sync::mutex::Mutex<CriticalSectionRawMutex, Uart<'static, Async>>,
 }

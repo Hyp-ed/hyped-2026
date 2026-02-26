@@ -543,6 +543,15 @@ dependencies = [
  "defmt 0.3.100",
  "embassy-sync 0.6.2",
  "heapless",
+ "hyped_uart_derive",
+]
+
+[[package]]
+name = "hyped_uart_derive"
+version = "0.1.0"
+dependencies = [
+ "quote",
+ "syn",
 ]
 
 [[package]]

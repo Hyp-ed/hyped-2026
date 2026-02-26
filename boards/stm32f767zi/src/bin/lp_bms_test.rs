@@ -14,12 +14,10 @@ use hyped_boards_stm32f767zi::{
     board_state::THIS_BOARD,
     tasks::{
         can::{
-            board_heartbeat::{heartbeat_listener, send_heartbeat},
             receive::{can_receiver, INCOMING_BMS_MESSAGES},
             send::{can_sender, BMS_SEND},
         },
         sensors::read_lp_bms::read_lp_bms,
-        state_machine::state_updater,
     },
 };
 use hyped_communications::boards::Board;

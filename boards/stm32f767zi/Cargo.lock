@@ -766,6 +766,7 @@ dependencies = [
  "hyped_spi",
  "hyped_spi_derive",
  "hyped_state_machine",
+ "hyped_uart",
  "panic-probe",
  "rand_core",
  "rust-mqtt",
@@ -918,6 +919,15 @@ dependencies = [
  "defmt",
  "embassy-sync 0.6.2",
  "heapless 0.8.0",
+ "hyped_uart_derive",
+]
+
+[[package]]
+name = "hyped_uart_derive"
+version = "0.1.0"
+dependencies = [
+ "quote",
+ "syn",
 ]
 
 [[package]]
