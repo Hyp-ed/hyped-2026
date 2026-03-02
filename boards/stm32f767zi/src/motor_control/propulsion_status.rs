@@ -22,6 +22,6 @@ pub async fn propulsion_status_task() -> ! {
         })
         .await;
 
-        Timer::after(Duration::from_millis(100)).await; // pick a sensible rate (e.g. 10 Hz)
+        Timer::after(Duration::from_millis(100)).await; // adjust frequency as needed
     }
 }
