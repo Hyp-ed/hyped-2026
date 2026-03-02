@@ -19,6 +19,7 @@ use motor_control::{
     braking::braking_system_loop,
     control_loop::motor_control_loop,
     navigation::NAV_KINEMATICS,
+    event_handling::{motor_control_event_task, propulsion_status_task};
 };
 
 use hyped_boards_stm32f767zi::{
@@ -135,6 +136,9 @@ async fn main(spawner: Spawner) -> ! {
     spawner.must_spawn(braking_system_loop(
         NAV_KINEMATICS.receiver(),
     ));
+
+    spawner.must_spawn(motor_control_event_task());
+    spawner.must_spawn(propulsion_status_task());
 
     loop { Timer::after(Duration::from_secs(1)).await; }
 }
