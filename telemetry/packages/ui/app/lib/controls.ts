@@ -18,6 +18,7 @@ export const CONTROLS = {
 	RAISE: 'raise',
 	LOWER: 'lower',
 	TILT: 'tilt',
+	// TODOLater: check if we need emergency_stop control
 } as const;
 
 export type Control = (typeof CONTROLS)[keyof typeof CONTROLS];
