@@ -246,13 +246,14 @@ impl TryFrom<u16> for MessageIdentifier {
         }
     }
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use hyped_core::config::MeasurementId;
 
     #[test]
-    fn test_message_identifier_heartbeat() {
+    fn message_identifier_round_trips_heartbeat() {
         let message_identifier = MessageIdentifier::Heartbeat;
         let encoded_message_identifier: u16 = message_identifier.clone().into();
 
@@ -262,8 +263,8 @@ mod tests {
     }
 
     #[test]
-    fn test_message_identifier_measurement() {
-        let message_identifier = MessageIdentifier::Measurement(MeasurementId::Thermistor1);
+    fn message_identifier_round_trips_emergency() {
+        let message_identifier = MessageIdentifier::Emergency;
         let encoded_message_identifier: u16 = message_identifier.clone().into();
 
         let decoded_message_identifier = MessageIdentifier::try_from(encoded_message_identifier)
@@ -272,7 +273,17 @@ mod tests {
     }
 
     #[test]
-    fn test_invalid_message_identifier() {
+    fn message_identifier_round_trips_measurement() {
+        let message_identifier = MessageIdentifier::Measurement(MeasurementId::Acceleration);
+        let encoded_message_identifier: u16 = message_identifier.clone().into();
+
+        let decoded_message_identifier = MessageIdentifier::try_from(encoded_message_identifier)
+            .expect("Failed to decode message identifier");
+        assert_eq!(message_identifier, decoded_message_identifier);
+    }
+
+    #[test]
+    fn invalid_message_identifier_errors() {
         assert!(MessageIdentifier::try_from(0xABCD).is_err());
     }
 }

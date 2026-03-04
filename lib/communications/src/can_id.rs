@@ -77,31 +77,36 @@ impl From<u32> for CanId {
     }
 }
 
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use hyped_core::config::MeasurementId;
 
-//     // #[test]
-//     // fn it_works() {
-//     //     let can_id = CanId::new_high_priority(
-//     //         Board::Test,
-//     //         CanDataType::State,
-//     //         MessageIdentifier::StateTransitionCommand,
-//     //     );
-//     //     let encoded_can_id: u32 = can_id.clone().into();
+    #[test]
+    fn can_id_round_trip_measurement() {
+        let can_id = CanId::new(
+            Board::Telemetry,
+            CanDataType::F32,
+            MessageIdentifier::Measurement(MeasurementId::Acceleration),
+        );
+        let encoded_can_id: u32 = can_id.clone().into();
 
-//     //     assert_eq!(can_id, CanId::from(encoded_can_id));
-//     // }
+        let decoded = CanId::from(encoded_can_id);
+        assert_eq!(can_id, decoded);
+        assert!(!decoded.priority);
+    }
 
-//     // #[test]
-//     // fn it_works_with_low_priority() {
-//     //     let can_id = CanId::new(
-//     //         Board::Test,
-//     //         CanDataType::State,
-//     //         MessageIdentifier::StateTransitionCommand,
-//     //     );
-//     //     let encoded_can_id: u32 = can_id.clone().into();
+    #[test]
+    fn can_id_round_trip_high_priority() {
+        let can_id = CanId::new_high_priority(
+            Board::Navigation,
+            CanDataType::U32,
+            MessageIdentifier::Measurement(MeasurementId::Acceleration),
+        );
+        let encoded_can_id: u32 = can_id.clone().into();
 
-//     //     assert_eq!(can_id, CanId::from(encoded_can_id));
-//     // }
-// }
+        let decoded = CanId::from(encoded_can_id);
+        assert_eq!(can_id, decoded);
+        assert!(decoded.priority);
+    }
+}

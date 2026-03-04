@@ -74,3 +74,55 @@ impl From<State> for String<20> {
         s
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn state_u8_round_trip() {
+        let states = [
+            State::Idle,
+            State::Precharge,
+            State::ReadyForPropulsion,
+            State::Accelerate,
+            State::Brake,
+            State::Stopped,
+            State::Emergency,
+        ];
+
+        for state in states {
+            let encoded: u8 = state.into();
+            let decoded = State::try_from(encoded).expect("decode state");
+            assert_eq!(state, decoded);
+        }
+    }
+
+    #[test]
+    fn state_string_round_trip() {
+        let states = [
+            State::Idle,
+            State::Precharge,
+            State::ReadyForPropulsion,
+            State::Accelerate,
+            State::Brake,
+            State::Stopped,
+            State::Emergency,
+        ];
+
+        for state in states {
+            let name: &str = state.into();
+            let parsed = State::from_str(name).expect("parse state");
+            assert_eq!(state, parsed);
+
+            let heapless: String<20> = state.into();
+            assert_eq!(name, heapless.as_str());
+        }
+    }
+
+    #[test]
+    fn invalid_state_rejected() {
+        assert!(State::try_from(0xFF).is_err());
+        assert!(State::from_str("unknown").is_err());
+    }
+}

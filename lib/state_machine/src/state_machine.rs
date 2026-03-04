@@ -107,3 +107,20 @@ pub async fn run(mut sm: StateMachine) -> ! {
         sm.react(ev).await;
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn state_machine_defaults() {
+        let sm = StateMachine::new();
+        assert!(matches!(sm.current_state, State::Idle));
+        assert!(!sm.ready_for_run);
+        assert!(sm.brakes_clamped); // brakes start clamped
+        assert!(!sm.precharge_voltage_ok);
+        assert!(!sm.discharge_voltage_ok);
+        assert_eq!(sm.precharge_step, 0);
+        assert_eq!(sm.discharge_step, 0);
+    }
+}
