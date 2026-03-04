@@ -8,6 +8,7 @@ pub enum Board {
     KeyenceTester = 5,
     StateMachineTester = 6,
     Mqtt = 7,
+    MotorControl = 8,
 }
 
 impl From<Board> for u8 {
@@ -29,6 +30,7 @@ impl TryFrom<u8> for Board {
             5 => Ok(Board::KeyenceTester),
             6 => Ok(Board::StateMachineTester),
             7 => Ok(Board::Mqtt),
+            8 => Ok(Board::MotorControl),
             _ => Err("Invalid Board index"),
         }
     }

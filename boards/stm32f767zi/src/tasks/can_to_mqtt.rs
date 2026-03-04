@@ -8,17 +8,11 @@ use hyped_core::{
 use super::{can::receive::INCOMING_MEASUREMENTS, mqtt::send::MQTT_SEND};
 
 /// Run functions to send CAN messages to MQTT and vice versa.
-#[embassy_executor::task]
+#[embassy_executor::task]                                                                 
 pub async fn can_to_mqtt() {
-    join(
-        join(
-            send_can_measurement_to_mqtt(),
-            async {}, //TODO Placeholder
-        ),
-        async {}, //TODO Placeholder
-    )
-    .await;
+    send_can_measurement_to_mqtt().await;
 }
+
 
 /// Send a CAN measurement to MQTT.
 pub async fn send_can_measurement_to_mqtt() {
