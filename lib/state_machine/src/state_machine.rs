@@ -1,5 +1,4 @@
 use crate::state::State;
-//use heapless::FnvIndexSet;
 use hyped_communications::{bus::EVENT_BUS, events::Event};
 use hyped_core::logging::{debug, info, warn};
 
@@ -13,7 +12,7 @@ pub struct StateMachine {
     // Precharge Sequence
     //  0 = all relays open, waiting for shutdown relay
     //  1 = shutdown relay closed, waiting for battery precharge relay
-    //  2 = shutdown & battery preacharge closed, waiting for motor controller relay
+    //  2 = shutdown & battery precharge closed, waiting for motor controller relay
     //  3 = all relays closed
     pub(crate) precharge_step: u8,
 
