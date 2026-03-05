@@ -68,6 +68,10 @@ mod tests {
             Board::try_from(Board::StateMachineTester as u8).unwrap()
         );
         assert_eq!(Board::Mqtt, Board::try_from(Board::Mqtt as u8).unwrap());
-        assert_eq!(Board::try_from(8), Err("Invalid Board index"));
+        assert_eq!(
+            Board::MotorControl,
+            Board::try_from(Board::MotorControl as u8).unwrap()
+        );
+        assert_eq!(Board::try_from(9), Err("Invalid Board index"));
     }
 }

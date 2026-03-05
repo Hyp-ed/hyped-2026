@@ -1,5 +1,4 @@
 use core::str::FromStr;
-use embassy_futures::join::join;
 use heapless::String;
 use hyped_core::{
     format, format_string::show, mqtt::MqttMessage, mqtt_topics::MQTT_MEASUREMENT_TOPIC_PREFIX,
