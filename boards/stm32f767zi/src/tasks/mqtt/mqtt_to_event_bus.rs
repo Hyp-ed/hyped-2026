@@ -1,6 +1,6 @@
+use super::receive::MQTT_RECEIVE;
 use hyped_communications::{bus::EVENT_BUS, events::Event};
-  use hyped_core::mqtt_topics::MqttTopic;
-  use super::receive::MQTT_RECEIVE;
+use hyped_core::mqtt_topics::MqttTopic;
 
 #[embassy_executor::task]
 pub async fn mqtt_to_event_bus() {

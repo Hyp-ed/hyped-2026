@@ -31,7 +31,10 @@ use hyped_boards_stm32f767zi::{
             send::can_sender,
         },
         can_to_mqtt::can_to_mqtt,
-        mqtt::{base_station_heartbeat::base_station_heartbeat, mqtt, mqtt_to_event_bus::mqtt_to_event_bus},
+        mqtt::{
+            base_station_heartbeat::base_station_heartbeat, mqtt,
+            mqtt_to_event_bus::mqtt_to_event_bus,
+        },
         network::net_task,
     },
 };

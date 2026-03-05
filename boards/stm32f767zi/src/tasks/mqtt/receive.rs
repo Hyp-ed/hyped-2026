@@ -105,7 +105,6 @@ pub async fn mqtt_receive(
                             .await;
                     }
 
-
                     Ok(_) => {}
                     Err(_) => {
                         // Log warning for unknown topic

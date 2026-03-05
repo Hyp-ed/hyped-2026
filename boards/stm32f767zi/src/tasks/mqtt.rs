@@ -1,8 +1,7 @@
 pub mod base_station_heartbeat;
+pub mod mqtt_to_event_bus;
 pub mod receive;
 pub mod send;
-pub mod mqtt_to_event_bus;
-
 
 use core::str::FromStr;
 use embassy_futures::join::join;
