@@ -61,6 +61,7 @@ async fn main(spawner: Spawner) -> ! {
     // spawner.must_spawn(send_heartbeat(Board::Telemetry));
 
     let mut bms = BmsUart::new(uart);
+
     bms.init().await.expect("Failed to init");
 
     spawner.must_spawn(read_lp_bms_uart::read_lp_bms(

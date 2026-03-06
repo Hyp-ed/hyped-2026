@@ -19,6 +19,10 @@ pub enum UartErr {
 pub trait HypedUart: Sized {
     fn write(&mut self, buffer: &[u8]) -> impl Future<Output = Result<(), UartErr>> + Send;
     fn read(&mut self, buffer: &mut [u8]) -> impl Future<Output = Result<(), UartErr>> + Send;
+    fn read_until_idle(
+        &mut self,
+        buffer: &mut [u8],
+    ) -> impl Future<Output = Result<(), UartErr>> + Send;
     fn flush(&mut self) -> impl Future<Output = Result<(), UartErr>> + Send;
 }
 //

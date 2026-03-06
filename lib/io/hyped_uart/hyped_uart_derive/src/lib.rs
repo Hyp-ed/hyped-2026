@@ -24,7 +24,6 @@ fn impl_hyped_uart(ast: &syn::DeriveInput) -> TokenStream {
                     .await
                     .map_err(Self::to_hyped_uart_err)
             }
-
             async fn write(&mut self, buffer: &[u8]) -> Result<(), UartErr> {
                 self.uart
                     .lock()
@@ -33,7 +32,6 @@ fn impl_hyped_uart(ast: &syn::DeriveInput) -> TokenStream {
                     .await
                     .map_err(Self::to_hyped_uart_err)
             }
-
             async fn flush(&mut self) -> Result<(), UartErr> {
                 self.uart
                     .lock()
@@ -41,15 +39,22 @@ fn impl_hyped_uart(ast: &syn::DeriveInput) -> TokenStream {
                     .blocking_flush()
                     .map_err(Self::to_hyped_uart_err)
             }
+            async fn read_until_idle(&mut self, buffer: &mut [u8]) -> Result<(), UartErr> {
+                self.uart
+                    .lock()
+                    .await
+                    .read_until_idle(buffer)
+                    .await
+                    .map(|_n| ())
+                    .map_err(Self::to_hyped_uart_err)
+            }
         }
-
         impl #impl_generics #name #ty_generics {
             pub fn new(
                 uart: &'d embassy_sync::mutex::Mutex<CriticalSectionRawMutex, Uart<'static, Async>>,
             ) -> Self {
                 Self { uart }
             }
-
             fn to_hyped_uart_err(e: embassy_stm32::usart::Error) -> UartErr {
                 match e {
                     embassy_stm32::usart::Error::Noise => UartErr::Noise,

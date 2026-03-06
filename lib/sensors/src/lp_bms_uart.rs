@@ -80,6 +80,7 @@ impl<U: HypedUart> BmsUart<U> {
 
     pub async fn init(&mut self) -> Result<(), UartErr> {
         defmt::info!("BMS: initializing");
+        self.drain_banner().await?;
         self.reset().await?;
         self.cells_count = self.read_cell_count().await?;
         defmt::info!("BMS: initialized with {} cells", self.cells_count);
@@ -88,8 +89,6 @@ impl<U: HypedUart> BmsUart<U> {
 
     /// Writes a request frame: [0xAA, cmd, ...payload..., CRC_LSB, CRC_MSB].
     async fn send_request(&mut self, payload: &[u8]) -> Result<(), UartErr> {
-        // Build the frame without CRC first, then compute and append.
-        // Maximum frame we ever send is small, so a 16-byte stack buffer is enough.
         let mut frame: heapless::Vec<u8, 16> = heapless::Vec::new();
         frame
             .extend_from_slice(payload)
@@ -107,18 +106,48 @@ impl<U: HypedUart> BmsUart<U> {
         self.uart.write(&frame).await
     }
 
-    /// Reads exactly `n` bytes into `buf`.
-    async fn read_exact(&mut self, buf: &mut [u8]) -> Result<(), UartErr> {
-        self.uart.read(buf).await
+    /// Drains the startup banner the BMS emits on power-up/reset.
+    /// The banner ends with \r\n\r\n (0x0D 0x0A 0x0D 0x0A).
+    pub async fn drain_banner(&mut self) -> Result<(), UartErr> {
+        defmt::info!("BMS: draining startup banner");
+        let mut buf = [0u8; 128];
+        self.uart.read_until_idle(&mut buf).await?;
+        defmt::info!("BMS: startup banner drained");
+        Ok(())
+    }
+
+    /// Reads a full response frame of exactly N bytes, retrying until a frame
+    /// with a matching start byte (0xAA) and expected command byte is received.
+    /// Unsolicited broadcasts with a different command byte are silently discarded.
+    async fn read_exact<const N: usize>(&mut self, expected_cmd: u8) -> Result<[u8; N], UartErr> {
+        loop {
+            let mut buf = [0u8; N];
+            self.uart.read_until_idle(&mut buf).await?;
+
+            if buf[0] != BmsCmd::START_BYTE {
+                defmt::warn!(
+                    "BMS UART: discarding frame, expected start byte 0xAA got 0x{:02X}",
+                    buf[0]
+                );
+                continue;
+            }
+
+            // buf[1] is ACK/NACK, buf[2] is the echoed command
+            if buf[2] != expected_cmd {
+                defmt::warn!(
+                    "BMS UART: discarding unsolicited frame cmd=0x{:02X}, waiting for 0x{:02X}",
+                    buf[2],
+                    expected_cmd
+                );
+                continue;
+            }
+
+            defmt::trace!("BMS UART: received frame for cmd=0x{:02X}", expected_cmd);
+            return Ok(buf);
+        }
     }
 
     /// Reads and validates a fixed-length response.
-    ///
-    /// Every response begins with [0xAA, status, cmd, ...].
-    /// Returns the full response buffer (without the trailing CRC bytes) on success.
-    ///
-    /// `expected_cmd` – the command byte we expect back in position [2].
-    /// `total_len`    – total number of bytes in the response (including 0xAA, status, cmd and CRC).
     async fn read_response<const N: usize>(
         &mut self,
         expected_cmd: u8,
@@ -128,14 +157,7 @@ impl<U: HypedUart> BmsUart<U> {
             expected_cmd
         );
 
-        let mut buf = [0u8; N];
-        self.read_exact(&mut buf).await?;
-
-        // Validate start byte.
-        if buf[0] != BmsCmd::START_BYTE {
-            defmt::error!("BMS UART: bad start byte 0x{:02X} (expected 0xAA)", buf[0]);
-            return Err(UartErr::Unknown);
-        }
+        let buf: [u8; N] = self.read_exact(expected_cmd).await?;
 
         // Validate CRC over everything except the last two bytes.
         let computed = crc16(&buf[..N - 2]);
@@ -159,8 +181,8 @@ impl<U: HypedUart> BmsUart<U> {
             return Err(UartErr::Unknown);
         }
 
-        // Validate ACK byte and command echo.
-        if buf[1] != BmsCmd::ACK || buf[2] != expected_cmd {
+        // Validate ACK byte.
+        if buf[1] != BmsCmd::ACK {
             defmt::error!(
                 "BMS UART: unexpected response status=0x{:02X} cmd=0x{:02X}",
                 buf[1],
@@ -174,7 +196,6 @@ impl<U: HypedUart> BmsUart<U> {
     }
 
     pub async fn read_voltage(&mut self) -> Result<f32, UartErr> {
-        // Request: [0xAA, 0x14, CRC:LSB, CRC:MSB]
         self.send_request(&[BmsCmd::START_BYTE, BmsCmd::READ_VOLTAGE])
             .await?;
 
@@ -244,43 +265,37 @@ impl<U: HypedUart> BmsUart<U> {
         self.send_request(&[BmsCmd::START_BYTE, BmsCmd::READ_CELL_VOLTAGES])
             .await?;
 
-        // The BMS sends a variable-length response:
-        // [0xAA, 0x1C, PL, DATA1:LSB, DATA1:MSB, ..., DATAn:LSB, DATAn:MSB, CRC:LSB, CRC:MSB]
-        // We first read the 3-byte header to get PL, then read the rest.
+        // Response: [0xAA, 0x1C, PL, DATA1:LSB, DATA1:MSB, ..., DATAn:LSB, DATAn:MSB, CRC:LSB, CRC:MSB]
+        // Read the entire variable-length response in one shot into a max-sized buffer.
+        // Max: 3 header + 32*2 payload + 2 CRC = 69 bytes.
+        let mut buf = [0u8; 69];
+        loop {
+            self.uart.read_until_idle(&mut buf).await?;
 
-        let mut header = [0u8; 3];
-        self.read_exact(&mut header).await?;
-
-        if header[0] != BmsCmd::START_BYTE {
-            defmt::error!("BMS UART: bad start byte in cell voltages response");
-            return Err(UartErr::Unknown);
+            if buf[0] != BmsCmd::START_BYTE {
+                defmt::warn!(
+                    "BMS UART: cell voltages discarding frame, no start byte (0x{:02X})",
+                    buf[0]
+                );
+                continue;
+            }
+            if buf[1] != BmsCmd::READ_CELL_VOLTAGES {
+                defmt::warn!(
+                    "BMS UART: cell voltages discarding unsolicited frame cmd=0x{:02X}",
+                    buf[1]
+                );
+                continue;
+            }
+            break;
         }
-        if header[1] != BmsCmd::READ_CELL_VOLTAGES {
-            defmt::error!("BMS UART: unexpected cmd in cell voltages response");
-            return Err(UartErr::Unknown);
-        }
 
-        let payload_len = header[2] as usize;
+        let payload_len = buf[2] as usize;
         let cell_count = payload_len / 2;
+        let total_len = 3 + payload_len + 2;
 
-        // Read payload + 2 CRC bytes.
-        let tail_len = payload_len + 2;
-        let mut tail: heapless::Vec<u8, 68> = heapless::Vec::new(); // 32 cells * 2 + 4 overhead
-        tail.resize_default(tail_len)
-            .map_err(|_| UartErr::BufferOverflow)?;
-        self.read_exact(&mut tail).await?;
-
-        // Validate CRC over [header || payload] (everything except last 2 bytes of tail).
-        let mut crc_data: heapless::Vec<u8, 72> = heapless::Vec::new();
-        crc_data
-            .extend_from_slice(&header)
-            .map_err(|_| UartErr::BufferOverflow)?;
-        crc_data
-            .extend_from_slice(&tail[..payload_len])
-            .map_err(|_| UartErr::BufferOverflow)?;
-
-        let computed = crc16(&crc_data);
-        let received = (tail[tail_len - 1] as u16) << 8 | tail[tail_len - 2] as u16;
+        // Validate CRC over [header + payload], i.e. buf[0..3+payload_len].
+        let computed = crc16(&buf[..3 + payload_len]);
+        let received = (buf[total_len - 1] as u16) << 8 | buf[total_len - 2] as u16;
         if computed != received {
             defmt::error!("BMS UART: CRC mismatch in cell voltages response");
             return Err(UartErr::CrcError);
@@ -288,8 +303,8 @@ impl<U: HypedUart> BmsUart<U> {
 
         let mut voltages = heapless::Vec::<u16, 32>::new();
         for i in 0..cell_count.min(self.cells_count as usize) {
-            let lsb = tail[i * 2];
-            let msb = tail[i * 2 + 1];
+            let lsb = buf[3 + i * 2];
+            let msb = buf[3 + i * 2 + 1];
             let val = u16::from_le_bytes([lsb, msb]);
             defmt::trace!("BMS: cell[{}] voltage = {}mV", i, val);
             voltages.push(val).map_err(|_| {
@@ -311,6 +326,10 @@ impl<U: HypedUart> BmsUart<U> {
             BmsCmd::RESET_BMS,
         ])
         .await?;
+
+        // The BMS re-emits its startup banner after reset before sending the ACK.
+        defmt::info!("BMS: reset sent, draining post-reset banner");
+        self.drain_banner().await?;
 
         // ACK response: [0xAA, 0x01, 0x02, CRC:LSB, CRC:MSB] = 5 bytes
         self.read_response::<5>(BmsCmd::RESET_OR_CLEAN_EVENT_OR_STATUS)
