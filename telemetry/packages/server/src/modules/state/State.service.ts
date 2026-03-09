@@ -1,4 +1,4 @@
-import { InfluxService } from '@/modules/influx/Influx.service';
+import type { InfluxService } from '@/modules/influx/Influx.service';
 import { Logger } from '@/modules/logger/Logger.decorator';
 import { getStateType } from '@hyped/telemetry-constants';
 import { Point } from '@influxdata/influxdb-client';

@@ -1,4 +1,4 @@
-import { HistoricalTelemetryDataService } from '@/modules/openmct/data/historical/HistoricalTelemetryData.service';
+import type { HistoricalTelemetryDataService } from '@/modules/openmct/data/historical/HistoricalTelemetryData.service';
 import { podIds } from '@hyped/telemetry-constants';
 import type {
 	LevitationHeightResponse,
@@ -11,7 +11,7 @@ import type {
 	StateResponse,
 } from '@hyped/telemetry-types';
 import { Controller, Get, HttpException, Param, Query } from '@nestjs/common';
-import { PublicDataService } from './PublicData.service';
+import type { PublicDataService } from './PublicData.service';
 
 @Controller('pods/:podId/public-data')
 export class PublicDataController {

@@ -1,6 +1,6 @@
 import { INFLUX_TELEMETRY_BUCKET } from '@/core/config';
 import type { InfluxRow } from '@/modules/common/types/InfluxRow';
-import { InfluxService } from '@/modules/influx/Influx.service';
+import type { InfluxService } from '@/modules/influx/Influx.service';
 import { Logger } from '@/modules/logger/Logger.decorator';
 import { flux, fluxDateTime } from '@influxdata/influxdb-client';
 import { HttpException, Injectable, type LoggerService } from '@nestjs/common';

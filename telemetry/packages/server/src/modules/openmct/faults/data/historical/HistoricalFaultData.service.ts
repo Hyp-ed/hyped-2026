@@ -1,6 +1,6 @@
 import { INFLUX_FAULTS_BUCKET } from '@/core/config';
 import type { InfluxRow } from '@/modules/common/types/InfluxRow';
-import { InfluxService } from '@/modules/influx/Influx.service';
+import type { InfluxService } from '@/modules/influx/Influx.service';
 import { Logger } from '@/modules/logger/Logger.decorator';
 import type { OpenMctFault } from '@hyped/telemetry-types';
 import type { HistoricalFaults } from '@hyped/telemetry-types';
