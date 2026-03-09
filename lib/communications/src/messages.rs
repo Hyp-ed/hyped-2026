@@ -342,7 +342,7 @@ impl From<CanMessage> for HypedCanFrame {
             }
 
             // Propulsion
-            // TODO: Boards for these events are placeholders, replace with MotorControl once merged
+            // TODOLater: Boards for these events are placeholders, replace with MotorControl once merged
             CanMessage::PropulsionStatus {
                 current_ma,
                 velocity_kmh,
