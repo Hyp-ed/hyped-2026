@@ -34,7 +34,9 @@ impl FromStr for MqttTopic {
             "debug" => Ok(MqttTopic::Debug),
             "test" => Ok(MqttTopic::Test),
             _ => {
-                if s.starts_with(MQTT_MEASUREMENT_TOPIC_PREFIX) {
+                if s.starts_with("hyped/the_podigal_son/controls/") {
+                    Ok(MqttTopic::Controls)
+                } else if s.starts_with(MQTT_MEASUREMENT_TOPIC_PREFIX) {
                     let measurement_id_string = &s[MQTT_MEASUREMENT_TOPIC_PREFIX.len()..s.len()];
                     let measurement_id = measurement_id_string.into();
                     Ok(MqttTopic::Measurement(measurement_id))
