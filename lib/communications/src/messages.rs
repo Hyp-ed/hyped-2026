@@ -342,7 +342,6 @@ impl From<CanMessage> for HypedCanFrame {
             }
 
             // Propulsion
-            // TODO: Boards for these events are placeholders, replace with MotorControl once merged
             CanMessage::PropulsionStatus {
                 current_ma,
                 velocity_kmh,
@@ -350,7 +349,7 @@ impl From<CanMessage> for HypedCanFrame {
                 voltage_cv,
             } => {
                 let can_id: CanId = CanId::new(
-                    Board::Telemetry,
+                    Board::MotorControl,
                     CanDataType::PropulsionStatus,
                     MessageIdentifier::Event(EventId::PropulsionStatus),
                 );
@@ -366,7 +365,7 @@ impl From<CanMessage> for HypedCanFrame {
 
             CanMessage::PropulsionForce { force_n } => {
                 let can_id: CanId = CanId::new(
-                    Board::Telemetry,
+                    Board::MotorControl,
                     CanDataType::U16,
                     MessageIdentifier::Event(EventId::PropulsionForce),
                 );
@@ -375,7 +374,7 @@ impl From<CanMessage> for HypedCanFrame {
             }
             CanMessage::StartPropulsionAccelerationCommand => {
                 let can_id: CanId = CanId::new_high_priority(
-                    Board::Telemetry,
+                    Board::MotorControl,
                     CanDataType::U32,
                     MessageIdentifier::Event(EventId::StartPropulsionAccelerationCommand),
                 );
@@ -383,7 +382,7 @@ impl From<CanMessage> for HypedCanFrame {
             }
             CanMessage::StartPropulsionBrakingCommand => {
                 let can_id: CanId = CanId::new_high_priority(
-                    Board::Telemetry,
+                    Board::MotorControl,
                     CanDataType::U32,
                     MessageIdentifier::Event(EventId::StartPropulsionBrakingCommand),
                 );
@@ -391,7 +390,7 @@ impl From<CanMessage> for HypedCanFrame {
             }
             CanMessage::PropulsionAccelerationStarted => {
                 let can_id: CanId = CanId::new(
-                    Board::Telemetry,
+                    Board::MotorControl,
                     CanDataType::U32,
                     MessageIdentifier::Event(EventId::PropulsionAccelerationStarted),
                 );
@@ -399,7 +398,7 @@ impl From<CanMessage> for HypedCanFrame {
             }
             CanMessage::PropulsionBrakingStarted => {
                 let can_id: CanId = CanId::new(
-                    Board::Telemetry,
+                    Board::MotorControl,
                     CanDataType::U32,
                     MessageIdentifier::Event(EventId::PropulsionBrakingStarted),
                 );
@@ -576,8 +575,8 @@ mod tests {
     use hyped_core::config::MeasurementId;
 
     use crate::{
-        boards::Board, data::CanData, heartbeat::Heartbeat, measurements::MeasurementReading,
-        messages::CanMessage,
+        boards::Board, data::CanData, emergency::Reason, heartbeat::Heartbeat,
+        measurements::MeasurementReading, messages::CanMessage,
     };
 
     #[test]
@@ -601,5 +600,36 @@ mod tests {
         let can_frame: HypedCanFrame = heartbeat.clone().into();
         let can_message_from_frame: CanMessage = can_frame.into();
         assert_eq!(heartbeat, can_message_from_frame)
+    }
+
+    #[test]
+    fn can_message_round_trip_measurement() {
+        let measurement_reading = MeasurementReading::new(
+            CanData::F32(1.25),
+            Board::Telemetry,
+            MeasurementId::Acceleration,
+        );
+        let can_message = CanMessage::MeasurementReading(measurement_reading);
+
+        let can_frame: HypedCanFrame = can_message.clone().into();
+        let decoded: CanMessage = can_frame.into();
+
+        assert_eq!(can_message, decoded)
+    }
+
+    #[test]
+    fn can_message_round_trip_heartbeat() {
+        let heartbeat = CanMessage::Heartbeat(Heartbeat::new(Board::Mqtt, Board::Telemetry));
+        let can_frame: HypedCanFrame = heartbeat.clone().into();
+        let decoded: CanMessage = can_frame.into();
+        assert_eq!(heartbeat, decoded)
+    }
+
+    #[test]
+    fn can_message_round_trip_emergency() {
+        let message = CanMessage::Emergency(Board::Navigation, Reason::MissingHeartbeat);
+        let can_frame: HypedCanFrame = message.clone().into();
+        let decoded: CanMessage = can_frame.into();
+        assert_eq!(message, decoded)
     }
 }
