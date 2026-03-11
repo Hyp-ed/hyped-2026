@@ -26,7 +26,6 @@ impl FromStr for MqttTopic {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "hyped/the_podigal_son/state/state" => Ok(MqttTopic::State),
-            "hyped/the_podigal_son/controls" => Ok(MqttTopic::Controls),
             "hyped/the_podigal_son/heartbeat" => Ok(MqttTopic::Heartbeat),
             "hyped/the_podigal_son/logs" => Ok(MqttTopic::Logs),
             "hyped/the_podigal_son/latency/request" => Ok(MqttTopic::LatencyRequest),
