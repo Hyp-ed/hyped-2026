@@ -1,5 +1,5 @@
 import { Controller, Get } from '@nestjs/common';
-import { ObjectTypesService } from './ObjectTypes.service';
+import type { ObjectTypesService } from './ObjectTypes.service';
 
 @Controller('openmct/object-types')
 export class ObjectTypesController {

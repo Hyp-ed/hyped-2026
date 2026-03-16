@@ -1,4 +1,4 @@
-import { InfluxService } from '@/modules/influx/Influx.service';
+import type { InfluxService } from '@/modules/influx/Influx.service';
 import { Logger } from '@/modules/logger/Logger.decorator';
 import type { RealtimeTelemetryDataGateway } from '@/modules/openmct/data/realtime/RealtimeTelemetryData.gateway';
 import { FaultService } from '@/modules/openmct/faults/Fault.service';
