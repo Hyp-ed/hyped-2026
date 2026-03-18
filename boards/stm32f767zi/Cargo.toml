@@ -53,3 +53,8 @@ path = "src/bin/boards/telemetry.rs"
 [[bin]]
 name = "i2cdetect"
 path = "src/bin/tools/i2cdetect.rs"
+
+[[bin]]                                                                                   
+name = "sensors"
+path = "src/bin/boards/sensors.rs"
+
