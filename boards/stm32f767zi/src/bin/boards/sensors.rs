@@ -57,7 +57,7 @@ async fn main(spawner: Spawner) -> ! {
 }
 
 #[embassy_executor::task]
-async fn sensors_board_response_task(mut led: gpio::Output<'static>) -> ! {
+async fn sensors_board_response_task(mut led: gpio::Output<'static>) {
     let rx = EVENT_BUS.receiver();
 
     loop {
@@ -75,6 +75,16 @@ async fn sensors_board_response_task(mut led: gpio::Output<'static>) -> ! {
 
                 EVENT_BUS.sender().send(Event::PrechargeComplete).await;
             }
+
+            Event::Emergency { from, reason } => {
+                defmt::warn!("EMERGENCY: from {:?} reason={}", from, reason);
+                return;
+            }
+
+            Event::Heartbeat { from } => {
+                defmt::debug!("Heartbeat from {:?}", from);
+            }
+
             _ => {} // Ignore other events
         }
     }
