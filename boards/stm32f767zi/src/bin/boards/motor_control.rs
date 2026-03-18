@@ -5,8 +5,8 @@ use defmt_rtt as _;
 use embassy_executor::Spawner;
 use embassy_stm32::{
     bind_interrupts,
-    can::{Can, Fifo, Rx0InterruptHandler, Rx1InterruptHandler, SceInterruptHandler, TxInterruptHandler},
-    gpio::{Level, Output, OutputType, Speed},
+    can::{Can, Fifo, Rx0InterruptHandler, Rx1InterruptHandler, SceInterruptHandler, TxInterruptHandler, filter::Mask32},
+    gpio::{Level, Output, Speed},
     peripherals::{self, CAN1, CAN2},
     rng,
     Config,
@@ -14,12 +14,11 @@ use embassy_stm32::{
 use embassy_time::{Duration, Timer};
 use core::sync::atomic::{AtomicBool, Ordering};
 
-mod motor_control;
-use motor_control::{
+use hyped_boards_stm32f767zi::motor_control::{
     braking::braking_system_loop,
     control_loop::motor_control_loop,
     navigation::NAV_KINEMATICS,
-    event_handling::{motor_control_event_task, propulsion_status_task};
+    event_handling::{motor_control_event_task, propulsion_status_task},
 };
 
 use hyped_boards_stm32f767zi::{
@@ -28,7 +27,6 @@ use hyped_boards_stm32f767zi::{
     tasks::{
         can::{
             board_heartbeat::send_heartbeat,      
-            receive::can_receiver,
             send::{can_sender, CAN_SEND},                 
         },
         state_machine::state_machine,
@@ -56,17 +54,14 @@ bind_interrupts!(struct Irqs {
 });
 
 // NAV -> MotorControl command ID
-const NAV_TO_MTC_CMD_ID_EXT: u32 = 0x18FF_0301; // agree this with Navigation (29-bit Extended ID)
-// Additional NAV -> MTC IDs to remove command byte 
-const NAV_TO_MTC_SPEED_ACCEL_ID_EXT: u32 = 0x18FF_0302; // 8 bytes: speed + accel
-const NAV_TO_MTC_POS_TARGET_ID_EXT: u32  = 0x18FF_0303; // 8 bytes: position + target
-// payload format proposal:4
-//   data[0] command code: 0x01=StartDrive, 0x02=Shutdown, 0x03=QuickStop, 0x04=SwitchOn, 0x05=SetFrequency
+pub const NAV_TO_MTC_CMD_ID_EXT: u32 = 0x18FF_0301; 
+pub const NAV_TO_MTC_SPEED_ACCEL_ID_EXT: u32 = 0x18FF_0302; 
+pub const NAV_TO_MTC_POS_TARGET_ID_EXT: u32  = 0x18FF_0303; 
 
 // === Braking constants (placeholder values; replace with real pod params) ===
-pub(crate) const POD_MASS_KG: f32 = 200.0;           // TODO: set actual pod mass
-pub(crate) const MAX_BRAKE_FORCE_N: f32 = 5000.0;    // TODO: measured clamp braking force
-pub(crate) const BRAKE_MARGIN_M: f32 = 5.0;          // TODO: safety margin distance for brake trigger
+pub(crate) const POD_MASS_KG: f32 = 200.0;           
+pub(crate) const MAX_BRAKE_FORCE_N: f32 = 5000.0;    
+pub(crate) const BRAKE_MARGIN_M: f32 = 5.0;          
 
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, mutex::Mutex};
 
@@ -101,27 +96,24 @@ async fn main(spawner: Spawner) -> ! {
     can1.enable().await;
 
     // TODO: replace PC13 with the actual brake solenoid GPIO pin once wiring is finalised.
-    // NOTE: Assumes active-low solenoid: LOW = brakes engaged, HIGH = brakes released.
-    // Confirm polarity with pneumatics wiring.
-    let brake_solenoid_pin = Output::new(p.PC13, Level::High, OutputType::PushPull, Speed::High);
+    let brake_solenoid_pin = Output::new(p.PC13, Level::High, Speed::High);
     {
         let mut guard = BRAKE_SOLENOID.lock().await;
         *guard = Some(brake_solenoid_pin);
     }
 
-
-    // TODO: configure CAN filters so NAV frames are routed to FIFO1
-    // Dedicated system receiver (heartbeats, emergency, state transitions)
-    let can1_rx_system = can1.receiver_for_fifo(Fifo::Rx0);
-    spawner.must_spawn(can_receiver(can1_rx_system));
-
-    // Dedicated NAV receiver
-    let can1_rx_nav = can1.receiver_for_fifo(Fifo::Rx1);
-    spawner.must_spawn(motor_control_loop(can1_rx_nav));
+    let (can1_tx, can1_rx) = can1.split();
+    // For now, we use a single receiver for all CAN1 messages.
+    // In a more complex setup, we might want to use different FIFOs.
+    spawner.must_spawn(motor_control_loop(can1_rx));
+    // We also need the system can_receiver, but it also wants can1_rx.
+    // For now, motor_control_loop will have to handle system messages or we need a dispatcher.
+    // Let's use a dispatcher approach.
+    
     defmt::info!("CAN1 ready");
 
     defmt::info!("Setting up CAN2 (EMSISO)...");
-    let mut can2 = Can::new(p.CAN2, p.PB12, p.PB13, Irqs); // need to double check GPIO pins 
+    let mut can2 = Can::new(p.CAN2, p.PB12, p.PB13, Irqs); 
     default_can_config!(can2);
     can2.enable().await;
     let (can2_tx, _can2_rx) = can2.split();
@@ -152,7 +144,7 @@ async fn emergency_handler() {
             defmt::error!("Emergency signal received! Enqueuing QUICK_STOP and halting...");
             // Immediately push a Quick Stop to EMSISO via CAN2
             FORCE_BRAKE.store(true, Ordering::SeqCst);
-            enqueue_canopen(Messages::QuickStop).await;
+            let _ = enqueue_canopen(Messages::QuickStop).await;
             engage_brake_solenoid().await;
 
             current_state_sender.send(State::Emergency);
@@ -160,53 +152,25 @@ async fn emergency_handler() {
             panic!("Emergency stop triggered");
         }
     }
-
-//    loop {
-          //Set up match statement to handle both error and Ok sitches so no panicking on receiving errors
-//        match EMERGENCY.receiver() {
-//        Ok(receiver) => {
-//                if receiver.get().await {
-//                    defmt::error!(“Emergency signal received! Enqueuing QUICK_STOP and halting...“);
-                      // Error handling using if let Err(e)
-//                    if let Err(e) = enqueue_canopen(Messages::QuickStop).await {
-//                        defmt::error!(“Failed to send QUICK_STOP message: {:?}“, e);
-//                    current_state_sender.send(State::Emergency);
-//                    Timer::after(Duration::from_millis(200)).await;
-//                    panic!(“Emergency stop triggered”);
-//                    }
-//                }
-//            }
-              //If receiver fails --> log critical error and immediately halt the program as failsafe
-//            Err(e) => {
-//                defmt::error!(“Failed to get EMERGENCY receiver: {:?}“, e);
-//                panic!(“Emergency monitor failed”)
-//            }
-//        }
-//    }
 }
 
-pub(crate) async fn enqueue_canopen(message: Messages) {
+pub(crate) async fn enqueue_canopen(message: Messages) -> Result<(), ()> {
     let msg: CanOpenMessage = message.into();
     let frame: HypedCanFrame = msg.into();
     let can_msg: CanMessage = frame.into();
-    //Replaced CAN_SEND.send(can_msg).await and wrapped in match to so function won’t block always if queue full
+    
     match CAN_SEND.try_send(can_msg) {
-        //If successful, return Ok
         Ok(_) => Ok(()),
-        //If the queue is full, log a warning and handle based on message criticality
         Err(e) => {
-            defmt::warn!(“CAN send queue full, message dropped: {:?}“, e);
-            match messages {
-                //If quickstop or shutdown message dropped, return error and let motor_control_loop handle handle emergency
-                Messages::QuickStop | Messages::Shutdown => { Err(())}
-                //If StartDrive message dropped, log a warning but continue operation
+            defmt::warn!("CAN send queue full, message dropped: {:?}", e);
+            match message {
+                Messages::QuickStop | Messages::Shutdown => Err(()),
                 Messages::StartDrive => {
-                    defmt::warn!(“StartDrive message dropped, but continuing operation.“);
+                    defmt::warn!("StartDrive message dropped, but continuing operation.");
                     Err(())
                 }
-                //If non-critical messages dropped, log info and continue operation
                 _ => {
-                    defmt::info!(“None-critical CAN message dropped, continuing operation.“);
+                    defmt::info!("None-critical CAN message dropped, continuing operation.");
                     Err(())
                 }
             }

@@ -1,16 +1,23 @@
 use embassy_executor::task;
 use embassy_stm32::can::Id;
+use embassy_time::{Duration, Timer};
+use core::sync::atomic::Ordering;
 
-use crate::{enqueue_canopen, NAV_TO_MTC_CMD_ID_EXT, NAV_TO_MTC_POS_TARGET_ID_EXT, NAV_TO_MTC_SPEED_ACCEL_ID_EXT};
-use crate::motor_control::navigation::{decode_position_target_mm, decode_speed_accel_mmps, NAV_KINEMATICS};
-use mc_logic::NavKinematics;
+use crate::bin::boards::motor_control::{
+    enqueue_canopen, NAV_TO_MTC_CMD_ID_EXT, NAV_TO_MTC_POS_TARGET_ID_EXT,
+    NAV_TO_MTC_SPEED_ACCEL_ID_EXT,
+};
+use crate::motor_control::navigation::{
+    decode_position_target_mm, decode_speed_accel_mmps, NavKinematics, NAV_KINEMATICS,
+};
+use crate::board_state::EMERGENCY;
 use hyped_motors::can_open_processor::Messages;
 
 /// Reads frames from CAN1(RX1) which is reserved for the navigation commands.
 /// These commands are parsed and converted into CANOpen drive commands that are
 /// transmitted to the EMSISO motor controller over CAN2.
 #[task]
-pub async fn motor_control_loop(mut can1_rx: embassy_stm32::can::Receiver<'_>) {
+pub async fn motor_control_loop(mut can1_rx: embassy_stm32::can::CanRx<'static>) {
     defmt::info!("Motor control loop started (Option A: separate CAN IDs)");
 
     //Used AtomicU32 for better compilation and speed:
@@ -18,7 +25,7 @@ pub async fn motor_control_loop(mut can1_rx: embassy_stm32::can::Receiver<'_>) {
     //CAN_ERROR_THRESHOLD: constant defining max number of errors before triggering emergency
     use core::sync::atomic::AtomicU32;
     static CAN_ERROR_COUNT: AtomicU32 = AtomicU32::new(0);
-    const CAN_ERROR_THESHOLD: u32 = 10;
+    const CAN_ERROR_THRESHOLD: u32 = 10;
     loop {
         // Uses the Embassy receiver directly (no shared can_receiver task for CAN1)
         let env = match can1_rx.read().await {
@@ -27,21 +34,17 @@ pub async fn motor_control_loop(mut can1_rx: embassy_stm32::can::Receiver<'_>) {
                 //Atomically increases error counter by 1 and retrieves previous value, set to Ordering::Relaxed for minimal memory
                 let count = CAN_ERROR_COUNT.fetch_add(1, Ordering::Relaxed);
                 //log error with new count value
-                defmt::warn!(“Error receiving CAN frame on CAN1: {:?}, count: {}“, e, count + 1);
+                defmt::warn!("Error receiving CAN frame on CAN1: {:?}, count: {}", e, count + 1);
                 //Check threshold, if 10+ errors --> call panic! to send emergency via emergency channel
                 if count >= CAN_ERROR_THRESHOLD {
-                    defmt::error!(“Exceeded CAN error threshold on CAN1, communication failure”);
-                    EMERGENCY.sender().send();
-                    panic!(“Terminating due to CAN communication failure”);
+                    defmt::error!("Exceeded CAN error threshold on CAN1, communication failure");
+                    EMERGENCY.sender().send(true);
+                    panic!("Terminating due to CAN communication failure");
                 }
                 //Try to recover
                 Timer::after(Duration::from_millis(100)).await;
                 continue;
             },
-            //let env = match can1_rx.read().await {
-            //Ok(e) => e,
-            //Err(_e) => continue,
-            //}
         };
 
         let can_id = match env.frame.id() {
@@ -62,33 +65,33 @@ pub async fn motor_control_loop(mut can1_rx: embassy_stm32::can::Receiver<'_>) {
                 match data[0] {
                     //log error if start_drive fails to send
                     0x01 => {
-                        defmt::info!(“NAV→MTC: START_DRIVE”);
+                        defmt::info!("NAV→MTC: START_DRIVE");
                         if let Err(_) = enqueue_canopen(Messages::StartDrive).await {
-                            defmt::error!(“Failed to send START_DRIVE message”);
+                            defmt::error!("Failed to send START_DRIVE message");
                         };
-                    };
+                    }
                     //log error if shutdown fails to send
                     0x02 => {
-                        defmt::info!(“NAV→MTC: SHUTDOWN”);
+                        defmt::info!("NAV→MTC: SHUTDOWN");
                         if let Err(_) = enqueue_canopen(Messages::Shutdown).await {
-                            defmt::error!(“Failed to send SHUTDOWN message”);
-                            EMERGENCY.sender().send(); // trigger emergency if shutdown fails
-                            panic!(“Terminating due to failed SHUTDOWN message”);
+                            defmt::error!("Failed to send SHUTDOWN message");
+                            EMERGENCY.sender().send(true); // trigger emergency if shutdown fails
+                            panic!("Terminating due to failed SHUTDOWN message");
                         }
                     }
                     //log error and trigger emergency if quick-stop fails to send
                     0x03 => {
-                        defmt::info!(“NAV→MTC: QUICK_STOP”);
+                        defmt::info!("NAV→MTC: QUICK_STOP");
                         if let Err(_) = enqueue_canopen(Messages::QuickStop).await {
-                            defmt::error!(“Failed to send QUICK_STOP message”);
-                            EMERGENCY.sender().send(); // trigger emergency if quick stop fails
-                            panic!(“Terminating due to failed QUICK_STOP message”);
+                            defmt::error!("Failed to send QUICK_STOP message");
+                            EMERGENCY.sender().send(true); // trigger emergency if quick stop fails
+                            panic!("Terminating due to failed QUICK_STOP message");
                         }
                     }
                     0x04 => {
-                        defmt::info!(“NAV→MTC: SWITCH_ON”);
+                        defmt::info!("NAV→MTC: SWITCH_ON");
                         if let Err(_) = enqueue_canopen(Messages::SwitchOn).await{
-                            defmt::error!(“Failed to send SWITCH_ON message”);
+                            defmt::error!("Failed to send SWITCH_ON message");
                         }
                     }
 

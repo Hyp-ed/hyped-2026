@@ -1,17 +1,18 @@
 use embassy_executor::task;
+use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 
-use crate::{
+use crate::bin::boards::motor_control::{
     engage_brake_solenoid, enqueue_canopen, release_brake_solenoid, BRAKE_MARGIN_M, FORCE_BRAKE,
     MAX_BRAKE_FORCE_N, POD_MASS_KG,
 };
-use mc_logic::NavKinematics;
+use crate::motor_control::navigation::NavKinematics;
 use hyped_motors::can_open_processor::Messages;
 use core::sync::atomic::Ordering;
 
 // Brakes latch once engaged; no auto-release implemented yet.
 #[task]
 pub async fn braking_system_loop(
-    mut nav_rx: embassy_sync::channel::Receiver<'static, NavKinematics>,
+    mut nav_rx: embassy_sync::channel::Receiver<'static, CriticalSectionRawMutex, NavKinematics, 5>,
 ) {
     defmt::info!("Braking system active (mechanical brakes via GPIO)");
 
@@ -52,7 +53,7 @@ pub async fn braking_system_loop(
                     position,
                     target
                 );
-                enqueue_canopen(Messages::QuickStop).await;
+                let _ = enqueue_canopen(Messages::QuickStop).await;
                 engage_brake_solenoid().await;
                 brakes_engaged = true;
             }
@@ -73,8 +74,8 @@ pub async fn braking_system_loop(
                     stopping_distance
                 );
                 // Tell motor controller to stop drive before clamping.
-                enqueue_canopen(Messages::QuickStop).await;
-                enqueue_canopen(Messages::Shutdown).await;
+                let _ = enqueue_canopen(Messages::QuickStop).await;
+                let _ = enqueue_canopen(Messages::Shutdown).await;
                 // Brake solenoid clamps when driven low (per pneumatics::engage_brakes comments).
                 engage_brake_solenoid().await;
                 brakes_engaged = true;

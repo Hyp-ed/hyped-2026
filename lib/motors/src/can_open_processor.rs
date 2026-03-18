@@ -3,6 +3,7 @@ use hyped_can::{CanError, HypedCan, HypedCanFrame};
 
 /// All types of messages that can be sent to the motor controller
 pub enum Messages {
+    TestStepperFrequency,
     TestStepperEnable,
     TestModeCommand,
     EnterStopState,
@@ -55,6 +56,7 @@ impl From<HypedCanFrame> for CanOpenMessage {
 impl From<Messages> for CanOpenMessage {
     fn from(message: Messages) -> Self {
         match message {
+            Messages::TestStepperFrequency => config_messages::TEST_STEPPER_FREQUENCY,
             Messages::TestStepperEnable => config_messages::TEST_STEPPER_ENABLE,
             Messages::TestModeCommand => config_messages::TEST_MODE_COMMAND,
             Messages::EnterStopState => messages::ENTER_STOP_STATE,
