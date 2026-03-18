@@ -10,11 +10,19 @@ pub struct CanOpenMessage {
 
 pub mod config_messages {
     use super::CanOpenMessage;
+    
+    pub const TEST_STEPPER_FREQUENCY: CanOpenMessage = CanOpenMessage {
+        id: 0x601,
+        command: 0x2B,
+        index: 0x2040,
+        sub_index: 0x04,
+        data: 0x00000014, // Data will be overwritten at runtime depending on the frequency desired
+    };
 
     pub const TEST_STEPPER_ENABLE: CanOpenMessage = CanOpenMessage {
         id: 0x601,
         command: 0x2B,
-        index: 0x6040,
+        index: 0x2040,
         sub_index: 0x09,
         data: 0x00000001,
     };
@@ -24,7 +32,7 @@ pub mod config_messages {
         command: 0x2B,
         index: 0x2031,
         sub_index: 0x00,
-        data: 0x00000060,
+        data: 0x000000C8,
     };
 }
 
