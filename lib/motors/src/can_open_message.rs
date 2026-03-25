@@ -21,7 +21,7 @@ pub mod config_messages {
 
     pub const TEST_STEPPER_ENABLE: CanOpenMessage = CanOpenMessage {
         id: 0x601,
-        command: 0x2B,
+        command: 0x2F,
         index: 0x2040,
         sub_index: 0x09,
         data: 0x00000001,
@@ -45,7 +45,7 @@ pub mod config_messages {
 
     pub const SET_MAX_CURRENT: CanOpenMessage = CanOpenMessage {
         id: 0x601,
-        command: 0x2B,
+        command: 0x23,
         index: 0x2050,
         sub_index: 0x00,
         data: 0x00005208,
@@ -61,7 +61,7 @@ pub mod config_messages {
 
     pub const MOTOR_RATED_CURRENT: CanOpenMessage = CanOpenMessage {
         id: 0x601,
-        command: 0x2B,
+        command: 0x23,
         index: 0x6075,
         sub_index: 0x00,
         data: 0x00004E20,
@@ -74,6 +74,31 @@ pub mod config_messages {
         sub_index: 0x00,
         data: 0x000001A4,
     };
+
+    pub const MODES_OF_OPERATION: CanOpenMessage = CanOpenMessage {
+        id: 0x601,
+        command: 0x2F,
+        index: 0x6060,
+        sub_index: 0x00,
+        data: 0x000000FD,
+    };
+
+    pub const SENSOR_TYPE: CanOpenMessage = CanOpenMessage {
+        id: 0x601,
+        command: 0x2F,
+        index: 0x2057,
+        sub_index: 0x01,
+        data: 0x00000000,
+    };
+
+    pub const UNDERVOLTAGE_LIMIT: CanOpenMessage = CanOpenMessage {
+        id: 0x601,
+        command: 0x2B,
+        index: 0x2055,
+        sub_index: 0x01,
+        data: 0x0000001E,
+    };
+
 }
 
 pub mod messages {
@@ -90,6 +115,14 @@ pub mod messages {
     pub const ENTER_PREOPERATIONAL_STATE: CanOpenMessage = CanOpenMessage {
         id: 0x000,
         command: 0x80,
+        index: 0x0000,
+        sub_index: 0x00,
+        data: 0x00000000,
+    };
+
+    pub const RESET_NODE: CanOpenMessage = CanOpenMessage {
+        id: 0x000,
+        command: 0x81,
         index: 0x0000,
         sub_index: 0x00,
         data: 0x00000000,
