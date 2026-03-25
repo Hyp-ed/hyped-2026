@@ -34,6 +34,38 @@ pub mod config_messages {
         sub_index: 0x00,
         data: 0x000000C8,
     };
+
+    pub const SET_MAX_CURRENT: CanOpenMessage = CanOpenMessage {
+        id: 0x601,
+        command: 0x2B,
+        index: 0x2050,
+        sub_index: 0x00,
+        data: 0x00005208,
+    };
+
+    pub const SECONDARY_CURRENT_PROTECTION: CanOpenMessage = CanOpenMessage {
+        id: 0x601,
+        command: 0x2B,
+        index: 0x2051,
+        sub_index: 0x00,
+        data: 0x000186A0,
+    };
+
+    pub const MOTOR_RATED_CURRENT: CanOpenMessage = CanOpenMessage {
+        id: 0x601,
+        command: 0x2B,
+        index: 0x6075,
+        sub_index: 0x00,
+        data: 0x00004E20,
+    };
+
+    pub const OVERVOLTAGE_LIMIT: CanOpenMessage = CanOpenMessage {
+        id: 0x601,
+        command: 0x2B,
+        index: 0x2054,
+        sub_index: 0x00,
+        data: 0x000001A4,
+    };
 }
 
 pub mod messages {

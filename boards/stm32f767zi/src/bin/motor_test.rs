@@ -51,9 +51,33 @@ async fn main(_spawner: Spawner) {
 
     let (mut tx, _rx) = can.split();
 
+    //Set up stuff
+    info!("Sending Test Stepper frequency message...");
+    send_motor_message(&mut tx, Messages::TestStepperFrequency).await;
+
+    info!("Sending Test Stepper Enable message...");
+    send_motor_message(&mut tx, Messages::TestStepperEnable).await;
+
+    info!("Setting maximum controller current...");
+    send_motor_message(&mut tx, Messages::SetMaxCurrent).await;
+
+    info!("Setting secondary current protection...");
+    send_motor_message(&mut tx, Messages::SecondaryCurrentProtection).await;
+
+    info!("Setting motor rated current...");
+    send_motor_message(&mut tx, Messages::MotorRatedCurrent).await;
+
+    info!("Setting overvoltage limit...");
+    send_motor_message(&mut tx, Messages::OvervoltageLimit).await;
+
+    info!("CONFIG COMPLETE");
+    Timer::after(Duration::from_secs(5)).await;
+
+
+
     info!("Sending Preoperational message...");
     send_motor_message(&mut tx, Messages::EnterPreoperationalState).await;
-    Timer::after(Duration::from_secs(15)).await;
+    Timer::after(Duration::from_secs(30)).await;
 
     info!("Sending Operational message...");
     send_motor_message(&mut tx, Messages::EnterOperationalState).await;
@@ -69,8 +93,17 @@ async fn main(_spawner: Spawner) {
     send_motor_message(&mut tx, Messages::StartDrive).await;
     Timer::after(Duration::from_secs(15)).await;
 
-    info!("Sending Test Mode Command message...");
-    send_motor_message(&mut tx, Messages::TestModeCommand).await;
+    info!("Sending Start Drive message...");
+    send_motor_message(&mut tx, Messages::StartDrive).await;
+    Timer::after(Duration::from_secs(2)).await;
+
+    info!("Starting motor");
+    info!("Setting Frequency to 200...");
+    send_motor_message(&mut tx, Messages::SetFrequency(200)).await;
+    Timer::after(Duration::from_secs(15)).await;
+
+    info!("Stopping motor...");
+    send_motor_message(&mut tx, Messages::QuickStop).await;
 }
 
 async fn send_motor_message(tx: &mut embassy_stm32::can::CanTx<'static>, msg: Messages) {
