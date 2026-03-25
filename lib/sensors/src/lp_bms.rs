@@ -67,7 +67,7 @@ impl Bms {
 
     pub async fn init(&mut self) -> Result<(), CanError> {
         defmt::info!("BMS: initializing");
-        self.reset().await?;
+        // self.reset().await?;
         self.cells_count = self.read_cell_count().await?;
         defmt::info!("BMS: initialized with {} cells", self.cells_count);
         Ok(())

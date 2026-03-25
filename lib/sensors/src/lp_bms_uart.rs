@@ -80,7 +80,6 @@ impl<U: HypedUart> BmsUart<U> {
 
     pub async fn init(&mut self) -> Result<(), UartErr> {
         defmt::info!("BMS: initializing");
-        self.drain_banner().await?;
         self.reset().await?;
         self.cells_count = self.read_cell_count().await?;
         defmt::info!("BMS: initialized with {} cells", self.cells_count);
@@ -102,7 +101,7 @@ impl<U: HypedUart> BmsUart<U> {
             .push((crc >> 8) as u8)
             .map_err(|_| UartErr::BufferOverflow)?;
 
-        defmt::trace!("BMS UART TX: {} bytes", frame.len());
+        defmt::info!("BMS UART TX: {} bytes", frame.len());
         self.uart.write(&frame).await
     }
 
@@ -110,9 +109,13 @@ impl<U: HypedUart> BmsUart<U> {
     /// The banner ends with \r\n\r\n (0x0D 0x0A 0x0D 0x0A).
     pub async fn drain_banner(&mut self) -> Result<(), UartErr> {
         defmt::info!("BMS: draining startup banner");
-        let mut buf = [0u8; 128];
-        self.uart.read_until_idle(&mut buf).await?;
+        let mut buf = [0u8; 8 * 72];
+        // self.uart.read_until_idle(&mut buf).await?;
+        self.uart.read(&mut buf).await?;
+        defmt::info!("{:?}", buf);
+
         defmt::info!("BMS: startup banner drained");
+
         Ok(())
     }
 
@@ -125,7 +128,7 @@ impl<U: HypedUart> BmsUart<U> {
             self.uart.read_until_idle(&mut buf).await?;
 
             if buf[0] != BmsCmd::START_BYTE {
-                defmt::warn!(
+                defmt::info!(
                     "BMS UART: discarding frame, expected start byte 0xAA got 0x{:02X}",
                     buf[0]
                 );
@@ -134,7 +137,7 @@ impl<U: HypedUart> BmsUart<U> {
 
             // buf[1] is ACK/NACK, buf[2] is the echoed command
             if buf[2] != expected_cmd {
-                defmt::warn!(
+                defmt::info!(
                     "BMS UART: discarding unsolicited frame cmd=0x{:02X}, waiting for 0x{:02X}",
                     buf[2],
                     expected_cmd
@@ -142,7 +145,7 @@ impl<U: HypedUart> BmsUart<U> {
                 continue;
             }
 
-            defmt::trace!("BMS UART: received frame for cmd=0x{:02X}", expected_cmd);
+            defmt::info!("BMS UART: received frame for cmd=0x{:02X}", expected_cmd);
             return Ok(buf);
         }
     }
@@ -331,6 +334,8 @@ impl<U: HypedUart> BmsUart<U> {
         defmt::info!("BMS: reset sent, draining post-reset banner");
         self.drain_banner().await?;
 
+        todo!();
+
         // ACK response: [0xAA, 0x01, 0x02, CRC:LSB, CRC:MSB] = 5 bytes
         self.read_response::<5>(BmsCmd::RESET_OR_CLEAN_EVENT_OR_STATUS)
             .await
@@ -340,7 +345,7 @@ impl<U: HypedUart> BmsUart<U> {
     }
 
     pub async fn read_cell_count(&mut self) -> Result<u16, UartErr> {
-        defmt::debug!("BMS: reading cell count");
+        defmt::info!("BMS: reading cell count");
         // MODBUS-compatible read: [0xAA, 0x03, ADDR:MSB, ADDR:LSB, 0x00, RL, CRC:LSB, CRC:MSB]
         // Register 53 (0x0035) = Number Of Detected Cells, read 1 register.
         self.send_request(&[
