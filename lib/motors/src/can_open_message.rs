@@ -27,12 +27,20 @@ pub mod config_messages {
         data: 0x00000001,
     };
 
+    pub const RESET_TEST_MODE_COMMAND: CanOpenMessage = CanOpenMessage {
+        id: 0x601,
+        command: 0x2B,
+        index: 0x2031,
+        sub_index: 0x00,
+        data: 0x00000000,
+    };
+
     pub const TEST_MODE_COMMAND: CanOpenMessage = CanOpenMessage {
         id: 0x601,
         command: 0x2B,
         index: 0x2031,
         sub_index: 0x00,
-        data: 0x000000C8,
+        data: 0x00000000, // Data will be overwritten at runtime depending on the test mode command desired
     };
 
     pub const SET_MAX_CURRENT: CanOpenMessage = CanOpenMessage {
@@ -45,7 +53,7 @@ pub mod config_messages {
 
     pub const SECONDARY_CURRENT_PROTECTION: CanOpenMessage = CanOpenMessage {
         id: 0x601,
-        command: 0x2B,
+        command: 0x23,
         index: 0x2051,
         sub_index: 0x00,
         data: 0x000186A0,
@@ -81,7 +89,7 @@ pub mod messages {
 
     pub const ENTER_PREOPERATIONAL_STATE: CanOpenMessage = CanOpenMessage {
         id: 0x000,
-        command: 0x03,
+        command: 0x80,
         index: 0x0000,
         sub_index: 0x00,
         data: 0x00000000,

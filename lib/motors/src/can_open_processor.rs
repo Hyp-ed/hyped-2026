@@ -5,7 +5,8 @@ use hyped_can::{CanError, HypedCan, HypedCanFrame};
 pub enum Messages {
     TestStepperFrequency,
     TestStepperEnable,
-    TestModeCommand,
+    TestModeCommand(u32),
+    ResetTestModeCommand,
     SetMaxCurrent,
     SecondaryCurrentProtection,
     MotorRatedCurrent,
@@ -62,7 +63,14 @@ impl From<Messages> for CanOpenMessage {
         match message {
             Messages::TestStepperFrequency => config_messages::TEST_STEPPER_FREQUENCY,
             Messages::TestStepperEnable => config_messages::TEST_STEPPER_ENABLE,
-            Messages::TestModeCommand => config_messages::TEST_MODE_COMMAND,
+            Messages::TestModeCommand(f) => CanOpenMessage {
+                id: config_messages::TEST_MODE_COMMAND.id,
+                command: config_messages::TEST_MODE_COMMAND.command,
+                index: config_messages::TEST_MODE_COMMAND.index,
+                sub_index: config_messages::TEST_MODE_COMMAND.sub_index,
+                data: f,
+            },
+            Messages::ResetTestModeCommand => config_messages::RESET_TEST_MODE_COMMAND,
             Messages::SetMaxCurrent => config_messages::SET_MAX_CURRENT,
             Messages::SecondaryCurrentProtection => config_messages::SECONDARY_CURRENT_PROTECTION,
             Messages::MotorRatedCurrent => config_messages::MOTOR_RATED_CURRENT,
