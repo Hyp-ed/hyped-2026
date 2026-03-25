@@ -13,7 +13,7 @@ async fn main(_spawner: Spawner) {
 
     for addr in 0x08u8..=0x77 {
         defmt::info!("Scanning addr {}", addr);
-        match i2c.blocking_write(addr, &[]) {
+        match i2c.blocking_write(addr, &[0]) {
             Ok(_) => defmt::info!("Found device at 0x{:02X}", addr),
             Err(_) => {}
         }
