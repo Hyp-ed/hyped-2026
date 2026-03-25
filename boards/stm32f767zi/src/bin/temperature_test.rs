@@ -50,6 +50,8 @@ bind_interrupts!(struct Irqs {
     CAN1_TX => TxInterruptHandler<CAN1>;
 });
 
+// from J0: GND, +3.3, SD0 (PB9), SC0 (PB8)
+
 type I2c1Bus = Mutex<NoopRawMutex, RefCell<I2c<'static, Blocking>>>;
 
 /// Used to keep the latest temperature sensor value.

@@ -43,7 +43,8 @@ pub async fn read_temperature_mux_board(
 
         let i2c_mux = match I2cMux::new(Stm32f767ziI2c::new(i2c_bus), channel, mux_address) {
             Ok(i2c_mux) => i2c_mux,
-            Err(_) => {
+            Err(e) => {
+                defmt::info!("{}", e);
                 panic!("Failed to create I2C Mux. Check the wiring and the I2C address of the Mux.")
             }
         };

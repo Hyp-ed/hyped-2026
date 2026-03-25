@@ -1,3 +1,4 @@
+use defmt::Format;
 use hyped_i2c::{HypedI2c, I2cError};
 
 use crate::SensorValueRange;
@@ -91,7 +92,7 @@ pub enum TemperatureAddresses {
 }
 
 /// Represents the possible errors that can occur when reading the temperature sensor
-#[derive(Debug)]
+#[derive(Debug, Format)]
 pub enum TemperatureError {
     I2cError(I2cError),
 }

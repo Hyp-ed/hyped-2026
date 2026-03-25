@@ -41,10 +41,21 @@ pub async fn read_temperature(
     let can_sender = CAN_SEND.sender();
 
     let mut hyped_i2c = Stm32f767ziI2c::new(i2c_bus);
-    let mut temperature_sensor = Temperature::new(&mut hyped_i2c, TemperatureAddresses::Address3f)
-        .expect(
-        "Failed to create temperature sensor. Check the wiring and the I2C address of the sensor.",
-    );
+
+    // After testing it looks like Address38 works
+    let temperature_sensor = Temperature::new(&mut hyped_i2c, TemperatureAddresses::Address38);
+
+    let mut temperature_sensor = match temperature_sensor {
+        Ok(s) => s,
+        Err(e) => {
+            defmt::info!("{:?}", e);
+            loop {}
+        }
+    };
+
+    //     .expect(
+    //     "Failed to create temperature sensor. Check the wiring and the I2C address of the sensor.",
+    // );
 
     loop {
         match temperature_sensor.check_status() {
@@ -81,6 +92,8 @@ pub async fn read_temperature(
                 SensorValueRange::Warning(v) => v,
                 SensorValueRange::Safe(v) => v,
             };
+
+            latest_temperature_reading_sender.send(Some(reading));
 
             defmt::debug!("Sending temperature reading over CAN");
             can_sender

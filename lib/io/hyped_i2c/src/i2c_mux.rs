@@ -1,6 +1,8 @@
+use defmt::Format;
+
 use crate::{HypedI2c, I2cError};
 
-#[derive(Debug)]
+#[derive(Debug, Format)]
 pub enum I2cMuxError {
     InvalidChannel,
     FailedToSelectChannel,
@@ -35,7 +37,10 @@ impl<T: HypedI2c> I2cMux<T> {
         };
         match mux.select_channel() {
             Ok(_) => {}
-            Err(_) => return Err(I2cMuxError::FailedToSelectChannel),
+            Err(e) => {
+                defmt::error!("{}", e);
+                return Err(I2cMuxError::FailedToSelectChannel);
+            }
         }
         Ok(mux)
     }

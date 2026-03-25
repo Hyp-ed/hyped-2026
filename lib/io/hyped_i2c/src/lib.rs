@@ -1,10 +1,12 @@
 #![no_std]
 
+use defmt::Format;
+
 pub mod i2c_mux;
 
 /// I2C errors that can occur
 /// From: https://docs.embassy.dev/embassy-stm32/git/stm32g031c8/i2c/enum.Error.html
-#[derive(Debug)]
+#[derive(Debug, Format)]
 pub enum I2cError {
     Bus,
     Arbitration,
