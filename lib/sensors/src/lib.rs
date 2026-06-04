@@ -4,6 +4,7 @@ use defmt::Format;
 
 pub mod accelerometer;
 pub mod high_pressure;
+pub mod imd;
 pub mod keyence;
 pub mod laser_triangulation;
 pub mod low_pressure;
