@@ -1,6 +1,6 @@
 import type { OpenMctPod } from '@hyped/telemetry-types';
 import { Controller, Get, Param } from '@nestjs/common';
-import type { DictionaryService } from './Dictionary.service';
+import { DictionaryService } from './Dictionary.service';
 
 @Controller('openmct/dictionary')
 export class DictionaryController {
