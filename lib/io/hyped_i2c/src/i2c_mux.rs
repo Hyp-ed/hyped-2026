@@ -46,7 +46,7 @@ impl<T: HypedI2c> I2cMux<T> {
     }
 
     /// Selects the channel on the multiplexer by writing the channel number
-    fn select_channel(&mut self) -> Result<(), I2cError> {
+    pub fn select_channel(&mut self) -> Result<(), I2cError> {
         self.i2c.write_byte(self.mux_address, 1 << self.channel)
     }
 }

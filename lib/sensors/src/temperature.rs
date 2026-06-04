@@ -1,5 +1,5 @@
 use defmt::Format;
-use hyped_i2c::{HypedI2c, I2cError};
+use hyped_i2c::{i2c_mux::I2cMux, HypedI2c, I2cError};
 
 use crate::SensorValueRange;
 
@@ -14,6 +14,12 @@ pub struct Temperature<'a, T: HypedI2c> {
     i2c: &'a mut T,
     device_address: u8,
     calculate_bounds: fn(f32) -> SensorValueRange<f32>,
+}
+
+impl<'a, T: HypedI2c> Temperature<'a, I2cMux<T>> {
+    pub fn select_channel(&mut self) -> Result<(), I2cError> {
+        self.i2c.select_channel()
+    }
 }
 
 impl<'a, T: HypedI2c> Temperature<'a, T> {

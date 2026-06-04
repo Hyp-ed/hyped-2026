@@ -63,8 +63,9 @@ pub async fn read_temperature_mux_board(
         NUM_TEMPERATURE_SENSORS,
     > = i2c_muxes.iter_mut().map(|i2c_mux| {
         match Temperature::new(i2c_mux, TemperatureAddresses::Address3f) {
-            Ok(temperature_sensor) => {
+            Ok(mut temperature_sensor) => {
                 defmt::info!("Temperature sensor created.");
+                temperature_sensor.select_channel();
                 Some(temperature_sensor)
             },
             Err(_) => {
@@ -102,6 +103,8 @@ pub async fn read_temperature_mux_board(
                     readings
                         .push(temperature_sensor.read())
                         .expect("Failed to add temperature reading to the vector.");
+
+                    temperature_sensor.select_channel();
                 }
                 None => {
                     readings
