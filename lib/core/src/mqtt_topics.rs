@@ -51,7 +51,7 @@ impl From<MqttTopic> for String<100> {
     fn from(v: MqttTopic) -> Self {
         let mut topic = String::<100>::new();
         match v {
-            MqttTopic::State => topic.push_str("hyped/the_podigal_son/state/state").unwrap(),
+            MqttTopic::State => topic.push_str("hyped/the_podigal_son/state").unwrap(),
             MqttTopic::Controls => topic.push_str("hyped/the_podigal_son/controls/").unwrap(),
             MqttTopic::Heartbeat => topic.push_str("hyped/the_podigal_son/heartbeat").unwrap(),
             MqttTopic::Logs => topic.push_str("hyped/the_podigal_son/logs").unwrap(),
