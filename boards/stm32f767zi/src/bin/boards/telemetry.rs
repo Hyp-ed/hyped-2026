@@ -31,7 +31,10 @@ use hyped_boards_stm32f767zi::{
             send::can_sender,
         },
         can_to_mqtt::can_to_mqtt,
-        mqtt::{base_station_heartbeat::base_station_heartbeat, mqtt},
+        mqtt::{
+            base_station_heartbeat::base_station_heartbeat, mqtt,
+            mqtt_to_event_bus::mqtt_to_event_bus,
+        },
         network::net_task,
     },
 };
@@ -84,6 +87,7 @@ async fn main(spawner: Spawner) -> ! {
     spawner.must_spawn(emergency_handler());
     spawner.must_spawn(heartbeat_listener(Board::TemperatureTester));
     spawner.must_spawn(send_heartbeat(Board::TemperatureTester));
+    spawner.must_spawn(mqtt_to_event_bus());
     // ... add more boards here
     spawner.must_spawn(run(StateMachine::new()));
 
