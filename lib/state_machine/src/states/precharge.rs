@@ -1,4 +1,7 @@
-use crate::{state::State, state_machine::{PrechargeStep, StateMachine}};
+use crate::{
+    state::State,
+    state_machine::{PrechargeStep, StateMachine},
+};
 use embassy_time::Instant;
 use hyped_communications::{bus::EVENT_BUS, events::Event};
 use hyped_core::logging::{debug, info, warn};
