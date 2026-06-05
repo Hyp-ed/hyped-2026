@@ -101,7 +101,16 @@ async fn sensors_board_response_task(mut gpio_pins: GpioPins) {
                 gpio_pins.gpio4.set_high();
 
                 gpio_pins.gpio2.set_low();
+                EVENT_BUS
+                    .sender()
+                    .send(Event::ShutdownCircuitryRelayClosed)
+                    .await;
+
                 gpio_pins.gpio3.set_low();
+                EVENT_BUS
+                    .sender()
+                    .send(Event::ShutdownCircuitryRelayClosed)
+                    .await;
 
                 Timer::after_secs(4).await;
                 gpio_pins.gpio4.set_low();

@@ -51,7 +51,7 @@ path = "src/bin/boards/telemetry.rs"
 
 [[bin]]                                                                                   
 name = "sensors1"
-path = "src/bin/boards/sensors2.rs"
+path = "src/bin/boards/sensors1.rs"
 
 
 [[bin]]                                                                                   
