@@ -14,8 +14,7 @@ use embassy_stm32::{
 };
 use embassy_time::{Duration, Timer};
 use hyped_can::HypedCanFrame;
-use hyped_motors::can_open_message::CanOpenMessage;
-use hyped_motors::can_open_processor::Messages;
+use hyped_motors::{can_open_message::CanOpenMessage, can_open_processor::Messages};
 use panic_probe as _;
 use static_cell::StaticCell;
 
@@ -156,7 +155,11 @@ async fn rx_task(mut rx: CanRx<'static>) {
                     embassy_stm32::can::Id::Standard(id) => id.as_raw() as u32,
                     embassy_stm32::can::Id::Extended(id) => id.as_raw(),
                 };
-                info!("Received id={=u32:x} data={=[u8]:#02x}", raw_id, frame.data());
+                info!(
+                    "Received id={=u32:x} data={=[u8]:#02x}",
+                    raw_id,
+                    frame.data()
+                );
             }
             Err(e) => {
                 warn!("CAN receive error: {:?}", e);
@@ -171,9 +174,7 @@ async fn wait_after_send() {
 }
 
 async fn send_nmt(tx: &mut CanTx<'static>, command: u8, node_id: u8) {
-    let id = embassy_stm32::can::Id::Standard(unwrap!(
-        embassy_stm32::can::StandardId::new(0x000)
-    ));
+    let id = embassy_stm32::can::Id::Standard(unwrap!(embassy_stm32::can::StandardId::new(0x000)));
 
     let data = [command, node_id];
     let frame = embassy_stm32::can::Frame::new_data(id, &data).unwrap();
@@ -184,13 +185,13 @@ async fn send_sdo(tx: &mut CanTx<'static>, msg: CanOpenMessage) {
     let hyped_frame: HypedCanFrame = msg.into();
 
     let id = if hyped_frame.can_id <= 0x7FF {
-        embassy_stm32::can::Id::Standard(unwrap!(
-            embassy_stm32::can::StandardId::new(hyped_frame.can_id as u16)
-        ))
+        embassy_stm32::can::Id::Standard(unwrap!(embassy_stm32::can::StandardId::new(
+            hyped_frame.can_id as u16
+        )))
     } else {
-        embassy_stm32::can::Id::Extended(unwrap!(
-            embassy_stm32::can::ExtendedId::new(hyped_frame.can_id)
-        ))
+        embassy_stm32::can::Id::Extended(unwrap!(embassy_stm32::can::ExtendedId::new(
+            hyped_frame.can_id
+        )))
     };
 
     let frame = embassy_stm32::can::Frame::new_data(id, &hyped_frame.data).unwrap();

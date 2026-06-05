@@ -3,8 +3,7 @@ use embassy_stm32::can::CanTx;
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, channel::Channel};
 use embassy_time::{Duration, Timer};
 use hyped_can::HypedCanFrame;
-use hyped_motors::can_open_message::CanOpenMessage;
-use hyped_motors::can_open_processor::Messages;
+use hyped_motors::{can_open_message::CanOpenMessage, can_open_processor::Messages};
 
 const NODE_ID: u8 = 0x01;
 
@@ -12,7 +11,8 @@ pub enum MotorCommand {
     SendMessage(Messages),
 }
 
-pub static MOTOR_COMMAND_CHANNEL: Channel<CriticalSectionRawMutex, MotorCommand, 32> = Channel::new();
+pub static MOTOR_COMMAND_CHANNEL: Channel<CriticalSectionRawMutex, MotorCommand, 32> =
+    Channel::new();
 
 #[embassy_executor::task]
 pub async fn motor_setup_task() {
@@ -40,19 +40,31 @@ pub async fn motor_setup_task() {
 
     info!("Config complete. Transitioning to Operational...");
 
-    sender.send(MotorCommand::SendMessage(Messages::EnterPreoperationalState)).await;
+    sender
+        .send(MotorCommand::SendMessage(
+            Messages::EnterPreoperationalState,
+        ))
+        .await;
     Timer::after(Duration::from_secs(30)).await;
 
-    sender.send(MotorCommand::SendMessage(Messages::EnterOperationalState)).await;
+    sender
+        .send(MotorCommand::SendMessage(Messages::EnterOperationalState))
+        .await;
     Timer::after(Duration::from_secs(1)).await;
 
-    sender.send(MotorCommand::SendMessage(Messages::Shutdown)).await;
+    sender
+        .send(MotorCommand::SendMessage(Messages::Shutdown))
+        .await;
     Timer::after(Duration::from_secs(1)).await;
 
-    sender.send(MotorCommand::SendMessage(Messages::SwitchOn)).await;
+    sender
+        .send(MotorCommand::SendMessage(Messages::SwitchOn))
+        .await;
     Timer::after(Duration::from_secs(30)).await;
 
-    sender.send(MotorCommand::SendMessage(Messages::StartDrive)).await;
+    sender
+        .send(MotorCommand::SendMessage(Messages::StartDrive))
+        .await;
     Timer::after(Duration::from_secs(15)).await;
 
     info!("Motor setup complete and drive started.");
@@ -73,9 +85,7 @@ pub async fn motor_control_loop(mut tx: CanTx<'static>) {
 }
 
 async fn send_nmt(tx: &mut CanTx<'static>, command: u8, node_id: u8) {
-    let id = embassy_stm32::can::Id::Standard(unwrap!(
-        embassy_stm32::can::StandardId::new(0x000)
-    ));
+    let id = embassy_stm32::can::Id::Standard(unwrap!(embassy_stm32::can::StandardId::new(0x000)));
 
     let data = [command, node_id];
     let frame = embassy_stm32::can::Frame::new_data(id, &data).unwrap();
@@ -86,13 +96,13 @@ async fn send_sdo(tx: &mut CanTx<'static>, msg: CanOpenMessage) {
     let hyped_frame: HypedCanFrame = msg.into();
 
     let id = if hyped_frame.can_id <= 0x7FF {
-        embassy_stm32::can::Id::Standard(unwrap!(
-            embassy_stm32::can::StandardId::new(hyped_frame.can_id as u16)
-        ))
+        embassy_stm32::can::Id::Standard(unwrap!(embassy_stm32::can::StandardId::new(
+            hyped_frame.can_id as u16
+        )))
     } else {
-        embassy_stm32::can::Id::Extended(unwrap!(
-            embassy_stm32::can::ExtendedId::new(hyped_frame.can_id)
-        ))
+        embassy_stm32::can::Id::Extended(unwrap!(embassy_stm32::can::ExtendedId::new(
+            hyped_frame.can_id
+        )))
     };
 
     let frame = embassy_stm32::can::Frame::new_data(id, &hyped_frame.data).unwrap();

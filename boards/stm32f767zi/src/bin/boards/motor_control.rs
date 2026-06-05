@@ -6,7 +6,10 @@ use defmt_rtt as _;
 use embassy_executor::Spawner;
 use embassy_stm32::{
     bind_interrupts,
-    can::{filter::Mask32, Can, Fifo, Rx0InterruptHandler, Rx1InterruptHandler, SceInterruptHandler, TxInterruptHandler},
+    can::{
+        filter::Mask32, Can, Fifo, Rx0InterruptHandler, Rx1InterruptHandler, SceInterruptHandler,
+        TxInterruptHandler,
+    },
     peripherals::{CAN1, CAN3},
 };
 use embassy_time::{Duration, Timer};
@@ -14,15 +17,12 @@ use hyped_boards_stm32f767zi::{
     board_state::THIS_BOARD,
     default_can_config,
     tasks::{
-        can::{
-            receive::can_receiver,
-            send::can_sender,
-        },
+        can::{receive::can_receiver, send::can_sender},
         motor_control::{
-            control::motor_control_loop, 
-            receive::motor_rx_task, 
-            control::motor_setup_task},
-    }
+            control::{motor_control_loop, motor_setup_task},
+            receive::motor_rx_task,
+        },
+    },
 };
 use hyped_communications::boards::Board;
 use panic_probe as _;
@@ -62,7 +62,6 @@ async fn main(spawner: Spawner) {
     can3.enable().await;
     let (can3_tx, can3_rx) = can3.split();
     info!("CAN3 enabled");
-
 
     spawner.must_spawn(motor_rx_task(can3_rx));
     spawner.must_spawn(motor_setup_task());

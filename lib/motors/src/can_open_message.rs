@@ -10,7 +10,7 @@ pub struct CanOpenMessage {
 
 pub mod config_messages {
     use super::CanOpenMessage;
-    
+
     pub const TEST_STEPPER_FREQUENCY: CanOpenMessage = CanOpenMessage {
         id: 0x601,
         command: 0x2B,
@@ -98,7 +98,6 @@ pub mod config_messages {
         sub_index: 0x01,
         data: 0x0000001E,
     };
-
 }
 
 pub mod messages {

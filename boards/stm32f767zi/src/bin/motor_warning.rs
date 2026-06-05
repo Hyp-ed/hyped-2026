@@ -103,9 +103,7 @@ async fn main(_spawner: Spawner) {
                 let abort_code = u32::from_le_bytes([data[4], data[5], data[6], data[7]]);
                 warn!(
                     "SDO abort for {:x}:{:x}, code=0x{=u32:x}",
-                    0x2027u16,
-                    0x00u8,
-                    abort_code
+                    0x2027u16, 0x00u8, abort_code
                 );
                 break;
             }
@@ -119,9 +117,8 @@ async fn main(_spawner: Spawner) {
 }
 
 async fn send_sdo_read(tx: &mut CanTx<'static>, index: u16, sub_index: u8) {
-    let id = embassy_stm32::can::Id::Standard(unwrap!(
-        embassy_stm32::can::StandardId::new(SDO_TX_ID)
-    ));
+    let id =
+        embassy_stm32::can::Id::Standard(unwrap!(embassy_stm32::can::StandardId::new(SDO_TX_ID)));
 
     let data = [
         0x40,
