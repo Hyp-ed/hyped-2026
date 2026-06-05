@@ -10,7 +10,11 @@ pub async fn mqtt_to_event_bus() {
         if message.topic != MqttTopic::Controls {
             continue;
         }
-        defmt::info!("Received MQTT message on topic {:?} with payload {:?}", message.topic, message.payload);
+        defmt::info!(
+            "Received MQTT message on topic {:?} with payload {:?}",
+            message.topic,
+            message.payload
+        );
         let event = match message.payload.as_str() {
             "start-hp" => Some(Event::PrechargeOperatorCommand),
             "start-run" => Some(Event::StartRunOperatorCommand),
@@ -18,8 +22,12 @@ pub async fn mqtt_to_event_bus() {
             "stop" => Some(Event::BrakeOperatorCommand),
             "emergency-stop" => Some(Event::EmergencyStopOperatorCommand),
             //TESTING PURPOSES: for single-board testing, just map 'clamp' and 'retract' to response --> will be removed
-            "clamp" => Some(Event::BrakesClamped { from: Board::Telemetry }),
-            "retract" => Some(Event::LateralSuspensionRetracted { from: Board::Telemetry }),
+            "clamp" => Some(Event::BrakesClamped {
+                from: Board::Telemetry,
+            }),
+            "retract" => Some(Event::LateralSuspensionRetracted {
+                from: Board::Telemetry,
+            }),
             _ => None,
         };
         if let Some(event) = event {
