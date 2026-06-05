@@ -40,8 +40,14 @@ pub async fn can_receiver(mut rx: CanRx<'static>) {
         let envelope = envelope.unwrap();
 
         // TODO: identify imd frame
-        if true {
-            // something something send
+        if let Id::Extended(id) = envelope.frame.id() {
+            const DEFAULT_IMD_ID: u32 = 0x18ff01f4;
+            if id.as_raw() == DEFAULT_IMD_ID {
+                INCOMING_IMD_MSGS
+                    .send(ImdFrame::from_data(envelope.frame.data()))
+                    .await;
+                continue;
+            }
         }
 
         let id = envelope.frame.id();

@@ -3,11 +3,12 @@
 
 use defmt_rtt as _;
 use embassy_executor::Spawner;
+use embassy_futures::yield_now;
 use embassy_stm32::{
     bind_interrupts,
     can::{
-        filter::Mask32, Can, Fifo, Rx0InterruptHandler, Rx1InterruptHandler, SceInterruptHandler,
-        TxInterruptHandler,
+        filter::Mask32, Can, ExtendedId, Fifo, Frame, Id, Rx0InterruptHandler, Rx1InterruptHandler,
+        SceInterruptHandler, TxInterruptHandler,
     },
     peripherals::CAN1,
 };
@@ -25,7 +26,7 @@ bind_interrupts!(struct Irqs {
 });
 
 #[embassy_executor::main]
-async fn main(spawner: Spawner) {
+async fn main(spawner: Spawner) -> ! {
     let p = embassy_stm32::init(Default::default());
 
     defmt::info!("Setting up CAN...");
@@ -33,8 +34,21 @@ async fn main(spawner: Spawner) {
     default_can_config!(can);
     can.enable().await;
     let (_, can_rx) = can.split();
+
+    defmt::info!("mb");
+
+    // while let Ok(envelope) = can_rx.read().await {
+    // defmt::info!("{}", envelope);
+    // }
+
+    // defmt::info!("{}", can_rx.read().await);
+    // defmt::info!("{}", can_rx.read().await);
     spawner.must_spawn(can_receiver(can_rx));
     defmt::info!("CAN setup complete");
 
     spawner.must_spawn(read_imd::read_imd());
+
+    loop {
+        yield_now().await;
+    }
 }
