@@ -25,7 +25,7 @@ bind_interrupts!(struct Irqs {
 });
 
 #[embassy_executor::main]
-async fn main(spawner: Spawner) -> ! {
+async fn main(spawner: Spawner) {
     let p = embassy_stm32::init(Default::default());
 
     defmt::info!("Setting up CAN...");
@@ -37,8 +37,4 @@ async fn main(spawner: Spawner) -> ! {
     defmt::info!("CAN setup complete");
 
     spawner.must_spawn(read_imd::read_imd());
-
-    loop {
-        core::hint::spin_loop();
-    }
 }

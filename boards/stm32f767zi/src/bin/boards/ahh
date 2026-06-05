@@ -1,0 +1,38 @@
+So basically now there is a new version which should be ordered tomorrow/weekend which will see the board essentially becoming 2 separate boards, both have CAN transceiver and both have 6 gpios each
+
+
+
+Next message has the schematics so you can check the pins needs for the nucleo
+
+
+
+Both are stacked with the nucleo F767ZI
+
+
+
+Refer to the following if unsure about the pins fct
+
+
+
+https://os.mbed.com/platforms/ST-Nucleo-F767ZI/
+
+[7:56 PM]
+Basically board number 1: Hat Sensors Dynamics, is there for
+
+show the power available ie to check that the voltages 3.3, 5, 12, and 24 are operating check the gpios pins
+There are extra gpios pins that are there to detect the pressure sensors (6 in total) basically your code should make sure that the pressure on each does not exceed 16 bar if it does that is one of the emergency states
+
+
+
+
+Regarding the how many pressure sensors there are I am actually uncertain if dynamics are using all 6 please check with Murdo Pate on this
+
+
+
+The second board Sensors Hat High Power Relay has a similar structure and aims than the previous one difference here is we have to control 4 relays (there are 2 extra pins for redundancy nothing should happen with those)
+What needs to happen for
+
+Solenoid (or high power relay) number 1 is the Shutdown Circuitry Relay ( I believe Catherine should have a detailed info on this) this relay is the first one that needs to be turned on immediately 
+Relay number 2 is the power pre-charge which also need to be off for 4 sec then turned on (if possible we might be able to do a test this month and there is a possibility that after 20s of this relay being on it needs to be turned back off, please have code for this commented for now until further confirmation)
+Relay number 3 is the Motor Pre-charge this is same as the power pre-charge (including the potential 20s)
+Relay number 4 has been removed for now so this is optional (have the code such as this relay should be initially off, and only turn on immediately after the sdc relay (relay1) has been turned on, it should only be on for 4 sec then off

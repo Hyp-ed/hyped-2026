@@ -30,9 +30,10 @@ pub async fn can_receiver(mut rx: CanRx<'static>) {
     let event_sender = EVENT_BUS.sender();
 
     loop {
-        defmt::debug!("Waiting for CAN message");
+        defmt::info!("Waiting for CAN message");
 
         let envelope = rx.read().await;
+        defmt::info!("envelope: {:?}", envelope);
         if envelope.is_err() {
             continue;
         }
