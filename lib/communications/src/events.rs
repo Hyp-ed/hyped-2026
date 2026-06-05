@@ -5,11 +5,11 @@ use hyped_core::types::{Current, Force, Pressure, Temperature, Velocity, Voltage
 #[derive(Debug, Clone, defmt::Format)]
 pub enum Event {
     // ------ Operator Commands ------
-    EmergencyStopOperatorCommand,
-    PrechargeOperatorCommand,  // Idle -> Precharge
-    AccelerateOperatorCommand, // ReadyForPropulsion -> Accelerate
-    BrakeOperatorCommand,      // Accelerate -> Brake
-    StartRunOperatorCommand,   // Start a run (Propulsion Only)
+    EmergencyStopOperatorCommand, // Emergency stop
+    PrechargeOperatorCommand,     // Idle -> Precharge
+    AccelerateOperatorCommand,    // ReadyForPropulsion -> Accelerate
+    BrakeOperatorCommand,         // Accelerate -> Brake
+    StartRunOperatorCommand,      // Start a run (Propulsion Only)
 
     // ------ Emergency Events ------
     Emergency {

@@ -72,7 +72,7 @@ export const Errors = () => {
 									onClick={() =>
 										void sendControlMessage(
 											errors[index].podId || currentPod,
-											CONTROLS.STOP,
+											CONTROLS.EMERGENCY_STOP,
 										)
 									}
 								>

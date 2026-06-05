@@ -6,8 +6,10 @@ import toast from 'react-hot-toast';
  * Defines the controls that can be sent to a pod.
  */
 export const CONTROLS = {
-	START: 'start',
+	START_RUN: 'start-run',
+	ACCELERATE: 'accelerate',
 	STOP: 'stop',
+	EMERGENCY_STOP: 'emergency-stop',
 	LEVITATE: 'levitate',
 	STOP_LEVITATING: 'stop-levitating',
 	CLAMP: 'clamp',
@@ -18,7 +20,6 @@ export const CONTROLS = {
 	RAISE: 'raise',
 	LOWER: 'lower',
 	TILT: 'tilt',
-	// TODOLater: check if we need emergency_stop control
 } as const;
 
 export type Control = (typeof CONTROLS)[keyof typeof CONTROLS];
