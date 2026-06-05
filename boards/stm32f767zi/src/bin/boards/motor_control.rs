@@ -26,7 +26,6 @@ use hyped_boards_stm32f767zi::{
 };
 use hyped_communications::boards::Board;
 use panic_probe as _;
-use static_cell::StaticCell;
 
 bind_interrupts!(struct Irqs {
     CAN1_RX0 => Rx0InterruptHandler<CAN1>;

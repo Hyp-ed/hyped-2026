@@ -7,7 +7,7 @@ use embassy_executor::Spawner;
 use embassy_stm32::{
     bind_interrupts,
     can::{
-        filter::Mask32, Can, CanRx, CanTx, Fifo, Rx0InterruptHandler, Rx1InterruptHandler,
+        filter::Mask32, Can, CanTx, Fifo, Rx0InterruptHandler, Rx1InterruptHandler,
         SceInterruptHandler, TxInterruptHandler,
     },
     peripherals::CAN1,
