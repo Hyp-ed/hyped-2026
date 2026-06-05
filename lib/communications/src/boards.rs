@@ -8,7 +8,8 @@ pub enum Board {
     KeyenceTester = 5,
     StateMachineTester = 6,
     Mqtt = 7,
-    Sensors = 8,
+    Sensors1 = 8,
+    Sensors2 = 9,
 }
 
 impl From<Board> for u8 {
