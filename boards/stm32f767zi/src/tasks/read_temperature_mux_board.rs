@@ -45,7 +45,7 @@ pub async fn read_temperature_mux_board(
             Ok(i2c_mux) => i2c_mux,
             Err(e) => {
                 defmt::info!("{}", e);
-                panic!("Failed to create I2C Mux. Check the wiring and the I2C address of the Mux.")
+                continue;
             }
         };
 
@@ -65,7 +65,7 @@ pub async fn read_temperature_mux_board(
         match Temperature::new(i2c_mux, TemperatureAddresses::Address3f) {
             Ok(mut temperature_sensor) => {
                 defmt::info!("Temperature sensor created.");
-                temperature_sensor.select_channel();
+                temperature_sensor.select_channel().unwrap_or_else(|e|{defmt::error!("{}", e);});
                 Some(temperature_sensor)
             },
             Err(_) => {
@@ -104,7 +104,9 @@ pub async fn read_temperature_mux_board(
                         .push(temperature_sensor.read())
                         .expect("Failed to add temperature reading to the vector.");
 
-                    temperature_sensor.select_channel();
+                    temperature_sensor.select_channel().unwrap_or_else(|e| {
+                        defmt::error!("{}", e);
+                    });
                 }
                 None => {
                     readings
