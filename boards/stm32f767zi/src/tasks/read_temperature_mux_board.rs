@@ -52,7 +52,7 @@ pub async fn read_temperature_mux_board(
         match i2c_muxes.push(i2c_mux) {
             Ok(_) => {}
             Err(_) => {
-                panic!("Failed to add I2C Mux to the vector.");
+                defmt::error!("Failed to add I2C Mux to the vector: {}", i);
             }
         }
     }
@@ -95,7 +95,7 @@ pub async fn read_temperature_mux_board(
                             defmt::warn!("Temperature sensor is busy.");
                         }
                         Status::Unknown => {
-                            panic!("Could not get the status of the temperature sensor.")
+                            defmt::error!("Could not get the status of the temperature sensor.")
                         }
                         Status::Ok => {}
                     }
