@@ -1,16 +1,13 @@
 use crate::{state::State, state_machine::StateMachine};
 use embassy_time::Instant;
-use hyped_communications::{bus::EVENT_BUS, events::Event};
+use hyped_communications::events::Event;
 use hyped_core::logging::{debug, info};
 
 impl StateMachine {
     pub(crate) async fn entry_brake(&mut self) {
         info!("Pod is braking");
-        EVENT_BUS
-            .sender()
-            .send(Event::StartPropulsionBrakingCommand)
-            .await;
-        EVENT_BUS.sender().send(Event::ClampBrakesCommand).await;
+        self.queue_publish(Event::StartPropulsionBrakingCommand);
+        self.queue_publish(Event::ClampBrakesCommand);
     }
 
     pub(crate) async fn react_brake(&mut self, event: Event) {

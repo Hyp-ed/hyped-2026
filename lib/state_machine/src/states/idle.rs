@@ -1,13 +1,13 @@
 use crate::{state::State, state_machine::StateMachine};
 use defmt::warn;
-use hyped_communications::{bus::EVENT_BUS, events::Event};
+use hyped_communications::events::Event;
 use hyped_core::logging::{debug, info};
 
 impl StateMachine {
     pub(crate) async fn entry_idle(&mut self) {
         info!("Pod is idle");
         // Send clamp brakes command in case brakes aren't clamped yet
-        EVENT_BUS.sender().send(Event::ClampBrakesCommand).await;
+        self.queue_publish(Event::ClampBrakesCommand);
         self.brakes_clamped = false;
     }
 
