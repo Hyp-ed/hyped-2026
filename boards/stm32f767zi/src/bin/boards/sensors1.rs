@@ -4,7 +4,7 @@
 use embassy_executor::Spawner;
 use embassy_futures::yield_now;
 use embassy_stm32::{
-    adc, bind_interrupts,
+    bind_interrupts,
     can::{
         filter::Mask32, Can, Fifo, Rx0InterruptHandler, Rx1InterruptHandler, SceInterruptHandler,
         TxInterruptHandler,
@@ -33,7 +33,7 @@ bind_interrupts!(struct Irqs {
 #[embassy_executor::main]
 async fn main(spawner: Spawner) -> ! {
     THIS_BOARD
-        .init(Board::Sensors1)
+        .init(Board::Sensors2)
         .expect("Failed to initialize board");
 
     let config = Config::default();
@@ -47,12 +47,18 @@ async fn main(spawner: Spawner) -> ! {
         gpio::Output::new(p.PE11, gpio::Level::High, gpio::Speed::Low);
     let gpio4: gpio::Output<'static> =
         gpio::Output::new(p.PF14, gpio::Level::High, gpio::Speed::Low);
+    let gpio5: gpio::Output<'static> =
+        gpio::Output::new(p.PE13, gpio::Level::High, gpio::Speed::Low);
+    let gpio6: gpio::Output<'static> =
+        gpio::Output::new(p.PF15, gpio::Level::High, gpio::Speed::Low);
 
     let gpio_pins = GpioPins {
-        shutdown_circuitry_relay: gpio1,
-        battery_precharge_relay: gpio2,
-        motor_controller_relay: gpio3,
+        gpio1,
+        gpio2,
+        gpio3,
         gpio4,
+        gpio5,
+        gpio6,
     };
 
     defmt::info!("Setting up CAN...");
@@ -72,10 +78,12 @@ async fn main(spawner: Spawner) -> ! {
 }
 
 struct GpioPins {
-    shutdown_circuitry_relay: gpio::Output<'static>,
-    battery_precharge_relay: gpio::Output<'static>,
-    motor_controller_relay: gpio::Output<'static>,
+    gpio1: gpio::Output<'static>,
+    gpio2: gpio::Output<'static>,
+    gpio3: gpio::Output<'static>,
     gpio4: gpio::Output<'static>,
+    gpio5: gpio::Output<'static>,
+    gpio6: gpio::Output<'static>,
 }
 
 #[embassy_executor::task]
@@ -89,29 +97,31 @@ async fn sensors_board_response_task(mut gpio_pins: GpioPins) {
             Event::StartPrechargeCommand => {
                 EVENT_BUS.sender().send(Event::PrechargeStarted).await;
 
-                gpio_pins.shutdown_circuitry_relay.set_high();
+                gpio_pins.gpio1.set_high();
+                gpio_pins.gpio4.set_high();
+
+                gpio_pins.gpio2.set_low();
                 EVENT_BUS
                     .sender()
                     .send(Event::ShutdownCircuitryRelayClosed)
                     .await;
-                gpio_pins.gpio4.set_high();
 
-                gpio_pins.battery_precharge_relay.set_low();
+                gpio_pins.gpio3.set_low();
+                EVENT_BUS
+                    .sender()
+                    .send(Event::ShutdownCircuitryRelayClosed)
+                    .await;
 
                 Timer::after_secs(4).await;
                 gpio_pins.gpio4.set_low();
 
-                gpio_pins.battery_precharge_relay.set_high();
+                gpio_pins.gpio2.set_high();
+                gpio_pins.gpio3.set_high();
+
                 EVENT_BUS
                     .sender()
-                    .send(Event::BatteryPrechargeRelayClosed)
+                    .send(Event::BatteryPrechargeRelayOpen)
                     .await;
-
-                Timer::after_secs(2).await;
-
-                EVENT_BUS.sender().send(Event::PrechargeVoltageOK).await;
-
-                gpio_pins.motor_controller_relay.set_high();
 
                 EVENT_BUS
                     .sender()

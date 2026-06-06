@@ -63,7 +63,4 @@ path = "src/bin/boards/sensors2.rs"
 name = "i2cdetect"
 path = "src/bin/tools/i2cdetect.rs"
 
-[[bin]]                                                                                   
-name = "sensors"
-path = "src/bin/boards/sensors.rs"
 
