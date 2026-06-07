@@ -1,6 +1,9 @@
 #![no_std]
 #![no_main]
 
+/// Sensors board 1
+/// Uses PC12 and PC13 for high pressure
+/// Uses PA1, 2, and 3 for low pressure
 use embassy_executor::Spawner;
 use embassy_futures::yield_now;
 use embassy_stm32::{
@@ -124,17 +127,17 @@ async fn sensors_board_response_task(mut pressure_sensors: PressureSensors) {
 
         // Read all three low pressure sensors
         let low_pressures_ok = [
-            matches!(
+            !matches!(
                 pressure_sensors.low_pressure_1.read_pressure(),
-                Some(SensorValueRange::Safe(_))
+                Some(SensorValueRange::Critical(_))
             ),
-            matches!(
+            !matches!(
                 pressure_sensors.low_pressure_2.read_pressure(),
-                Some(SensorValueRange::Safe(_))
+                Some(SensorValueRange::Critical(_))
             ),
-            matches!(
+            !matches!(
                 pressure_sensors.low_pressure_3.read_pressure(),
-                Some(SensorValueRange::Safe(_))
+                Some(SensorValueRange::Critical(_))
             ),
         ]
         .iter()

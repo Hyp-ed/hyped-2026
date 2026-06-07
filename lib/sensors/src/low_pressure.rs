@@ -53,9 +53,9 @@ impl<T: HypedAdc> LowPressure<T> {
 /// - Warning: 2.0 to 4.0 and 6.0 to 8.0 bar
 /// - Critical: below 2.0 and above 8.0 bar
 pub fn default_calculate_bounds(value: f32) -> SensorValueRange<f32> {
-    if value <= 2.0 || value >= 8.0 {
+    if value <= 2.0 || value >= 10.0 {
         SensorValueRange::Critical(value)
-    } else if value <= 4.0 || value >= 6.0 {
+    } else if value <= 4.0 || value >= 8.0 {
         SensorValueRange::Warning(value)
     } else {
         SensorValueRange::Safe(value)

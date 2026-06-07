@@ -1,25 +1,31 @@
 #![no_std]
 #![no_main]
 
+/// Sensors board 2
+/// Uses PA1 and 2 for low pressure
 use embassy_executor::Spawner;
 use embassy_futures::yield_now;
 use embassy_stm32::{
-    adc, bind_interrupts,
+    adc::{Adc, AdcChannel},
+    bind_interrupts,
     can::{
         filter::Mask32, Can, Fifo, Rx0InterruptHandler, Rx1InterruptHandler, SceInterruptHandler,
         TxInterruptHandler,
     },
     eth, gpio,
-    peripherals::{self, CAN1},
-    rng, time, Config,
+    peripherals::{self, ADC1, ADC2, CAN1},
+    rng, Config,
 };
-use embassy_time::Timer;
+use embassy_time::{Duration, Timer};
 use hyped_boards_stm32f767zi::{
     board_state::THIS_BOARD,
     default_can_config,
+    io::Stm32f767ziAdc,
     tasks::can::{receive::can_receiver, send::can_sender},
 };
 use hyped_communications::{boards::Board, bus::EVENT_BUS, events::Event};
+use hyped_core::config::SENSORS_CONFIG;
+use hyped_sensors::{low_pressure::LowPressure, SensorValueRange};
 
 bind_interrupts!(struct Irqs {
     ETH => eth::InterruptHandler;
@@ -29,6 +35,9 @@ bind_interrupts!(struct Irqs {
     CAN1_SCE => SceInterruptHandler<CAN1>;
     CAN1_TX => TxInterruptHandler<CAN1>;
 });
+
+/// The update frequency of the low pressure sensor.
+const UPDATE_FREQUENCY: Duration = Duration::from_hz(10);
 
 #[embassy_executor::main]
 async fn main(spawner: Spawner) -> ! {
@@ -48,11 +57,32 @@ async fn main(spawner: Spawner) -> ! {
     let gpio4: gpio::Output<'static> =
         gpio::Output::new(p.PF14, gpio::Level::High, gpio::Speed::Low);
 
-    let gpio_pins = GpioPins {
+    let adc1 = Adc::new(p.ADC1);
+    let pin1 = p.PA3.degrade_adc();
+
+    let adc2 = Adc::new(p.ADC2);
+    let pin2 = p.PA2.degrade_adc();
+
+    let low_pressure_1 = LowPressure::new(Stm32f767ziAdc::new(
+        adc1,
+        pin1,
+        SENSORS_CONFIG.sensors.low_pressure.v_ref as f32,
+    ));
+    let low_pressure_2 = LowPressure::new(Stm32f767ziAdc::new(
+        adc2,
+        pin2,
+        SENSORS_CONFIG.sensors.low_pressure.v_ref as f32,
+    ));
+
+    let gpio_pins = Pins {
         shutdown_circuitry_relay: gpio1,
         battery_precharge_relay: gpio2,
         motor_controller_relay: gpio3,
         gpio4,
+    };
+    let pressure_sensors = PressureSensors {
+        low_pressure_1,
+        low_pressure_2,
     };
 
     defmt::info!("Setting up CAN...");
@@ -65,21 +95,60 @@ async fn main(spawner: Spawner) -> ! {
     defmt::info!("CAN setup complete");
 
     spawner.must_spawn(sensors_board_response_task(gpio_pins));
+    spawner.must_spawn(sensors_board_pressure_sensors_task(pressure_sensors));
 
     loop {
         yield_now().await;
     }
 }
 
-struct GpioPins {
+struct Pins {
     shutdown_circuitry_relay: gpio::Output<'static>,
     battery_precharge_relay: gpio::Output<'static>,
     motor_controller_relay: gpio::Output<'static>,
     gpio4: gpio::Output<'static>,
 }
 
+struct PressureSensors {
+    low_pressure_1: LowPressure<Stm32f767ziAdc<'static, ADC1>>,
+    low_pressure_2: LowPressure<Stm32f767ziAdc<'static, ADC2>>,
+}
+
 #[embassy_executor::task]
-async fn sensors_board_response_task(mut gpio_pins: GpioPins) {
+async fn sensors_board_pressure_sensors_task(mut pressure_sensors: PressureSensors) {
+    loop {
+        // Read all three low pressure sensors
+        let low_pressures_ok = [
+            !matches!(
+                pressure_sensors.low_pressure_1.read_pressure(),
+                Some(SensorValueRange::Critical(_))
+            ),
+            !matches!(
+                pressure_sensors.low_pressure_2.read_pressure(),
+                Some(SensorValueRange::Critical(_))
+            ),
+        ]
+        .iter()
+        .all(|b| *b);
+
+        if !low_pressures_ok {
+            defmt::warn!("Pressure sensor out of safe range, sending emergency");
+            EVENT_BUS
+                .sender()
+                .send(Event::Emergency {
+                    from: Board::Sensors2,
+                    reason: hyped_communications::events::Reason::Pressure,
+                })
+                .await;
+            return;
+        }
+
+        Timer::after(UPDATE_FREQUENCY).await;
+    }
+}
+
+#[embassy_executor::task]
+async fn sensors_board_response_task(mut gpio_pins: Pins) {
     let rx = EVENT_BUS.receiver();
 
     loop {
