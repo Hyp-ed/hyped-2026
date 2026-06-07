@@ -7,8 +7,8 @@ use embassy_futures::yield_now;
 use embassy_stm32::{
     bind_interrupts,
     can::{
-        filter::Mask32, Can, ExtendedId, Fifo, Frame, Id, Rx0InterruptHandler, Rx1InterruptHandler,
-        SceInterruptHandler, TxInterruptHandler,
+        filter::Mask32, Can, Fifo, Rx0InterruptHandler, Rx1InterruptHandler, SceInterruptHandler,
+        TxInterruptHandler,
     },
     peripherals::CAN1,
 };
