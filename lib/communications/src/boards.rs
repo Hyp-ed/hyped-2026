@@ -31,6 +31,8 @@ impl TryFrom<u8> for Board {
             5 => Ok(Board::KeyenceTester),
             6 => Ok(Board::StateMachineTester),
             7 => Ok(Board::Mqtt),
+            8 => Ok(Board::Sensors1),
+            9 => Ok(Board::Sensors2),
             _ => Err("Invalid Board index"),
         }
     }
