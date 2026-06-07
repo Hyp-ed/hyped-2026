@@ -35,8 +35,6 @@ async fn main(spawner: Spawner) -> ! {
     can.enable().await;
     let (_, can_rx) = can.split();
 
-    defmt::info!("mb");
-
     // while let Ok(envelope) = can_rx.read().await {
     // defmt::info!("{}", envelope);
     // }
