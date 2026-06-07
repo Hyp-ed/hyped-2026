@@ -70,6 +70,15 @@ mod tests {
             Board::try_from(Board::StateMachineTester as u8).unwrap()
         );
         assert_eq!(Board::Mqtt, Board::try_from(Board::Mqtt as u8).unwrap());
-        assert_eq!(Board::try_from(8), Err("Invalid Board index"));
+        assert_eq!(
+            Board::Sensors1,
+            Board::try_from(Board::Sensors1 as u8).unwrap()
+        );
+        assert_eq!(
+            Board::Sensors2,
+            Board::try_from(Board::Sensors2 as u8).unwrap()
+        );
+
+        assert_eq!(Board::try_from(10), Err("Invalid Board index"));
     }
 }

@@ -97,9 +97,9 @@ async fn main(spawner: Spawner) -> ! {
 
     let pressure_sensors = PressureSensors {
         high_pressure,
-        low_pressure_1: low_pressure_1,
-        low_pressure_2: low_pressure_2,
-        low_pressure_3: low_pressure_3,
+        low_pressure_1,
+        low_pressure_2,
+        low_pressure_3,
     };
 
     spawner.must_spawn(sensors_board_response_task(pressure_sensors));
