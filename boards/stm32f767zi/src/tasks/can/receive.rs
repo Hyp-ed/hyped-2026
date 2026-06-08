@@ -2,11 +2,16 @@ use embassy_stm32::can::{CanRx, Id};
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, channel::Channel};
 use hyped_can::HypedCanFrame;
 use hyped_communications::{
-    bus::EVENT_BUS, events::Event, heartbeat::Heartbeat, measurements::MeasurementReading,
+    bus::publish,
+    can_id::CanId,
+    events::Event,
+    heartbeat::Heartbeat,
+    measurements::MeasurementReading,
+    message_identifier::{EventId, MessageIdentifier},
     messages::CanMessage,
 };
 
-use crate::board_state::EMERGENCY;
+use crate::board_state::{EMERGENCY, THIS_BOARD};
 
 use defmt_rtt as _;
 use panic_probe as _;
@@ -24,7 +29,6 @@ pub static INCOMING_MEASUREMENTS: Channel<CriticalSectionRawMutex, MeasurementRe
 pub async fn can_receiver(mut rx: CanRx<'static>) {
     let emergency_sender = EMERGENCY.sender();
     let incoming_heartbeat_sender = INCOMING_HEARTBEATS.sender();
-    let event_sender = EVENT_BUS.sender();
 
     loop {
         defmt::debug!("Waiting for CAN message");
@@ -35,13 +39,19 @@ pub async fn can_receiver(mut rx: CanRx<'static>) {
         }
         let envelope = envelope.unwrap();
         let id = envelope.frame.id();
-        let can_id = match id {
+        let raw_id = match id {
             Id::Standard(id) => id.as_raw() as u32, // 11-bit ID
             Id::Extended(id) => id.as_raw(),        // 29-bit ID
         };
         let mut data = [0u8; 8];
         data.copy_from_slice(envelope.frame.data());
-        let can_frame = HypedCanFrame::new(can_id, data);
+        let can_frame = HypedCanFrame::new(raw_id, data);
+
+        let source: CanId = raw_id.into();
+        if source.board == *THIS_BOARD.get().await && is_own_command_loopback(&source) {
+            defmt::debug!("Ignoring loopback command from {:?}", source.board);
+            continue;
+        }
 
         let can_message: CanMessage = can_frame.into();
         defmt::debug!("Received CAN message: {:?}", can_message);
@@ -49,7 +59,8 @@ pub async fn can_receiver(mut rx: CanRx<'static>) {
         match can_message {
             CanMessage::Heartbeat(heartbeat) => {
                 defmt::debug!("Received heartbeat: {:?}", heartbeat);
-                incoming_heartbeat_sender.send(heartbeat).await;
+                // Never block RX on heartbeats — the listener may not be running (bench setup).
+                let _ = incoming_heartbeat_sender.try_send(heartbeat);
             }
             CanMessage::Emergency(board, reason) => {
                 emergency_sender.send(true);
@@ -57,127 +68,119 @@ pub async fn can_receiver(mut rx: CanRx<'static>) {
             }
             CanMessage::MeasurementReading(measurement_reading) => {
                 defmt::info!("Received measurement reading: {:?}", measurement_reading);
-                INCOMING_MEASUREMENTS.send(measurement_reading).await;
+                let _ = INCOMING_MEASUREMENTS.try_send(measurement_reading);
             }
 
             // Electronics
             CanMessage::StartPrechargeCommand => {
                 defmt::debug!("Start Precharge Command received");
-                event_sender.send(Event::StartPrechargeCommand).await;
+                publish(Event::StartPrechargeCommand).await;
             }
             CanMessage::StartDischargeCommand => {
                 defmt::debug!("Start Discharge Command received");
-                event_sender.send(Event::StartDischargeCommand).await;
+                publish(Event::StartDischargeCommand).await;
             }
             CanMessage::PrechargeStarted => {
                 defmt::debug!("Precharge started");
-                event_sender.send(Event::PrechargeStarted).await;
+                publish(Event::PrechargeStarted).await;
             }
             CanMessage::DischargeStarted => {
                 defmt::debug!("Discharge started");
-                event_sender.send(Event::DischargeStarted).await;
+                publish(Event::DischargeStarted).await;
             }
             CanMessage::PrechargeComplete => {
                 defmt::debug!("Precharge complete");
-                event_sender.send(Event::PrechargeComplete).await;
+                publish(Event::PrechargeComplete).await;
             }
             CanMessage::DischargeComplete => {
                 defmt::debug!("Discharge complete");
-                event_sender.send(Event::DischargeComplete).await;
+                publish(Event::DischargeComplete).await;
             }
             CanMessage::VoltageStatus { voltage } => {
                 defmt::debug!("Voltage status: {}cV", voltage.0);
-                event_sender.send(Event::VoltageStatus { voltage }).await;
+                publish(Event::VoltageStatus { voltage }).await;
             }
             CanMessage::PrechargeVoltageOK => {
                 defmt::debug!("Precharge voltage OK");
-                event_sender.send(Event::PrechargeVoltageOK).await;
+                publish(Event::PrechargeVoltageOK).await;
             }
             CanMessage::DischargeVoltageOK => {
                 defmt::debug!("Discharge voltage OK");
-                event_sender.send(Event::DischargeVoltageOK).await;
+                publish(Event::DischargeVoltageOK).await;
             }
 
             // Relays
             CanMessage::ShutdownCircuitryRelayOpen => {
                 defmt::debug!("Shutdown circuitry relay open");
-                event_sender.send(Event::ShutdownCircuitryRelayOpen).await;
+                publish(Event::ShutdownCircuitryRelayOpen).await;
             }
             CanMessage::ShutdownCircuitryRelayClosed => {
                 defmt::debug!("Shutdown circuitry relay closed");
-                event_sender.send(Event::ShutdownCircuitryRelayClosed).await;
+                publish(Event::ShutdownCircuitryRelayClosed).await;
             }
             CanMessage::BatteryPrechargeRelayOpen => {
                 defmt::debug!("Battery precharge relay open");
-                event_sender.send(Event::BatteryPrechargeRelayOpen).await;
+                publish(Event::BatteryPrechargeRelayOpen).await;
             }
             CanMessage::BatteryPrechargeRelayClosed => {
                 defmt::debug!("Battery precharge relay closed");
-                event_sender.send(Event::BatteryPrechargeRelayClosed).await;
+                publish(Event::BatteryPrechargeRelayClosed).await;
             }
             CanMessage::MotorControllerRelayOpen => {
                 defmt::debug!("Motor controller relay open");
-                event_sender.send(Event::MotorControllerRelayOpen).await;
+                publish(Event::MotorControllerRelayOpen).await;
             }
             CanMessage::MotorControllerRelayClosed => {
                 defmt::debug!("Motor controller relay closed");
-                event_sender.send(Event::MotorControllerRelayClosed).await;
+                publish(Event::MotorControllerRelayClosed).await;
             }
             CanMessage::DischargeRelayOpen => {
                 defmt::debug!("Discharge relay open");
-                event_sender.send(Event::DischargeRelayOpen).await;
+                publish(Event::DischargeRelayOpen).await;
             }
             CanMessage::DischargeRelayClosed => {
                 defmt::debug!("Discharge relay closed");
-                event_sender.send(Event::DischargeRelayClosed).await;
+                publish(Event::DischargeRelayClosed).await;
             }
 
             // Navigation
             CanMessage::EndOfTrackBrake => {
                 defmt::debug!("End of Track Brake Command Received");
-                event_sender.send(Event::EndOfTrackBrakeCommand).await;
+                publish(Event::EndOfTrackBrakeCommand).await;
             }
 
             // Dynamics
             CanMessage::UnclampBrakesCommand => {
                 defmt::debug!("Unclamp Brakes Command Received");
-                event_sender.send(Event::UnclampBrakesCommand).await;
+                publish(Event::UnclampBrakesCommand).await;
             }
             CanMessage::ClampBrakesCommand => {
                 defmt::debug!("Clamp Brakes Command Received");
-                event_sender.send(Event::ClampBrakesCommand).await;
+                publish(Event::ClampBrakesCommand).await;
             }
             CanMessage::RetractLateralSuspensionCommand => {
                 defmt::debug!("Retract Lateral Suspension Command Received");
-                event_sender
-                    .send(Event::RetractLateralSuspensionCommand)
-                    .await;
+                publish(Event::RetractLateralSuspensionCommand).await;
             }
             CanMessage::ExtendLateralSuspensionCommand => {
                 defmt::debug!("Extend Lateral Suspension Command Received");
-                event_sender
-                    .send(Event::ExtendLateralSuspensionCommand)
-                    .await;
+                publish(Event::ExtendLateralSuspensionCommand).await;
             }
             CanMessage::BrakesClamped { from } => {
                 defmt::debug!("Brakes clamped. Board={}", from);
-                event_sender.send(Event::BrakesClamped { from }).await;
+                publish(Event::BrakesClamped { from }).await;
             }
             CanMessage::BrakesUnclamped { from } => {
                 defmt::debug!("Brakes unclamped. Board={}", from);
-                event_sender.send(Event::BrakesUnclamped { from }).await;
+                publish(Event::BrakesUnclamped { from }).await;
             }
             CanMessage::LateralSuspensionRetracted { from } => {
                 defmt::debug!("Lateral Suspension Retracted. Board={}", from);
-                event_sender
-                    .send(Event::LateralSuspensionRetracted { from })
-                    .await;
+                publish(Event::LateralSuspensionRetracted { from }).await;
             }
             CanMessage::LateralSuspensionExtended { from } => {
                 defmt::debug!("Lateral Suspension Extended. Board={}", from);
-                event_sender
-                    .send(Event::LateralSuspensionExtended { from })
-                    .await;
+                publish(Event::LateralSuspensionExtended { from }).await;
             }
             CanMessage::DynamicsStatus {
                 from,
@@ -188,36 +191,29 @@ pub async fn can_receiver(mut rx: CanRx<'static>) {
                     from,
                     actuator_pressure_bar
                 );
-                event_sender
-                    .send(Event::DynamicsStatus {
-                        from,
-                        actuator_pressure_bar,
-                    })
-                    .await;
+                publish(Event::DynamicsStatus {
+                    from,
+                    actuator_pressure_bar,
+                })
+                .await;
             }
 
             // Propulsion
             CanMessage::StartPropulsionAccelerationCommand => {
                 defmt::debug!("Start Propulsion Acceleration Command Received");
-                event_sender
-                    .send(Event::StartPropulsionAccelerationCommand)
-                    .await;
+                publish(Event::StartPropulsionAccelerationCommand).await;
             }
             CanMessage::StartPropulsionBrakingCommand => {
                 defmt::debug!("Start Propulsion Braking Command Received");
-                event_sender
-                    .send(Event::StartPropulsionBrakingCommand)
-                    .await;
+                publish(Event::StartPropulsionBrakingCommand).await;
             }
             CanMessage::PropulsionAccelerationStarted => {
                 defmt::debug!("Propulsion Acceleration Started");
-                event_sender
-                    .send(Event::PropulsionAccelerationStarted)
-                    .await;
+                publish(Event::PropulsionAccelerationStarted).await;
             }
             CanMessage::PropulsionBrakingStarted => {
                 defmt::debug!("Propulsion Braking Started");
-                event_sender.send(Event::PropulsionBrakingStarted).await;
+                publish(Event::PropulsionBrakingStarted).await;
             }
             CanMessage::PropulsionStatus {
                 current_ma,
@@ -227,19 +223,37 @@ pub async fn can_receiver(mut rx: CanRx<'static>) {
             } => {
                 defmt::debug!("Propulsion Status: current={}ma, velocity={}kmh, temperature={}c, voltage={}cv",
                 current_ma.0, velocity_kmh.0, temperature_c.0, voltage_cv.0);
-                event_sender
-                    .send(Event::PropulsionStatus {
-                        current_ma,
-                        velocity_kmh,
-                        temperature_c,
-                        voltage_cv,
-                    })
-                    .await;
+                publish(Event::PropulsionStatus {
+                    current_ma,
+                    velocity_kmh,
+                    temperature_c,
+                    voltage_cv,
+                })
+                .await;
             }
             CanMessage::PropulsionForce { force_n } => {
                 defmt::debug!("Calculated propulsion force: force={}n", force_n.0);
-                event_sender.send(Event::PropulsionForce { force_n }).await;
+                publish(Event::PropulsionForce { force_n }).await;
             }
         }
     }
+}
+
+/// Ignore loopback of commands this board transmitted. Status/completion frames must
+/// still be accepted even if their CAN source board ID matches ours (legacy encoding).
+fn is_own_command_loopback(source: &CanId) -> bool {
+    matches!(
+        source.message_identifier,
+        MessageIdentifier::Event(
+            EventId::StartPrechargeCommand
+                | EventId::StartDischargeCommand
+                | EventId::ClampBrakesCommand
+                | EventId::UnclampBrakesCommand
+                | EventId::StartPropulsionAccelerationCommand
+                | EventId::StartPropulsionBrakingCommand
+                | EventId::RetractLateralSuspensionCommand
+                | EventId::ExtendLateralSuspensionCommand
+                | EventId::EndOfTrackBrake
+        )
+    )
 }

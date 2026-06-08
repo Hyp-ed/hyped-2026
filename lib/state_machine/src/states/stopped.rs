@@ -3,13 +3,13 @@ use crate::{
     state_machine::{DischargeStep, StateMachine},
 };
 use embassy_time::Instant;
-use hyped_communications::{bus::EVENT_BUS, events::Event};
+use hyped_communications::events::Event;
 use hyped_core::logging::{debug, info, warn};
 
 impl StateMachine {
     pub(crate) async fn entry_stopped(&mut self) {
         info!("Pod is stopped");
-        EVENT_BUS.sender().send(Event::StartDischargeCommand).await;
+        self.queue_publish(Event::StartDischargeCommand);
         self.discharge_step = DischargeStep::Initial;
         self.discharge_voltage_ok = false;
     }

@@ -3,7 +3,7 @@ use crate::{
     state_machine::{PrechargeStep, StateMachine},
 };
 use embassy_time::Instant;
-use hyped_communications::{bus::EVENT_BUS, events::Event};
+use hyped_communications::events::Event;
 use hyped_core::logging::{debug, info, warn};
 
 impl StateMachine {
@@ -12,7 +12,7 @@ impl StateMachine {
         self.precharge_step = PrechargeStep::Initial;
         self.precharge_voltage_ok = false;
         self.ready_for_run = false;
-        EVENT_BUS.sender().send(Event::StartPrechargeCommand).await;
+        self.queue_publish(Event::StartPrechargeCommand);
     }
 
     pub(crate) async fn react_precharge(&mut self, event: Event) {
