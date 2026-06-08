@@ -62,8 +62,13 @@ pub async fn heartbeat_listener(from_board: Board) {
     }
 }
 
+#[derive(Debug, defmt::Format)]
+pub enum HeartbeatError {
+    Timeout,
+}
+
 /// Gives the boards a chance to wake up at the start.
-pub async fn wait_for_first_heartbeat(target_board: Board) -> Result<(), ()> {
+pub async fn wait_for_first_heartbeat(target_board: Board) -> Result<(), HeartbeatError> {
     match with_timeout(
         Duration::from_secs(HEARTBEAT_CONFIG.boards.startup_timeout_s as u64),
         async {
@@ -79,7 +84,7 @@ pub async fn wait_for_first_heartbeat(target_board: Board) -> Result<(), ()> {
     .await
     {
         Ok(_) => Ok(()),
-        Err(_) => Err(()),
+        Err(_) => Err(HeartbeatError::Timeout),
     }
 }
 

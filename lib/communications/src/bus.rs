@@ -16,14 +16,19 @@ pub static EVENT_BUS: PubSubChannel<
     EVENT_BUS_PUBLISHERS,
 > = PubSubChannel::new();
 
-//nitialise the event bus. Subscribers must be created before any events are published.
-pub fn init() -> Result<(), ()> {
+// Initialise the event bus. Subscribers must be created before any events are published.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, defmt::Format)]
+pub enum Error {
+    LimitReached,
+}
+
+pub fn init() -> Result<(), Error> {
     Ok(())
 }
 
 // Create a subscriber. Must be called before any events are published.
-pub fn subscriber() -> Result<DynSubscriber<'static, Event>, ()> {
-    EVENT_BUS.dyn_subscriber().map_err(|_| ())
+pub fn subscriber() -> Result<DynSubscriber<'static, Event>, Error> {
+    EVENT_BUS.dyn_subscriber().map_err(|_| Error::LimitReached)
 }
 
 // Publish an event to all subscribers without blocking.

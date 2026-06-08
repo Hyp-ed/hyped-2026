@@ -6,13 +6,12 @@ use embassy_executor::Spawner;
 use embassy_stm32::{
     bind_interrupts,
     can::{
-        self, filter::Mask32, Can, CanRx, Fifo, Id, Rx0InterruptHandler, Rx1InterruptHandler,
+        filter::Mask32, Can, CanRx, Fifo, Id, Rx0InterruptHandler, Rx1InterruptHandler,
         SceInterruptHandler, TxInterruptHandler,
     },
-    eth::{self, generic_smi::GenericSMI, Ethernet, PacketQueue},
-    peripherals::{self, CAN1, ETH},
-    rng::{self, Rng},
-    time::Hertz,
+    eth::{self},
+    peripherals::{self, CAN1},
+    rng::{self},
     Config,
 };
 use embassy_time::{Duration, Timer};
