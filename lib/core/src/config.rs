@@ -9,9 +9,9 @@ use hyped_measurement_ids::gen_measurement_ids;
 ///
 /// E.g. to get the pod name,
 /// ```rust
-/// let pod_name = CONFIG.pods.poddington.label;
+/// let pod_name = CONFIG.pods.the_podigal_son.label;
 ///
-/// assert_eq!(pod_name, "Poddington");
+/// assert_eq!(pod_name, "The Podigal Son");
 /// ````
 #[config_to_rs(yaml, "../../../config/pods.yaml")]
 pub struct PodsConfig;
@@ -35,14 +35,14 @@ pub struct ControlConfig;
 pub struct LevitationConfig;
 
 // TODOLater: this should be in a config
-pub static POD_NAME: &str = "poddington";
+pub static POD_NAME: &str = "the_podigal_son";
 
-gen_measurement_ids!("config/pods.yaml", "poddington");
+gen_measurement_ids!("config/pods.yaml", "the_podigal_son");
 
 mod test {
     #[test]
     fn test_config() {
-        let pod_name = super::PODS_CONFIG.pods.poddington.label;
-        assert_eq!(pod_name, "Poddington");
+        let pod_name = super::PODS_CONFIG.pods.the_podigal_son.label;
+        assert_eq!(pod_name, "The Podigal Son");
     }
 }

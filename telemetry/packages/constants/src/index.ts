@@ -1,4 +1,5 @@
 export { pods, podIds } from './pods/pods';
+export type { PodId } from '@hyped/telemetry-types';
 export {
 	ALL_POD_STATES,
 	PASSIVE_STATES,

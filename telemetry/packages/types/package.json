@@ -2,16 +2,25 @@
 	"name": "@hyped/telemetry-types",
 	"private": true,
 	"version": "0.0.0",
-	"types": "dist/index.d.ts",
-	"scripts": {
-		"build": "tsc",
-		"watch": "tsc -w",
-		"lint": "biome lint .",
-		"lint:fix": "biome check --write ."
+	"main": "./dist/cjs/index.js",
+	"types": "./dist/types/index.d.ts",
+	"module": "./dist/esm/index.js",
+	"exports": {
+	  ".": {
+		"types": "./dist/types/index.d.ts",
+		"import": "./dist/esm/index.js",
+		"require": "./dist/cjs/index.js"
+	  }
 	},
-	"dependencies": {
-		"@hyped/tsconfig": "workspace:*",
-		"typescript": "^5.7.3",
-		"zod": "^3.21.4"
+	"scripts": {
+	  "build": "rm -rf dist && tsc --module commonjs --moduleResolution node --outDir dist/cjs --declaration false --declarationMap false && tsc --module esnext --outDir dist/esm --declaration --declarationDir dist/types",
+	  "watch": "tsc -w",
+	  "lint": "biome lint .",
+	  "lint:fix": "biome check --write ."
+	},
+	"devDependencies": {
+	  "@hyped/tsconfig": "workspace:*",
+	  "typescript": "^5.7.3",
+	  "zod": "^3.21.4"
 	}
-}
+  }

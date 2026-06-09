@@ -1,6 +1,6 @@
 pods:
-  poddington:
-    label: 'Poddington'
+  the_podigal_son:
+    label: 'The Podigal Son'
     mode: 'LEVITATION_ONLY'
     measurements:
       accelerometer_1:

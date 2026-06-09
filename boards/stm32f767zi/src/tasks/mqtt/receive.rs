@@ -1,3 +1,4 @@
+use super::send::MQTT_SEND;
 use crate::log::log;
 use core::str::FromStr;
 use defmt_rtt as _;
@@ -72,19 +73,39 @@ pub async fn mqtt_receive(
                 let topic: Result<MqttTopic, &str> = topic_str.parse();
 
                 match topic {
-                    // Ignore heartbeat and log messages
+                    // Ignore heartbeat, log and latency response messages
                     Ok(MqttTopic::Heartbeat) => {}
                     Ok(MqttTopic::Logs) => {}
-                    Ok(topic) => {
-                        // Send message to channel so that it can be consumed by other tasks
+                    Ok(MqttTopic::LatencyResponse) => {}
+                    Ok(MqttTopic::LatencyRequest) => {
+                        MQTT_SEND
+                            .send(MqttMessage::new(
+                                MqttTopic::LatencyResponse,
+                                String::from_str(message).unwrap(),
+                            ))
+                            .await;
+                    }
+                    Ok(MqttTopic::State) => {
+                        // Only forward STATE messages (commands) to the internal channel
                         MQTT_RECEIVE
                             .send(MqttMessage::new(
-                                topic,
+                                MqttTopic::State,
                                 String::from_str(message)
                                     .expect("Failed to convert message to string"),
                             ))
                             .await;
                     }
+                    Ok(MqttTopic::Controls) => {
+                        MQTT_RECEIVE
+                            .send(MqttMessage::new(
+                                MqttTopic::Controls,
+                                String::from_str(message)
+                                    .expect("Failed to convert message to string"),
+                            ))
+                            .await;
+                    }
+
+                    Ok(_) => {}
                     Err(_) => {
                         // Log warning for unknown topic
                         log(

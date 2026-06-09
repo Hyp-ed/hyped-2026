@@ -1,6 +1,7 @@
 # compiled output
 dist
 node_modules
+packages/constants/src/pods/pods-data.generated.ts
 
 # Logs
 logs

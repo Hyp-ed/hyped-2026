@@ -6,7 +6,7 @@ export function mapMeasurementToOpenMct(
 	return {
 		name: measurement.label,
 		key: measurement.id,
-		type: measurement.type,
+		type: measurement.kind,
 		values: [
 			{
 				key: 'value',
