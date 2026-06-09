@@ -57,13 +57,12 @@ async fn main(spawner: Spawner) -> ! {
     let p = embassy_stm32::init(config);
 
     let gpio1: gpio::Output<'static> =
-        gpio::Output::new(p.PF13, gpio::Level::High, gpio::Speed::Low);
-    let gpio2: gpio::Output<'static> =
-        gpio::Output::new(p.PE9, gpio::Level::High, gpio::Speed::Low);
+        gpio::Output::new(p.PF13, gpio::Level::Low, gpio::Speed::Low);
+    let gpio2: gpio::Output<'static> = gpio::Output::new(p.PE9, gpio::Level::Low, gpio::Speed::Low);
     let gpio3: gpio::Output<'static> =
-        gpio::Output::new(p.PE11, gpio::Level::High, gpio::Speed::Low);
+        gpio::Output::new(p.PE11, gpio::Level::Low, gpio::Speed::Low);
     let gpio4: gpio::Output<'static> =
-        gpio::Output::new(p.PF14, gpio::Level::High, gpio::Speed::Low);
+        gpio::Output::new(p.PF14, gpio::Level::Low, gpio::Speed::Low);
 
     let adc1 = Adc::new(p.ADC1);
     let pin1 = p.PA3.degrade_adc();
@@ -171,12 +170,14 @@ async fn sensors_board_response_task(mut gpio_pins: Pins) {
             WaitResult::Message(Event::StartPrechargeCommand) => {
                 CAN_SEND.send(CanMessage::PrechargeStarted).await;
 
+                // shutdown_circuitry_relay
                 gpio_pins.shutdown_circuitry_relay.set_high();
                 CAN_SEND
                     .send(CanMessage::ShutdownCircuitryRelayClosed)
                     .await;
                 gpio_pins.gpio4.set_high();
 
+                // battery_precharge_relay
                 gpio_pins.battery_precharge_relay.set_low();
 
                 Timer::after_secs(4).await;
@@ -185,19 +186,20 @@ async fn sensors_board_response_task(mut gpio_pins: Pins) {
                 gpio_pins.battery_precharge_relay.set_high();
                 CAN_SEND.send(CanMessage::BatteryPrechargeRelayClosed).await;
 
+                // voltage
                 Timer::after_secs(2).await;
 
                 CAN_SEND.send(CanMessage::PrechargeVoltageOK).await;
 
+                // motor_controller_relay
+                gpio_pins.motor_controller_relay.set_low();
+                Timer::after_secs(4).await;
                 gpio_pins.motor_controller_relay.set_high();
 
                 CAN_SEND.send(CanMessage::MotorControllerRelayClosed).await;
 
                 // there is a possibility that after 20s of this relay being on it needs to be turned back off, please have code for this commented for now until further confirmation
                 // Timer::after_secs(20).await;
-                //
-                // gpio_pins.gpio2.set_low();
-                // gpio_pins.gpio3.set_low();
 
                 CAN_SEND.send(CanMessage::PrechargeComplete).await;
             }
