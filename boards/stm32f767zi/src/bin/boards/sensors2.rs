@@ -3,14 +3,15 @@
 
 /// Sensors board 2
 /// Uses PA1 and 2 for low pressure
+use defmt_rtt as _;
 use embassy_executor::Spawner;
 use embassy_futures::yield_now;
 use embassy_stm32::{
     adc::{Adc, AdcChannel},
     bind_interrupts,
     can::{
-        filter::Mask32, Can, Fifo, Rx0InterruptHandler, Rx1InterruptHandler, SceInterruptHandler,
-        TxInterruptHandler,
+        filter::Mask32, Can, CanRx, Fifo, Id, Rx0InterruptHandler, Rx1InterruptHandler,
+        SceInterruptHandler, TxInterruptHandler,
     },
     eth, gpio,
     peripherals::{self, ADC1, ADC2, CAN1},
@@ -21,19 +22,12 @@ use hyped_boards_stm32f767zi::{
     board_state::THIS_BOARD,
     default_can_config,
     io::Stm32f767ziAdc,
-    tasks::can::{
-        receive::can_receiver,
-        send::{can_sender, CAN_SEND},
-    },
+    tasks::can::{send::{can_sender, CAN_SEND}},
 };
-use hyped_communications::{
-    boards::Board,
-    bus::{self, EVENT_BUS},
-    events::Event,
-    messages::CanMessage,
-};
+use hyped_communications::{boards::Board, messages::CanMessage};
 use hyped_core::config::SENSORS_CONFIG;
 use hyped_sensors::{low_pressure::LowPressure, SensorValueRange};
+use panic_probe as _;
 
 bind_interrupts!(struct Irqs {
     ETH => eth::InterruptHandler;
@@ -93,15 +87,14 @@ async fn main(spawner: Spawner) -> ! {
     };
 
     defmt::info!("Setting up CAN...");
-    let mut can = Can::new(p.CAN1, p.PD0, p.PD1, Irqs);
+    let mut can = Can::new(p.CAN1, p.PB8, p.PB9, Irqs);
     default_can_config!(can);
     can.enable().await;
     let (can_tx, can_rx) = can.split();
-    spawner.must_spawn(can_receiver(can_rx));
     spawner.must_spawn(can_sender(can_tx));
+    spawner.must_spawn(sensors_board_can_receiver(can_rx, gpio_pins));
     defmt::info!("CAN setup complete");
 
-    spawner.must_spawn(sensors_board_response_task(gpio_pins));
     spawner.must_spawn(sensors_board_pressure_sensors_task(pressure_sensors));
 
     loop {
@@ -124,7 +117,6 @@ struct PressureSensors {
 #[embassy_executor::task]
 async fn sensors_board_pressure_sensors_task(mut pressure_sensors: PressureSensors) {
     loop {
-        // Read all three low pressure sensors
         let low_pressures_ok = [
             !matches!(
                 pressure_sensors.low_pressure_1.read_pressure(),
@@ -154,66 +146,83 @@ async fn sensors_board_pressure_sensors_task(mut pressure_sensors: PressureSenso
 }
 
 #[embassy_executor::task]
-async fn sensors_board_response_task(mut gpio_pins: Pins) {
-    bus::init().expect("Failed to init sensors board 2 event bus");
-
-    let mut sub = EVENT_BUS
-        .subscriber()
-        .expect("Failed to run sensors board 2 state machine");
-
-    use embassy_sync_compat::pubsub::WaitResult;
-
+async fn sensors_board_can_receiver(mut rx: CanRx<'static>, mut gpio_pins: Pins) {
     loop {
-        let event = sub.next_message().await;
+        defmt::debug!("Waiting for CAN message");
 
-        match event {
-            WaitResult::Message(Event::StartPrechargeCommand) => {
-                CAN_SEND.send(CanMessage::PrechargeStarted).await;
+        let envelope = rx.read().await;
+        if envelope.is_err() {
+            defmt::warn!("CAN receive error: {:?}", envelope.err());
+            continue;
+        }
+        let envelope = envelope.unwrap();
 
-                // shutdown_circuitry_relay
-                gpio_pins.shutdown_circuitry_relay.set_high();
-                CAN_SEND
-                    .send(CanMessage::ShutdownCircuitryRelayClosed)
-                    .await;
-                gpio_pins.gpio4.set_high();
+        let id = envelope.frame.id();
+        let raw_id = match id {
+            Id::Standard(id) => id.as_raw() as u32,
+            Id::Extended(id) => id.as_raw(),
+        };
 
-                // battery_precharge_relay
-                gpio_pins.battery_precharge_relay.set_low();
+        let mut data = [0u8; 8];
+        data.copy_from_slice(envelope.frame.data());
 
-                Timer::after_secs(4).await;
-                gpio_pins.gpio4.set_low();
+        let frame = hyped_can::HypedCanFrame::new(raw_id, data);
+        let message: CanMessage = frame.into();
+        defmt::info!("Received CAN message: {:?}", message);
 
-                gpio_pins.battery_precharge_relay.set_high();
-                CAN_SEND.send(CanMessage::BatteryPrechargeRelayClosed).await;
+        respond_to_message(message, &mut gpio_pins).await;
+    }
+}
 
-                // voltage
-                Timer::after_secs(2).await;
+async fn respond_to_message(message: CanMessage, gpio_pins: &mut Pins) {
+    match message {
+        CanMessage::Heartbeat(_heartbeat) => {
+            defmt::debug!("Heartbeat received");
+        }
+        CanMessage::StartPrechargeCommand => {
+            defmt::info!("StartPrechargeCommand received");
+            CAN_SEND.send(CanMessage::PrechargeStarted).await;
 
-                CAN_SEND.send(CanMessage::PrechargeVoltageOK).await;
+            gpio_pins.shutdown_circuitry_relay.set_high();
+            CAN_SEND
+                .send(CanMessage::ShutdownCircuitryRelayClosed)
+                .await;
+            gpio_pins.gpio4.set_high();
 
-                // motor_controller_relay
-                gpio_pins.motor_controller_relay.set_low();
-                Timer::after_secs(4).await;
-                gpio_pins.motor_controller_relay.set_high();
+            gpio_pins.battery_precharge_relay.set_low();
+            Timer::after_secs(4).await;
+            gpio_pins.gpio4.set_low();
 
-                CAN_SEND.send(CanMessage::MotorControllerRelayClosed).await;
+            gpio_pins.battery_precharge_relay.set_high();
+            CAN_SEND.send(CanMessage::BatteryPrechargeRelayClosed).await;
 
-                // there is a possibility that after 20s of this relay being on it needs to be turned back off, please have code for this commented for now until further confirmation
-                // Timer::after_secs(20).await;
+            Timer::after_secs(2).await;
+            CAN_SEND.send(CanMessage::PrechargeVoltageOK).await;
 
-                CAN_SEND.send(CanMessage::PrechargeComplete).await;
-            }
+            gpio_pins.motor_controller_relay.set_low();
+            Timer::after_secs(4).await;
+            gpio_pins.motor_controller_relay.set_high();
+            CAN_SEND.send(CanMessage::MotorControllerRelayClosed).await;
 
-            WaitResult::Message(Event::Emergency { from, reason }) => {
-                defmt::warn!("EMERGENCY: from {:?} reason={}", from, reason);
-                return;
-            }
+            // there is a possibility that after 20s of this relay being on it needs to be turned back off,
+            // please have code for this commented for now until further confirmation
+            // Timer::after_secs(20).await;
 
-            WaitResult::Message(Event::Heartbeat { from }) => {
-                defmt::debug!("Heartbeat from {:?}", from);
-            }
-
-            _ => {} // Ignore other events
+            CAN_SEND.send(CanMessage::PrechargeComplete).await;
+        }
+        CanMessage::UnclampBrakesCommand => {
+            defmt::info!("UnclampBrakesCommand received");
+            CAN_SEND
+                .send(CanMessage::BrakesUnclamped {
+                    from: Board::Sensors2,
+                })
+                .await;
+        }
+        CanMessage::Emergency(from, reason) => {
+            defmt::warn!("EMERGENCY: from {:?} reason={}", from, reason);
+        }
+        _ => {
+            defmt::debug!("Ignored CAN message: {:?}", message);
         }
     }
 }
