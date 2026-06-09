@@ -6,10 +6,13 @@ use core::cell::RefCell;
 use defmt::*;
 use embassy_executor::Spawner;
 use embassy_stm32::{
+    bind_interrupts,
     gpio::{Input, Level, Output, Pull, Speed},
     i2c::I2c,
     init,
+    can::{Can, Rx0InterruptHandler, Rx1InterruptHandler, SceInterruptHandler, TxInterruptHandler},
     mode::Blocking,
+    peripherals::{self, CAN1},
     spi::{self, BitOrder, Spi},
     time::{khz, Hertz},
 };
@@ -23,12 +26,23 @@ use embassy_sync::{
 use embassy_time::{Duration, Timer};
 use heapless::Vec;
 use hyped_boards_stm32f767zi::{
+    board_state::THIS_BOARD,
+    default_can_config,
     io::{Stm32f767ziGpioOutput, Stm32f767ziSpi},
-    tasks::sensors::{
-        read_accelerometers_from_mux::{read_accelerometers_from_mux, AccelerometerMuxReadings},
-        read_keyence::read_keyence,
-        read_optical_flow::read_optical_flow,
+    tasks::{
+        can::send::{can_sender, CAN_SEND},
+        sensors::{
+            read_accelerometers_from_mux::{read_accelerometers_from_mux, AccelerometerMuxReadings},
+            read_keyence::read_keyence,
+            read_optical_flow::read_optical_flow,
+        },
     },
+};
+use hyped_communications::{
+    boards::Board,
+    data::CanData,
+    measurements::MeasurementReading,
+    messages::CanMessage,
 };
 use hyped_core::config::{MeasurementId, LOCALISATION_CONFIG};
 use hyped_localisation::{control::localizer::Localizer, types::RawAccelerometerData};
@@ -48,10 +62,36 @@ static OPTICAL_FLOW_DATA: Watch<CriticalSectionRawMutex, Vec<f64, 2>, 1> = Watch
 static ACCELEROMETERS_DATA: Watch<CriticalSectionRawMutex, AccelerometerMuxReadings, 1> =
     Watch::new();
 
+bind_interrupts!(struct Irqs {
+    CAN1_RX0 => Rx0InterruptHandler<CAN1>;
+    CAN1_RX1 => Rx1InterruptHandler<CAN1>;
+    CAN1_SCE => SceInterruptHandler<CAN1>;
+    CAN1_TX => TxInterruptHandler<CAN1>;
+});
+
+const TRACK_LENGTH_M: f64 = 100.0;
+
 #[embassy_executor::main]
 async fn main(spawner: Spawner) -> ! {
     // Import `init` so that we can initialize board peripherals.
     let p = init(Default::default());
+
+    THIS_BOARD
+        .init(Board::Navigation)
+        .expect("Failed to initialize board identity");
+    defmt::info!("Board identity initialised");
+
+    let mut can = Can::new(p.CAN1, p.PD0, p.PD1, Irqs);
+    default_can_config!(can);
+    can.enable().await;
+    let (can_tx, _) = can.split();
+    spawner.must_spawn(can_sender(can_tx));
+    defmt::info!("CAN sender task started");
+
+    let can_message_sender = CAN_SEND.sender();
+
+    let board = *THIS_BOARD.get().await;
+    let mut end_of_track_brake_sent = false;
 
     let mut spi_config = spi::Config::default();
     spi_config.frequency = khz(400);
@@ -131,6 +171,39 @@ async fn main(spawner: Spawner) -> ! {
                     localizer.velocity,
                     localizer.acceleration
                 );
+
+                can_message_sender
+                    .send(CanMessage::MeasurementReading(MeasurementReading::new(
+                        CanData::F32(localizer.displacement as f32),
+                        board,
+                        MeasurementId::Displacement,
+                    )))
+                    .await;
+                can_message_sender
+                    .send(CanMessage::MeasurementReading(MeasurementReading::new(
+                        CanData::F32(localizer.velocity as f32),
+                        board,
+                        MeasurementId::Velocity,
+                    )))
+                    .await;
+                can_message_sender
+                    .send(CanMessage::MeasurementReading(MeasurementReading::new(
+                        CanData::F32(localizer.acceleration as f32),
+                        board,
+                        MeasurementId::Acceleration,
+                    )))
+                    .await;
+
+                //For demonstration purposes just brake when we're halfway down the track
+                //In reality we would calculate the braking point based on localiser data
+                if !end_of_track_brake_sent && localizer.displacement >= TRACK_LENGTH_M / 2.0 {
+                    defmt::info!(
+                        "Halfway to track end reached ({} m) — sending EndOfTrackBrake",
+                        localizer.displacement
+                    );
+                    can_message_sender.send(CanMessage::EndOfTrackBrake).await;
+                    end_of_track_brake_sent = true;
+                }
             }
             Err(e) => {
                 defmt::error!("Iteration error: {:?}", e);
