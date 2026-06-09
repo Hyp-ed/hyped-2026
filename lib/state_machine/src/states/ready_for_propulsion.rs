@@ -1,5 +1,5 @@
 use crate::{state::State, state_machine::StateMachine};
-use hyped_communications::{bus::EVENT_BUS, events::Event};
+use hyped_communications::events::Event;
 
 use hyped_core::logging::{debug, info, warn};
 
@@ -7,7 +7,7 @@ impl StateMachine {
     pub(crate) async fn entry_ready_for_propulsion(&mut self) {
         info!("Pod is ready for propulsion");
         info!("Awaiting accelerate command from operator");
-        EVENT_BUS.sender().send(Event::UnclampBrakesCommand).await;
+        self.queue_publish(Event::UnclampBrakesCommand);
     }
 
     pub(crate) async fn react_ready_for_propulsion(&mut self, event: Event) {

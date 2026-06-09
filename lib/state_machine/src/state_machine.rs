@@ -1,7 +1,24 @@
 use crate::state::State;
-//use heapless::FnvIndexSet;
-use hyped_communications::{bus::EVENT_BUS, events::Event};
+use heapless::Vec as HeaplessVec;
+use hyped_communications::{bus, bus::DynSubscriber, events::Event};
 use hyped_core::logging::{debug, info, warn};
+
+const MAX_PENDING_EVENTS: usize = 8;
+
+#[derive(Debug, PartialEq, defmt::Format, Clone, Copy)]
+pub enum PrechargeStep {
+    Initial,
+    ShutdownClosed,
+    BatteryPrechargeClosed,
+    AllClosed,
+}
+
+#[derive(Debug, PartialEq, defmt::Format, Clone, Copy)]
+pub enum DischargeStep {
+    Initial,
+    DischargeClosed,
+    SdcOpen,
+}
 
 pub struct StateMachine {
     pub current_state: State,
@@ -10,18 +27,9 @@ pub struct StateMachine {
     pub(crate) precharge_voltage_ok: bool,
     pub(crate) discharge_voltage_ok: bool,
 
-    // Precharge Sequence
-    //  0 = all relays open, waiting for shutdown relay
-    //  1 = shutdown relay closed, waiting for battery precharge relay
-    //  2 = shutdown & battery preacharge closed, waiting for motor controller relay
-    //  3 = all relays closed
-    pub(crate) precharge_step: u8,
-
-    // Discharge Sequence
-    // 0 = waiting for discharge relay to close
-    // 1 = discharge relay closed, waiting for SDC relay to open
-    // 2 = SDC open → transition to Idle
-    pub(crate) discharge_step: u8,
+    pub(crate) precharge_step: PrechargeStep,
+    pub(crate) discharge_step: DischargeStep,
+    pending_events: HeaplessVec<Event, MAX_PENDING_EVENTS>,
 }
 
 impl Default for StateMachine {
@@ -36,10 +44,23 @@ impl StateMachine {
             current_state: State::Idle,
             ready_for_run: false,
             brakes_clamped: true,
-            precharge_step: 0,
-            discharge_step: 0,
+            precharge_step: PrechargeStep::Initial,
+            discharge_step: DischargeStep::Initial,
             precharge_voltage_ok: false,
             discharge_voltage_ok: false,
+            pending_events: HeaplessVec::new(),
+        }
+    }
+
+    pub(crate) fn queue_publish(&mut self, event: Event) {
+        if self.pending_events.push(event.clone()).is_err() {
+            warn!("Pending event queue full, dropping {:?}", event);
+        }
+    }
+
+    pub(crate) async fn drain_pending(&mut self) {
+        while let Some(event) = self.pending_events.pop() {
+            bus::publish(event).await;
         }
     }
 
@@ -97,13 +118,30 @@ impl StateMachine {
 }
 
 #[embassy_executor::task]
-pub async fn run(mut sm: StateMachine) -> ! {
-    let rx = EVENT_BUS.receiver();
-
+pub async fn run(mut sm: StateMachine, mut events: DynSubscriber<'static, Event>) -> ! {
     sm.entry().await;
+    sm.drain_pending().await;
 
     loop {
-        let ev = rx.receive().await;
+        let ev = events.next_message_pure().await;
         sm.react(ev).await;
+        sm.drain_pending().await;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn state_machine_defaults() {
+        let sm = StateMachine::new();
+        assert!(matches!(sm.current_state, State::Idle));
+        assert!(!sm.ready_for_run);
+        assert!(sm.brakes_clamped); // brakes start clamped
+        assert!(!sm.precharge_voltage_ok);
+        assert!(!sm.discharge_voltage_ok);
+        assert_eq!(sm.precharge_step, PrechargeStep::Initial);
+        assert_eq!(sm.discharge_step, DischargeStep::Initial);
     }
 }

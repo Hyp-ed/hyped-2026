@@ -27,15 +27,19 @@ use hyped_boards_stm32f767zi::{
     tasks::{
         can::{
             board_heartbeat::{heartbeat_listener, send_heartbeat},
+            event_to_can::event_to_can,
             receive::can_receiver,
             send::can_sender,
         },
         can_to_mqtt::can_to_mqtt,
-        mqtt::{base_station_heartbeat::base_station_heartbeat, mqtt},
+        mqtt::{
+            base_station_heartbeat::base_station_heartbeat, mqtt,
+            mqtt_to_event_bus::mqtt_to_event_bus,
+        },
         network::net_task,
     },
 };
-use hyped_communications::boards::Board;
+use hyped_communications::{boards::Board, bus};
 use hyped_core::{config::TELEMETRY_CONFIG, log_types::LogLevel};
 use hyped_state_machine::{
     state::State,
@@ -70,6 +74,11 @@ async fn main(spawner: Spawner) -> ! {
     Timer::after(Duration::from_secs(2)).await;
     spawner.must_spawn(base_station_heartbeat());
 
+    bus::init().expect("Failed to initialise event bus publisher");
+    let state_machine_events =
+        bus::subscriber().expect("Failed to create state machine subscriber");
+    let can_bridge_events = bus::subscriber().expect("Failed to create CAN bridge subscriber");
+
     // CAN tasks: CAN send/receive, heartbeat controller, and state machine
     defmt::info!("Setting up CAN...");
     let mut can = Can::new(p.CAN1, p.PD0, p.PD1, Irqs);
@@ -84,8 +93,12 @@ async fn main(spawner: Spawner) -> ! {
     spawner.must_spawn(emergency_handler());
     spawner.must_spawn(heartbeat_listener(Board::TemperatureTester));
     spawner.must_spawn(send_heartbeat(Board::TemperatureTester));
+    spawner.must_spawn(mqtt_to_event_bus());
+    spawner.must_spawn(event_to_can(can_bridge_events));
+    // Let the CAN bridge start listening before the state machine entry publishes commands.
+    //Timer::after(Duration::from_millis(10)).await;
     // ... add more boards here
-    spawner.must_spawn(run(StateMachine::new()));
+    spawner.must_spawn(run(StateMachine::new(), state_machine_events));
 
     loop {
         Timer::after(Duration::from_secs(1)).await;

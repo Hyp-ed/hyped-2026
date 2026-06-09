@@ -16,6 +16,7 @@ use embassy_stm32::{
     peripherals::{self, ADC1, ADC2, CAN1},
     rng, Config,
 };
+use embassy_sync::pubsub::WaitResult;
 use embassy_time::{Duration, Timer};
 use hyped_boards_stm32f767zi::{
     board_state::THIS_BOARD,
@@ -23,7 +24,11 @@ use hyped_boards_stm32f767zi::{
     io::Stm32f767ziAdc,
     tasks::can::{receive::can_receiver, send::can_sender},
 };
-use hyped_communications::{boards::Board, bus::EVENT_BUS, events::Event};
+use hyped_communications::{
+    boards::Board,
+    bus::{self, EVENT_BUS},
+    events::Event,
+};
 use hyped_core::config::SENSORS_CONFIG;
 use hyped_sensors::{low_pressure::LowPressure, SensorValueRange};
 
@@ -149,13 +154,17 @@ async fn sensors_board_pressure_sensors_task(mut pressure_sensors: PressureSenso
 
 #[embassy_executor::task]
 async fn sensors_board_response_task(mut gpio_pins: Pins) {
-    let rx = EVENT_BUS.receiver();
+    bus::init().expect("Failed to init sensors board 2 event bus");
+
+    let sub = EVENT_BUS
+        .subscriber()
+        .expect("Failed to run sensors board 2 state machine");
 
     loop {
-        let event = rx.receive().await;
+        let event = sub.next_message().await;
 
         match event {
-            Event::StartPrechargeCommand => {
+            WaitResult::Message(Event::StartPrechargeCommand) => {
                 EVENT_BUS.sender().send(Event::PrechargeStarted).await;
 
                 gpio_pins.shutdown_circuitry_relay.set_high();

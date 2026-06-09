@@ -22,9 +22,12 @@ use hyped_boards_stm32f767zi::{
     board_state::THIS_BOARD,
     default_can_config,
     io::{Stm32f767ziAdc, Stm32f767ziGpioInput},
-    tasks::can::{receive::can_receiver, send::can_sender},
+    tasks::can::{
+        receive::can_receiver,
+        send::{can_sender, CAN_SEND},
+    },
 };
-use hyped_communications::{boards::Board, bus::EVENT_BUS, events::Event};
+use hyped_communications::{boards::Board, messages::CanMessage};
 use hyped_core::config::SENSORS_CONFIG;
 use hyped_sensors::{
     high_pressure::{self, HighPressure},
@@ -145,13 +148,14 @@ async fn sensors_board_response_task(mut pressure_sensors: PressureSensors) {
 
         if !high_pressure_ok || !low_pressures_ok {
             defmt::warn!("Pressure sensor out of safe range, sending emergency");
-            EVENT_BUS
-                .sender()
-                .send(Event::Emergency {
-                    from: Board::Sensors2,
-                    reason: hyped_communications::events::Reason::Pressure,
-                })
+
+            CAN_SEND
+                .send(CanMessage::Emergency(
+                    Board::Sensors2,
+                    hyped_communications::events::Reason::Pressure,
+                ))
                 .await;
+
             return;
         }
 

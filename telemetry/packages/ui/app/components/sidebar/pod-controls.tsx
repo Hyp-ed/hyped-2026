@@ -64,7 +64,7 @@ const LaunchButton = ({ podId }: { podId: string }) => {
 					'bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed',
 				)}
 				disabled={!enabled}
-				onClick={() => void sendControlMessage(podId, CONTROLS.START)}
+				onClick={() => void sendControlMessage(podId, CONTROLS.START_RUN)}
 			>
 				<Rocket /> LAUNCH
 			</Button>
@@ -85,7 +85,7 @@ export const EmergencyStopButton = ({
 			'bg-red-700 hover:bg-red-800',
 			className,
 		)}
-		onClick={() => void sendControlMessage(podId, CONTROLS.STOP)}
+		onClick={() => void sendControlMessage(podId, CONTROLS.EMERGENCY_STOP)}
 	>
 		<Siren /> EMERGENCY STOP
 	</Button>
