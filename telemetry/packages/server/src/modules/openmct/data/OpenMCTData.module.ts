@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { InfluxModule } from 'src/modules/influx/Influx.module';
+import { InfluxModule } from '@/modules/influx/Influx.module';
 import { HistoricalTelemetryDataController } from './historical/HistoricalTelemetryData.controller';
 import { HistoricalTelemetryDataService } from './historical/HistoricalTelemetryData.service';
 import { RealtimeTelemetryDataGateway } from './realtime/RealtimeTelemetryData.gateway';

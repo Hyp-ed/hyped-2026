@@ -45,7 +45,7 @@ export const FullControls = ({ podId }: { podId: string }) => {
 						<ButtonLabel>Start/stop</ButtonLabel>
 						<ButtonPair>
 							<LeftButton
-								onClick={() => void sendControlMessage(podId, CONTROLS.START)}
+								onClick={() => void sendControlMessage(podId, CONTROLS.START_RUN)}
 							>
 								Start <Rocket size={16} />
 							</LeftButton>
@@ -53,6 +53,19 @@ export const FullControls = ({ podId }: { podId: string }) => {
 								onClick={() => void sendControlMessage(podId, CONTROLS.STOP)}
 							>
 								Stop <Siren size={16} />
+							</RightButton>
+						</ButtonPair>
+						<ButtonPair>
+							<LeftButton
+								onClick={() => void sendControlMessage(podId, CONTROLS.ACCELERATE)}
+							>
+								Accelerate <ChevronsUp size={16} />
+							</LeftButton>
+							<RightButton
+								onClick={() => void sendControlMessage(podId, CONTROLS.EMERGENCY_STOP)}
+								className="bg-red-700 hover:bg-red-800 text-white"
+							>
+								E-Stop <Siren size={16} />
 							</RightButton>
 						</ButtonPair>
 					</div>

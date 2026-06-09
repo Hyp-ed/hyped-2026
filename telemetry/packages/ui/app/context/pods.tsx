@@ -7,11 +7,12 @@ import {
 import {
 	ALL_POD_STATES,
 	type ModeType,
-	POD_IDS,
 	type PodId,
+	podIds,
 	type PodStateType,
 	pods,
 } from '@hyped/telemetry-constants';
+
 import { FAILURE_STATES } from '@hyped/telemetry-constants';
 import { http } from 'openmct/core/http';
 import { createContext, useContext, useEffect, useState } from 'react';
@@ -46,7 +47,7 @@ const LATENCY_REQUEST_INTERVAL = 100 as const;
 /**
  * The default pod ID to use
  */
-export const DEFAULT_POD_ID = POD_IDS[1];
+export const DEFAULT_POD_ID = podIds[0];
 
 export type PreviousLatenciesType = {
 	index: number;
@@ -79,13 +80,13 @@ const PodsContext = createContext<PodsContextType | null>(null);
  * @param podIds The array of pod IDs to create the pods state object from.
  * @returns The pods state object.
  */
-function createPodsStateFromIds(podIds: typeof POD_IDS): PodsStateType {
+function createPodsStateFromIds(ids: readonly PodId[]): PodsStateType {
 	const podsContext: PodsStateType = {};
-	for (const podId of podIds) {
+	for (const podId of ids) {
 		podsContext[podId] = {
 			id: podId,
-			name: pods[podId].name,
-			operationMode: pods[podId].operationMode,
+			name: pods[podId].label,
+			operationMode: pods[podId].mode,
 			connectionStatus: POD_CONNECTION_STATUS.CONNECTED,
 			podState: ALL_POD_STATES.UNKNOWN,
 		};
@@ -100,7 +101,7 @@ function createPodsStateFromIds(podIds: typeof POD_IDS): PodsStateType {
  */
 export const PodsProvider = ({ children }: { children: React.ReactNode }) => {
 	const [podsState, setPodsState] = useState<PodsStateType>(
-		createPodsStateFromIds(POD_IDS),
+		createPodsStateFromIds(podIds),
 	);
 	const [currentPod, setCurrentPod] = useState<PodId>(DEFAULT_POD_ID);
 	const [lastLatencyResponse, setLastLatencyResponse] = useState<number>();
@@ -119,7 +120,7 @@ export const PodsProvider = ({ children }: { children: React.ReactNode }) => {
 			if (mqttConnectionStatus !== MQTT_CONNECTION_STATUS.CONNECTED) {
 				setPodsState((prevState) => {
 					const newPodsState = { ...prevState };
-					for (const podId of POD_IDS) {
+					for (const podId of podIds) {
 						if (
 							newPodsState[podId].connectionStatus !==
 							POD_CONNECTION_STATUS.DISCONNECTED
@@ -149,7 +150,7 @@ export const PodsProvider = ({ children }: { children: React.ReactNode }) => {
 		function sendLatencyMessages() {
 			// send latency messages every LATENCY_INTERVAL milliseconds
 			const interval = setInterval(() => {
-				POD_IDS.map((podId) => {
+				podIds.map((podId) => {
 					publish(
 						'latency/request',
 						JSON.stringify({
@@ -170,7 +171,7 @@ export const PodsProvider = ({ children }: { children: React.ReactNode }) => {
 		 */
 		function checkLatency() {
 			const interval = setTimeout(() => {
-				POD_IDS.map((podId) => {
+				podIds.map((podId) => {
 					if (!lastLatencyResponse) return;
 					if (new Date().getTime() - lastLatencyResponse > POD_MAX_LATENCY) {
 						setPodsState((prevState) => ({
@@ -274,7 +275,7 @@ export const PodsProvider = ({ children }: { children: React.ReactNode }) => {
 			};
 
 			// subscribe to latency messages and add MQTT message callback for each pod
-			POD_IDS.map((podId) => {
+			podIds.map((podId) => {
 				subscribe('latency/response', podId);
 				subscribe('state', podId);
 				client.on('message', (topic, message) =>
@@ -283,7 +284,7 @@ export const PodsProvider = ({ children }: { children: React.ReactNode }) => {
 			});
 
 			return () => {
-				POD_IDS.map((podId) => {
+				podIds.map((podId) => {
 					client.off('message', (topic, message) =>
 						processMessage(podId, topic as string, message as Buffer),
 					);

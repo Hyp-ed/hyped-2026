@@ -3,7 +3,7 @@ import type {
 	DisplacementResponse,
 	LaunchTimeResponse,
 	VelocityResponse,
-} from '@hyped/telemetry-types/dist/server/responses';
+} from '@hyped/telemetry-types';
 
 /**
  * The server endpoint for fetching public data.

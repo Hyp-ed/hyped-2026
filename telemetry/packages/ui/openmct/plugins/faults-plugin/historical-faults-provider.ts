@@ -1,4 +1,4 @@
-import type { HistoricalFaults } from '@hyped/telemetry-types/dist/openmct/openmct-fault.types';
+import type { HistoricalFaults } from '@hyped/telemetry-types';
 import { http } from 'openmct/core/http';
 import type { AugmentedDomainObject } from 'openmct/types/AugmentedDomainObject';
 import { FAULT_MANAGEMENT_DOMAIN_TYPE } from './constants';

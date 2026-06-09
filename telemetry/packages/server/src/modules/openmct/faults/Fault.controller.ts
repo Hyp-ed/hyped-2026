@@ -1,5 +1,5 @@
 import { Body, Controller, Post } from '@nestjs/common';
-import type { FaultService } from './Fault.service';
+import { FaultService } from './Fault.service';
 
 @Controller('openmct/faults')
 export class FaultsController {

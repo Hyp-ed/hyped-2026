@@ -3,4 +3,3 @@ pub mod can_to_mqtt;
 pub mod mqtt;
 pub mod network;
 pub mod sensors;
-pub mod state_machine;
