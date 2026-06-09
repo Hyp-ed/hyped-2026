@@ -16,18 +16,21 @@ use embassy_stm32::{
     peripherals::{self, ADC1, ADC2, CAN1},
     rng, Config,
 };
-use embassy_sync::pubsub::WaitResult;
 use embassy_time::{Duration, Timer};
 use hyped_boards_stm32f767zi::{
     board_state::THIS_BOARD,
     default_can_config,
     io::Stm32f767ziAdc,
-    tasks::can::{receive::can_receiver, send::can_sender},
+    tasks::can::{
+        receive::can_receiver,
+        send::{can_sender, CAN_SEND},
+    },
 };
 use hyped_communications::{
     boards::Board,
     bus::{self, EVENT_BUS},
     events::Event,
+    messages::CanMessage,
 };
 use hyped_core::config::SENSORS_CONFIG;
 use hyped_sensors::{low_pressure::LowPressure, SensorValueRange};
@@ -138,12 +141,11 @@ async fn sensors_board_pressure_sensors_task(mut pressure_sensors: PressureSenso
 
         if !low_pressures_ok {
             defmt::warn!("Pressure sensor out of safe range, sending emergency");
-            EVENT_BUS
-                .sender()
-                .send(Event::Emergency {
-                    from: Board::Sensors2,
-                    reason: hyped_communications::events::Reason::Pressure,
-                })
+            CAN_SEND
+                .send(CanMessage::Emergency(
+                    Board::Sensors2,
+                    hyped_communications::events::Reason::Pressure,
+                ))
                 .await;
             return;
         }
@@ -156,21 +158,22 @@ async fn sensors_board_pressure_sensors_task(mut pressure_sensors: PressureSenso
 async fn sensors_board_response_task(mut gpio_pins: Pins) {
     bus::init().expect("Failed to init sensors board 2 event bus");
 
-    let sub = EVENT_BUS
+    let mut sub = EVENT_BUS
         .subscriber()
         .expect("Failed to run sensors board 2 state machine");
+
+    use embassy_sync_compat::pubsub::WaitResult;
 
     loop {
         let event = sub.next_message().await;
 
         match event {
             WaitResult::Message(Event::StartPrechargeCommand) => {
-                EVENT_BUS.sender().send(Event::PrechargeStarted).await;
+                CAN_SEND.send(CanMessage::PrechargeStarted).await;
 
                 gpio_pins.shutdown_circuitry_relay.set_high();
-                EVENT_BUS
-                    .sender()
-                    .send(Event::ShutdownCircuitryRelayClosed)
+                CAN_SEND
+                    .send(CanMessage::ShutdownCircuitryRelayClosed)
                     .await;
                 gpio_pins.gpio4.set_high();
 
@@ -180,21 +183,15 @@ async fn sensors_board_response_task(mut gpio_pins: Pins) {
                 gpio_pins.gpio4.set_low();
 
                 gpio_pins.battery_precharge_relay.set_high();
-                EVENT_BUS
-                    .sender()
-                    .send(Event::BatteryPrechargeRelayClosed)
-                    .await;
+                CAN_SEND.send(CanMessage::BatteryPrechargeRelayClosed).await;
 
                 Timer::after_secs(2).await;
 
-                EVENT_BUS.sender().send(Event::PrechargeVoltageOK).await;
+                CAN_SEND.send(CanMessage::PrechargeVoltageOK).await;
 
                 gpio_pins.motor_controller_relay.set_high();
 
-                EVENT_BUS
-                    .sender()
-                    .send(Event::MotorControllerRelayClosed)
-                    .await;
+                CAN_SEND.send(CanMessage::MotorControllerRelayClosed).await;
 
                 // there is a possibility that after 20s of this relay being on it needs to be turned back off, please have code for this commented for now until further confirmation
                 // Timer::after_secs(20).await;
@@ -202,15 +199,15 @@ async fn sensors_board_response_task(mut gpio_pins: Pins) {
                 // gpio_pins.gpio2.set_low();
                 // gpio_pins.gpio3.set_low();
 
-                EVENT_BUS.sender().send(Event::PrechargeComplete).await;
+                CAN_SEND.send(CanMessage::PrechargeComplete).await;
             }
 
-            Event::Emergency { from, reason } => {
+            WaitResult::Message(Event::Emergency { from, reason }) => {
                 defmt::warn!("EMERGENCY: from {:?} reason={}", from, reason);
                 return;
             }
 
-            Event::Heartbeat { from } => {
+            WaitResult::Message(Event::Heartbeat { from }) => {
                 defmt::debug!("Heartbeat from {:?}", from);
             }
 
