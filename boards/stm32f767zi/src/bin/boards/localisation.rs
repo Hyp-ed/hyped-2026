@@ -10,9 +10,10 @@ use embassy_stm32::{
     gpio::{Input, Level, Output, Pull, Speed},
     i2c::I2c,
     init,
-    can::{Can, Rx0InterruptHandler, Rx1InterruptHandler, SceInterruptHandler, TxInterruptHandler},
+    can::{Can, Fifo, Rx0InterruptHandler, Rx1InterruptHandler, SceInterruptHandler, TxInterruptHandler},
+    can::filter::Mask32,
     mode::Blocking,
-    peripherals::{self, CAN1},
+    peripherals::CAN1,
     spi::{self, BitOrder, Spi},
     time::{khz, Hertz},
 };
