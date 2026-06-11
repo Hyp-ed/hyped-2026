@@ -54,7 +54,6 @@ impl StateMachine {
                 info!("Motor controller setup complete");
                 self.motor_controller_setup_done = true;
             }
-            // todo check
             Event::MotorControllerRelayClosed => {
                 if self.precharge_step == PrechargeStep::BatteryPrechargeClosed {
                     self.precharge_step = PrechargeStep::AllClosed;
@@ -64,6 +63,8 @@ impl StateMachine {
                     self.transition_to(State::Emergency).await;
                 }
             }
+
+            // todolater: consider adding in an exit (that's not emergency) if motor controller setup is not true
 
             // Any other change in relays, goto Emergency
             Event::DischargeRelayClosed
