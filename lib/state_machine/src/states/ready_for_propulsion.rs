@@ -7,11 +7,18 @@ impl StateMachine {
     pub(crate) async fn entry_ready_for_propulsion(&mut self) {
         info!("Pod is ready for propulsion");
         info!("Awaiting accelerate command from operator");
-        self.queue_publish(Event::UnclampBrakesCommand);
+        self.queue_publish(Event::OpenPrechargeRelaysCommand);
     }
 
     pub(crate) async fn react_ready_for_propulsion(&mut self, event: Event) {
         match event {
+            // todo check - assuming this is the correct relay?
+            Event::BatteryPrechargeRelayOpen => {
+                self.queue_publish(Event::MotorControllerSetOperationalCommand);
+            }
+            Event::MotorControllerOperational => {
+                self.queue_publish(Event::UnclampBrakesCommand);
+            }
             Event::BrakesUnclamped { from } => {
                 info!("Brakes unclamped. board ={}", from);
                 self.brakes_clamped = false;

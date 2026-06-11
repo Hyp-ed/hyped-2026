@@ -26,6 +26,7 @@ pub struct StateMachine {
     pub(crate) brakes_clamped: bool,
     pub(crate) precharge_voltage_ok: bool,
     pub(crate) discharge_voltage_ok: bool,
+    pub(crate) motor_controller_setup_done: bool,
 
     pub(crate) precharge_step: PrechargeStep,
     pub(crate) discharge_step: DischargeStep,
@@ -46,6 +47,7 @@ impl StateMachine {
             brakes_clamped: true,
             precharge_step: PrechargeStep::Initial,
             discharge_step: DischargeStep::Initial,
+            motor_controller_setup_done: false,
             precharge_voltage_ok: false,
             discharge_voltage_ok: false,
             pending_events: HeaplessVec::new(),
