@@ -12,6 +12,7 @@ impl StateMachine {
         self.precharge_step = PrechargeStep::Initial;
         self.precharge_voltage_ok = false;
         self.ready_for_run = false;
+        self.motor_controller_setup_done = false;
         self.queue_publish(Event::StartPrechargeCommand);
     }
 
@@ -43,10 +44,15 @@ impl StateMachine {
             Event::BatteryPrechargeRelayClosed => {
                 if self.precharge_step == PrechargeStep::ShutdownClosed {
                     self.precharge_step = PrechargeStep::BatteryPrechargeClosed;
+                    self.queue_publish(Event::MotorControllerSetupCommand)
                 } else {
                     warn!("Relays are out of order!");
                     self.transition_to(State::Emergency).await;
                 }
+            }
+            Event::MotorControllerSetupComplete => {
+                info!("Motor controller setup complete");
+                self.motor_controller_setup_done = true;
             }
             Event::MotorControllerRelayClosed => {
                 if self.precharge_step == PrechargeStep::BatteryPrechargeClosed {
@@ -58,6 +64,8 @@ impl StateMachine {
                 }
             }
 
+            // todolater: consider adding in an exit (that's not emergency) if motor controller setup is not true
+
             // Any other change in relays, goto Emergency
             Event::DischargeRelayClosed
             | Event::ShutdownCircuitryRelayOpen
@@ -68,7 +76,7 @@ impl StateMachine {
             }
 
             Event::StartRunOperatorCommand => {
-                if self.ready_for_run {
+                if self.ready_for_run && self.motor_controller_setup_done {
                     info!("Starting Propulsion run");
                     self.transition_to(State::ReadyForPropulsion).await;
                 }

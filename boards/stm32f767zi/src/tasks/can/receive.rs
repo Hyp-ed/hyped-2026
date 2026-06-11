@@ -143,6 +143,28 @@ pub async fn can_receiver(mut rx: CanRx<'static>) {
                 publish(Event::DischargeRelayClosed).await;
             }
 
+            // Motor Controller
+            CanMessage::MotorControllerSetOperationalCommand => {
+                defmt::debug!("Motor Controller Set Operational Command received");
+                publish(Event::MotorControllerSetOperationalCommand).await;
+            }
+            CanMessage::MotorControllerSetupCommand => {
+                defmt::debug!("Motor controller setup Command received");
+                publish(Event::MotorControllerSetupCommand).await;
+            }
+            CanMessage::OpenPrechargeRelaysCommand => {
+                defmt::debug!("Open precharge relays command received");
+                publish(Event::OpenPrechargeRelaysCommand).await;
+            }
+            CanMessage::MotorControllerSetupComplete => {
+                defmt::debug!("Motor controller setup complete");
+                publish(Event::MotorControllerSetupComplete).await;
+            }
+            CanMessage::MotorControllerOperational => {
+                defmt::debug!("Motor controller Operational");
+                publish(Event::MotorControllerOperational).await;
+            }
+
             // Navigation
             CanMessage::EndOfTrackBrake => {
                 defmt::debug!("End of Track Brake Command Received");
@@ -254,6 +276,9 @@ fn is_own_command_loopback(source: &CanId) -> bool {
                 | EventId::RetractLateralSuspensionCommand
                 | EventId::ExtendLateralSuspensionCommand
                 | EventId::EndOfTrackBrake
+                | EventId::MotorControllerSetOperationalCommand
+                | EventId::MotorControllerSetupCommand
+                | EventId::OpenPrechargeRelaysCommand
         )
     )
 }

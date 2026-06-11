@@ -27,6 +27,9 @@ pub enum Event {
     // Commands from FSM
     StartPrechargeCommand,
     StartDischargeCommand,
+    MotorControllerSetupCommand,
+    MotorControllerSetOperationalCommand,
+    OpenPrechargeRelaysCommand,
 
     // Confirmation
     PrechargeStarted,
@@ -43,6 +46,10 @@ pub enum Event {
     // Voltage checks
     PrechargeVoltageOK,
     DischargeVoltageOK,
+
+    // Motor controller
+    MotorControllerSetupComplete,
+    MotorControllerOperational,
 
     // Relays
     ShutdownCircuitryRelayOpen,

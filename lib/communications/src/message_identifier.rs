@@ -20,6 +20,11 @@ pub enum EventId {
     VoltageStatus,
     PrechargeVoltageOK,
     DischargeVoltageOK,
+    MotorControllerSetupCommand,
+    MotorControllerSetOperationalCommand,
+    OpenPrechargeRelaysCommand,
+    MotorControllerSetupComplete,
+    MotorControllerOperational,
 
     // Relays
     ShutdownCircuitryRelayOpen,
@@ -68,6 +73,27 @@ const PRECHARGE_COMPLETE_ID: u16 = MAX_MESSAGE_IDENTIFIER - 10;
 const DISCHARGE_STARTED_ID: u16 = MAX_MESSAGE_IDENTIFIER - 12;
 const DISCHARGE_COMPLETE_ID: u16 = MAX_MESSAGE_IDENTIFIER - 13;
 
+const VOLTAGE_STATUS_ID: u16 = MAX_MESSAGE_IDENTIFIER - 39;
+const PRECHARGE_VOLTAGE_OK_ID: u16 = MAX_MESSAGE_IDENTIFIER - 40;
+const DISCHARGE_VOLTAGE_OK_ID: u16 = MAX_MESSAGE_IDENTIFIER - 41;
+
+// Relays
+const SHUTDOWN_CIRCUITRY_RELAY_OPEN_ID: u16 = MAX_MESSAGE_IDENTIFIER - 42;
+const SHUTDOWN_CIRCUITRY_RELAY_CLOSED_ID: u16 = MAX_MESSAGE_IDENTIFIER - 43;
+const BATTERY_PRECHARGE_RELAY_OPEN_ID: u16 = MAX_MESSAGE_IDENTIFIER - 44;
+const BATTERY_PRECHARGE_RELAY_CLOSED_ID: u16 = MAX_MESSAGE_IDENTIFIER - 45;
+const MOTOR_CONTROLLER_RELAY_OPEN_ID: u16 = MAX_MESSAGE_IDENTIFIER - 46;
+const MOTOR_CONTROLLER_RELAY_CLOSED_ID: u16 = MAX_MESSAGE_IDENTIFIER - 47;
+const DISCHARGE_RELAY_OPEN_ID: u16 = MAX_MESSAGE_IDENTIFIER - 48;
+const DISCHARGE_RELAY_CLOSED_ID: u16 = MAX_MESSAGE_IDENTIFIER - 49;
+
+// Motor controller
+const MOTOR_CONTROLLER_SETUP_COMMAND_ID: u16 = MAX_MESSAGE_IDENTIFIER - 50;
+const MOTOR_CONTROLLER_SET_OPERATIONAL_COMMAND_ID: u16 = MAX_MESSAGE_IDENTIFIER - 51;
+const MOTOR_CONTROLLER_SETUP_COMPLETE_ID: u16 = MAX_MESSAGE_IDENTIFIER - 52;
+const MOTOR_CONTROLLER_OPERATIONAL_ID: u16 = MAX_MESSAGE_IDENTIFIER - 53;
+const OPEN_PRECHARGE_RELAYS_COMMAND_ID: u16 = MAX_MESSAGE_IDENTIFIER - 54;
+
 // Note: 3, 4, 11, 14-20 are free
 
 // Navigation
@@ -92,21 +118,6 @@ const PROPULSION_BRAKING_STARTED_ID: u16 = MAX_MESSAGE_IDENTIFIER - 33;
 const PROPULSION_STATUS_ID: u16 = MAX_MESSAGE_IDENTIFIER - 34;
 const PROPULSION_FORCE_ID: u16 = MAX_MESSAGE_IDENTIFIER - 35;
 
-// Electronics (cont.)
-const VOLTAGE_STATUS_ID: u16 = MAX_MESSAGE_IDENTIFIER - 39;
-const PRECHARGE_VOLTAGE_OK_ID: u16 = MAX_MESSAGE_IDENTIFIER - 40;
-const DISCHARGE_VOLTAGE_OK_ID: u16 = MAX_MESSAGE_IDENTIFIER - 41;
-
-// Relays
-const SHUTDOWN_CIRCUITRY_RELAY_OPEN_ID: u16 = MAX_MESSAGE_IDENTIFIER - 42;
-const SHUTDOWN_CIRCUITRY_RELAY_CLOSED_ID: u16 = MAX_MESSAGE_IDENTIFIER - 43;
-const BATTERY_PRECHARGE_RELAY_OPEN_ID: u16 = MAX_MESSAGE_IDENTIFIER - 44;
-const BATTERY_PRECHARGE_RELAY_CLOSED_ID: u16 = MAX_MESSAGE_IDENTIFIER - 45;
-const MOTOR_CONTROLLER_RELAY_OPEN_ID: u16 = MAX_MESSAGE_IDENTIFIER - 46;
-const MOTOR_CONTROLLER_RELAY_CLOSED_ID: u16 = MAX_MESSAGE_IDENTIFIER - 47;
-const DISCHARGE_RELAY_OPEN_ID: u16 = MAX_MESSAGE_IDENTIFIER - 48;
-const DISCHARGE_RELAY_CLOSED_ID: u16 = MAX_MESSAGE_IDENTIFIER - 49;
-
 impl From<EventId> for u16 {
     fn from(val: EventId) -> Self {
         match val {
@@ -117,6 +128,26 @@ impl From<EventId> for u16 {
             EventId::PrechargeComplete => PRECHARGE_COMPLETE_ID,
             EventId::DischargeStarted => DISCHARGE_STARTED_ID,
             EventId::DischargeComplete => DISCHARGE_COMPLETE_ID,
+            EventId::VoltageStatus => VOLTAGE_STATUS_ID,
+            EventId::PrechargeVoltageOK => PRECHARGE_VOLTAGE_OK_ID,
+            EventId::DischargeVoltageOK => DISCHARGE_VOLTAGE_OK_ID,
+            EventId::MotorControllerSetupCommand => MOTOR_CONTROLLER_SETUP_COMMAND_ID,
+            EventId::MotorControllerSetOperationalCommand => {
+                MOTOR_CONTROLLER_SET_OPERATIONAL_COMMAND_ID
+            }
+            EventId::MotorControllerSetupComplete => MOTOR_CONTROLLER_SETUP_COMPLETE_ID,
+            EventId::MotorControllerOperational => MOTOR_CONTROLLER_OPERATIONAL_ID,
+            EventId::OpenPrechargeRelaysCommand => OPEN_PRECHARGE_RELAYS_COMMAND_ID,
+
+            // Relays
+            EventId::ShutdownCircuitryRelayOpen => SHUTDOWN_CIRCUITRY_RELAY_OPEN_ID,
+            EventId::ShutdownCircuitryRelayClosed => SHUTDOWN_CIRCUITRY_RELAY_CLOSED_ID,
+            EventId::BatteryPrechargeRelayOpen => BATTERY_PRECHARGE_RELAY_OPEN_ID,
+            EventId::BatteryPrechargeRelayClosed => BATTERY_PRECHARGE_RELAY_CLOSED_ID,
+            EventId::MotorControllerRelayOpen => MOTOR_CONTROLLER_RELAY_OPEN_ID,
+            EventId::MotorControllerRelayClosed => MOTOR_CONTROLLER_RELAY_CLOSED_ID,
+            EventId::DischargeRelayOpen => DISCHARGE_RELAY_OPEN_ID,
+            EventId::DischargeRelayClosed => DISCHARGE_RELAY_CLOSED_ID,
 
             // Navigation
             EventId::EndOfTrackBrake => END_OF_TRACK_BRAKE_ID,
@@ -139,21 +170,6 @@ impl From<EventId> for u16 {
             EventId::PropulsionBrakingStarted => PROPULSION_BRAKING_STARTED_ID,
             EventId::PropulsionStatus => PROPULSION_STATUS_ID,
             EventId::PropulsionForce => PROPULSION_FORCE_ID,
-
-            // Electronics (cont.)
-            EventId::VoltageStatus => VOLTAGE_STATUS_ID,
-            EventId::PrechargeVoltageOK => PRECHARGE_VOLTAGE_OK_ID,
-            EventId::DischargeVoltageOK => DISCHARGE_VOLTAGE_OK_ID,
-
-            // Relays
-            EventId::ShutdownCircuitryRelayOpen => SHUTDOWN_CIRCUITRY_RELAY_OPEN_ID,
-            EventId::ShutdownCircuitryRelayClosed => SHUTDOWN_CIRCUITRY_RELAY_CLOSED_ID,
-            EventId::BatteryPrechargeRelayOpen => BATTERY_PRECHARGE_RELAY_OPEN_ID,
-            EventId::BatteryPrechargeRelayClosed => BATTERY_PRECHARGE_RELAY_CLOSED_ID,
-            EventId::MotorControllerRelayOpen => MOTOR_CONTROLLER_RELAY_OPEN_ID,
-            EventId::MotorControllerRelayClosed => MOTOR_CONTROLLER_RELAY_CLOSED_ID,
-            EventId::DischargeRelayOpen => DISCHARGE_RELAY_OPEN_ID,
-            EventId::DischargeRelayClosed => DISCHARGE_RELAY_CLOSED_ID,
         }
     }
 }
@@ -170,6 +186,26 @@ impl TryFrom<u16> for EventId {
             PRECHARGE_COMPLETE_ID => Ok(EventId::PrechargeComplete),
             DISCHARGE_STARTED_ID => Ok(EventId::DischargeStarted),
             DISCHARGE_COMPLETE_ID => Ok(EventId::DischargeComplete),
+            VOLTAGE_STATUS_ID => Ok(EventId::VoltageStatus),
+            PRECHARGE_VOLTAGE_OK_ID => Ok(EventId::PrechargeVoltageOK),
+            DISCHARGE_VOLTAGE_OK_ID => Ok(EventId::DischargeVoltageOK),
+            MOTOR_CONTROLLER_SET_OPERATIONAL_COMMAND_ID => {
+                Ok(EventId::MotorControllerSetOperationalCommand)
+            }
+            MOTOR_CONTROLLER_SETUP_COMMAND_ID => Ok(EventId::MotorControllerSetupCommand),
+            MOTOR_CONTROLLER_SETUP_COMPLETE_ID => Ok(EventId::MotorControllerSetupComplete),
+            MOTOR_CONTROLLER_OPERATIONAL_ID => Ok(EventId::MotorControllerOperational),
+
+            // Relays
+            SHUTDOWN_CIRCUITRY_RELAY_OPEN_ID => Ok(EventId::ShutdownCircuitryRelayOpen),
+            SHUTDOWN_CIRCUITRY_RELAY_CLOSED_ID => Ok(EventId::ShutdownCircuitryRelayClosed),
+            BATTERY_PRECHARGE_RELAY_OPEN_ID => Ok(EventId::BatteryPrechargeRelayOpen),
+            BATTERY_PRECHARGE_RELAY_CLOSED_ID => Ok(EventId::BatteryPrechargeRelayClosed),
+            MOTOR_CONTROLLER_RELAY_OPEN_ID => Ok(EventId::MotorControllerRelayOpen),
+            MOTOR_CONTROLLER_RELAY_CLOSED_ID => Ok(EventId::MotorControllerRelayClosed),
+            DISCHARGE_RELAY_OPEN_ID => Ok(EventId::DischargeRelayOpen),
+            DISCHARGE_RELAY_CLOSED_ID => Ok(EventId::DischargeRelayClosed),
+            OPEN_PRECHARGE_RELAYS_COMMAND_ID => Ok(EventId::OpenPrechargeRelaysCommand),
 
             // Navigation
             END_OF_TRACK_BRAKE_ID => Ok(EventId::EndOfTrackBrake),
@@ -194,21 +230,6 @@ impl TryFrom<u16> for EventId {
             PROPULSION_BRAKING_STARTED_ID => Ok(EventId::PropulsionBrakingStarted),
             PROPULSION_STATUS_ID => Ok(EventId::PropulsionStatus),
             PROPULSION_FORCE_ID => Ok(EventId::PropulsionForce),
-
-            // Electronics (cont.)
-            VOLTAGE_STATUS_ID => Ok(EventId::VoltageStatus),
-            PRECHARGE_VOLTAGE_OK_ID => Ok(EventId::PrechargeVoltageOK),
-            DISCHARGE_VOLTAGE_OK_ID => Ok(EventId::DischargeVoltageOK),
-
-            // Relays
-            SHUTDOWN_CIRCUITRY_RELAY_OPEN_ID => Ok(EventId::ShutdownCircuitryRelayOpen),
-            SHUTDOWN_CIRCUITRY_RELAY_CLOSED_ID => Ok(EventId::ShutdownCircuitryRelayClosed),
-            BATTERY_PRECHARGE_RELAY_OPEN_ID => Ok(EventId::BatteryPrechargeRelayOpen),
-            BATTERY_PRECHARGE_RELAY_CLOSED_ID => Ok(EventId::BatteryPrechargeRelayClosed),
-            MOTOR_CONTROLLER_RELAY_OPEN_ID => Ok(EventId::MotorControllerRelayOpen),
-            MOTOR_CONTROLLER_RELAY_CLOSED_ID => Ok(EventId::MotorControllerRelayClosed),
-            DISCHARGE_RELAY_OPEN_ID => Ok(EventId::DischargeRelayOpen),
-            DISCHARGE_RELAY_CLOSED_ID => Ok(EventId::DischargeRelayClosed),
 
             _ => Err("Invalid EventId"),
         }
