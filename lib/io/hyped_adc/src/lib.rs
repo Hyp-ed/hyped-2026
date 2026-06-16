@@ -1,5 +1,5 @@
 #![no_std]
-
+pub mod adc_mux;
 /// ADC trait used to abstract the ADC peripheral
 pub trait HypedAdc {
     /// Read value from the ADC channel
@@ -9,7 +9,12 @@ pub trait HypedAdc {
     /// Get reference voltage of ADC pin
     fn get_reference_voltage(&self) -> f32;
     /// Get voltage of the ADC pin
-    fn get_voltage(&mut self) -> f32;
+    fn get_voltage(&mut self) -> f32 {
+        let raw = self.read_value() as f32;
+        let resolution = self.get_resolution() as f32;
+        let vref = self.get_reference_voltage();
+        (raw / resolution) * vref
+    }
 }
 
 pub mod mock_adc {
