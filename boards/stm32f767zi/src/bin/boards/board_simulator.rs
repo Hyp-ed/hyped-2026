@@ -123,6 +123,35 @@ async fn respond_to_message(message: CanMessage) {
             send_after(Duration::from_millis(2000), CanMessage::PrechargeVoltageOK).await;
             send_after(Duration::from_millis(2000), CanMessage::PrechargeComplete).await;
         }
+        CanMessage::OpenPrechargeRelaysCommand => {
+            defmt::info!("Simulator responding to OpenPrechargeRelaysCommand");
+            send_after(
+                Duration::from_millis(100),
+                CanMessage::BatteryPrechargeRelayOpen,
+            )
+            .await;
+            send_after(
+                Duration::from_millis(100),
+                CanMessage::MotorControllerRelayOpen,
+            )
+            .await;
+        }
+        CanMessage::MotorControllerSetupCommand => {
+            defmt::info!("Simulator responding to MotorControllerSetupCommand");
+            send_after(
+                Duration::from_millis(100),
+                CanMessage::MotorControllerSetupComplete,
+            )
+            .await;
+        }
+        CanMessage::MotorControllerSetOperationalCommand => {
+            defmt::info!("Simulator responding to MotorControllerSetOperationalCommand");
+            send_after(
+                Duration::from_millis(100),
+                CanMessage::MotorControllerOperational,
+            )
+            .await;
+        }
         CanMessage::UnclampBrakesCommand => {
             defmt::info!("Simulator responding to UnclampBrakesCommand");
             send_after(
