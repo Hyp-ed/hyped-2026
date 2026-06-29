@@ -32,6 +32,7 @@ typenum = "1.17.0"
 
 hyped_core = { path = "../../lib/core" }
 hyped_sensors = { path = "../../lib/sensors" }
+hyped_localisation = { path = "../../lib/localisation" }
 hyped_state_machine = { path = "../../lib/state_machine" }
 hyped_communications = { path = "../../lib/communications" }
 
@@ -62,6 +63,10 @@ path = "src/bin/boards/sensors2.rs"
 [[bin]]
 name = "motor_control"
 path = "src/bin/boards/motor_control.rs"
+
+[[bin]]
+name = "localisation"
+path = "src/bin/boards/localisation.rs"
 
 [[bin]]
 name = "board_simulator"
