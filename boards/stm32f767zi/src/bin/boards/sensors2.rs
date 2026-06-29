@@ -22,7 +22,7 @@ use hyped_boards_stm32f767zi::{
     board_state::THIS_BOARD,
     default_can_config,
     io::Stm32f767ziAdc,
-    tasks::can::{send::{can_sender, CAN_SEND}},
+    tasks::can::send::{can_sender, CAN_SEND},
 };
 use hyped_communications::{boards::Board, messages::CanMessage};
 use hyped_core::config::SENSORS_CONFIG;
