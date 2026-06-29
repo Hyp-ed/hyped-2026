@@ -37,6 +37,7 @@ use hyped_boards_stm32f767zi::{
     io::{Stm32f767ziGpioOutput, Stm32f767ziSpi},
     tasks::{
         can::{
+            board_heartbeat::send_heartbeat,
             receive::can_receiver,
             send::{can_sender, CAN_SEND},
         },
@@ -101,6 +102,7 @@ async fn main(spawner: Spawner) -> ! {
     let (can_tx, can_rx) = can.split();
     spawner.must_spawn(can_receiver(can_rx));
     spawner.must_spawn(can_sender(can_tx));
+    spawner.must_spawn(send_heartbeat(Board::Telemetry));
     spawner.must_spawn(navigation_command_task(navigation_events));
     defmt::info!("CAN sender task started");
 

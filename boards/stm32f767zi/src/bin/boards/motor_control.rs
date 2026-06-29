@@ -17,7 +17,7 @@ use hyped_boards_stm32f767zi::{
     board_state::THIS_BOARD,
     default_can_config,
     tasks::{
-        can::{receive::can_receiver, send::can_sender},
+        can::{board_heartbeat::send_heartbeat, receive::can_receiver, send::can_sender},
         motor_control::{
             control::{motor_command_task, motor_control_loop},
             receive::motor_rx_task,
@@ -56,6 +56,7 @@ async fn main(spawner: Spawner) {
     let (can_tx, can_rx) = can.split();
     spawner.must_spawn(can_receiver(can_rx));
     spawner.must_spawn(can_sender(can_tx));
+    spawner.must_spawn(send_heartbeat(Board::Telemetry));
     info!("CAN1 enabled");
 
     info!("Setting up CAN3 (motor bus)...");

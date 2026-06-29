@@ -22,7 +22,10 @@ use hyped_boards_stm32f767zi::{
     board_state::THIS_BOARD,
     default_can_config,
     io::Stm32f767ziAdc,
-    tasks::can::send::{can_sender, CAN_SEND},
+    tasks::can::{
+        board_heartbeat::send_heartbeat,
+        send::{can_sender, CAN_SEND},
+    },
 };
 use hyped_communications::{boards::Board, messages::CanMessage};
 use hyped_core::config::SENSORS_CONFIG;
@@ -46,7 +49,7 @@ const DISCHARGE_SETTLE_TIME: Duration = Duration::from_secs(30);
 #[embassy_executor::main]
 async fn main(spawner: Spawner) -> ! {
     THIS_BOARD
-        .init(Board::Sensors1)
+        .init(Board::Sensors2)
         .expect("Failed to initialize board");
 
     let config = Config::default();
@@ -90,6 +93,7 @@ async fn main(spawner: Spawner) -> ! {
     can.enable().await;
     let (can_tx, can_rx) = can.split();
     spawner.must_spawn(can_sender(can_tx));
+    spawner.must_spawn(send_heartbeat(Board::Telemetry));
     spawner.must_spawn(sensors_board_can_receiver(can_rx, gpio_pins));
     defmt::info!("CAN setup complete");
 
