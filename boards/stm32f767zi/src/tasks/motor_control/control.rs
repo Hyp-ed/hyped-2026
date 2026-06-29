@@ -3,7 +3,10 @@ use embassy_stm32::can::CanTx;
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, channel::Channel};
 use embassy_time::{Duration, Timer};
 use hyped_can::HypedCanFrame;
+use hyped_communications::{bus::DynSubscriber, events::Event, messages::CanMessage};
 use hyped_motors::{can_open_message::CanOpenMessage, can_open_processor::Messages};
+
+use crate::tasks::can::send::CAN_SEND;
 
 const NODE_ID: u8 = 0x01;
 
@@ -15,9 +18,55 @@ pub static MOTOR_COMMAND_CHANNEL: Channel<CriticalSectionRawMutex, MotorCommand,
     Channel::new();
 
 #[embassy_executor::task]
-pub async fn motor_setup_task() {
-    let sender = MOTOR_COMMAND_CHANNEL.sender();
+pub async fn motor_command_task(mut events: DynSubscriber<'static, Event>) {
+    let mut setup_complete = false;
+    let mut operational = false;
 
+    loop {
+        match events.next_message_pure().await {
+            Event::MotorControllerSetupCommand => {
+                if setup_complete {
+                    info!("Motor controller setup already complete");
+                    CAN_SEND.send(CanMessage::MotorControllerSetupComplete).await;
+                    continue;
+                }
+
+                run_setup_sequence().await;
+                setup_complete = true;
+                CAN_SEND.send(CanMessage::MotorControllerSetupComplete).await;
+            }
+            Event::MotorControllerSetOperationalCommand => {
+                if !setup_complete {
+                    warn!("Ignoring operational command before motor controller setup is complete");
+                    continue;
+                }
+                if operational {
+                    info!("Motor controller already operational");
+                    CAN_SEND.send(CanMessage::MotorControllerOperational).await;
+                    continue;
+                }
+
+                run_operational_sequence().await;
+                operational = true;
+                CAN_SEND.send(CanMessage::MotorControllerOperational).await;
+            }
+            Event::StartPropulsionAccelerationCommand => {
+                if !operational {
+                    warn!("Ignoring acceleration command before motor controller is operational");
+                    continue;
+                }
+
+                info!("Starting low-power test acceleration");
+                send_motor_command(Messages::TestModeCommand(200)).await;
+                Timer::after(Duration::from_secs(3)).await;
+                CAN_SEND.send(CanMessage::PropulsionAccelerationStarted).await;
+            }
+            _ => {}
+        }
+    }
+}
+
+async fn run_setup_sequence() {
     info!("Starting motor setup sequence...");
 
     let config_sequence = [
@@ -34,40 +83,36 @@ pub async fn motor_setup_task() {
     ];
 
     for msg in config_sequence {
-        sender.send(MotorCommand::SendMessage(msg)).await;
+        send_motor_command(msg).await;
         Timer::after(Duration::from_secs(1)).await;
     }
 
     info!("Config complete. Transitioning to Operational...");
+}
 
-    sender
-        .send(MotorCommand::SendMessage(
-            Messages::EnterPreoperationalState,
-        ))
-        .await;
+async fn run_operational_sequence() {
+    send_motor_command(Messages::EnterPreoperationalState).await;
     Timer::after(Duration::from_secs(30)).await;
 
-    sender
-        .send(MotorCommand::SendMessage(Messages::EnterOperationalState))
-        .await;
+    send_motor_command(Messages::EnterOperationalState).await;
     Timer::after(Duration::from_secs(1)).await;
 
-    sender
-        .send(MotorCommand::SendMessage(Messages::Shutdown))
-        .await;
+    send_motor_command(Messages::Shutdown).await;
     Timer::after(Duration::from_secs(1)).await;
 
-    sender
-        .send(MotorCommand::SendMessage(Messages::SwitchOn))
-        .await;
+    send_motor_command(Messages::SwitchOn).await;
     Timer::after(Duration::from_secs(30)).await;
 
-    sender
-        .send(MotorCommand::SendMessage(Messages::StartDrive))
-        .await;
+    send_motor_command(Messages::StartDrive).await;
     Timer::after(Duration::from_secs(15)).await;
 
-    info!("Motor setup complete and drive started.");
+    info!("Motor controller operational and drive started.");
+}
+
+async fn send_motor_command(message: Messages) {
+    MOTOR_COMMAND_CHANNEL
+        .send(MotorCommand::SendMessage(message))
+        .await;
 }
 
 #[embassy_executor::task]

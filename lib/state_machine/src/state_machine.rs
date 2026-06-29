@@ -13,13 +13,6 @@ pub enum PrechargeStep {
     AllClosed,
 }
 
-#[derive(Debug, PartialEq, defmt::Format, Clone, Copy)]
-pub enum DischargeStep {
-    Initial,
-    DischargeClosed,
-    SdcOpen,
-}
-
 pub struct StateMachine {
     pub current_state: State,
     pub(crate) ready_for_run: bool,
@@ -35,7 +28,6 @@ pub struct StateMachine {
     pub(crate) motor_controller_operational: bool,
 
     pub(crate) precharge_step: PrechargeStep,
-    pub(crate) discharge_step: DischargeStep,
     pending_events: HeaplessVec<Event, MAX_PENDING_EVENTS>,
 }
 
@@ -52,7 +44,6 @@ impl StateMachine {
             ready_for_run: false,
             brakes_clamped: true,
             precharge_step: PrechargeStep::Initial,
-            discharge_step: DischargeStep::Initial,
             motor_controller_setup_command_sent: false,
             motor_controller_setup_done: false,
             battery_precharge_relay_open: false,
@@ -159,6 +150,5 @@ mod tests {
         assert!(!sm.precharge_complete);
         assert!(!sm.discharge_voltage_ok);
         assert_eq!(sm.precharge_step, PrechargeStep::Initial);
-        assert_eq!(sm.discharge_step, DischargeStep::Initial);
     }
 }

@@ -19,12 +19,12 @@ use hyped_boards_stm32f767zi::{
     tasks::{
         can::{receive::can_receiver, send::can_sender},
         motor_control::{
-            control::{motor_control_loop, motor_setup_task},
+            control::{motor_command_task, motor_control_loop},
             receive::motor_rx_task,
         },
     },
 };
-use hyped_communications::boards::Board;
+use hyped_communications::{boards::Board, bus};
 use panic_probe as _;
 
 bind_interrupts!(struct Irqs {
@@ -43,6 +43,9 @@ async fn main(spawner: Spawner) {
     THIS_BOARD
         .init(Board::MotorControl)
         .expect("Failed to initialize board");
+    bus::init().expect("Failed to initialise event bus");
+    let motor_control_events =
+        bus::subscriber().expect("Failed to create motor control event subscriber");
 
     let p = embassy_stm32::init(Default::default());
 
@@ -63,7 +66,7 @@ async fn main(spawner: Spawner) {
     info!("CAN3 enabled");
 
     spawner.must_spawn(motor_rx_task(can3_rx));
-    spawner.must_spawn(motor_setup_task());
+    spawner.must_spawn(motor_command_task(motor_control_events));
     spawner.must_spawn(motor_control_loop(can3_tx));
 
     loop {
