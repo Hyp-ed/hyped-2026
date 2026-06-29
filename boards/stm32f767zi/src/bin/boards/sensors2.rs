@@ -253,8 +253,6 @@ impl Pins {
 
     async fn open_shutdown_circuitry_relay(&mut self) {
         self.shutdown_circuitry_relay.set_low();
-        CAN_SEND
-            .send(CanMessage::ShutdownCircuitryRelayOpen)
-            .await;
+        CAN_SEND.send(CanMessage::ShutdownCircuitryRelayOpen).await;
     }
 }
