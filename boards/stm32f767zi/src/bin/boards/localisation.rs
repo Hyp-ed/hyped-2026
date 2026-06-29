@@ -7,11 +7,13 @@ use defmt::*;
 use embassy_executor::Spawner;
 use embassy_stm32::{
     bind_interrupts,
+    can::{
+        filter::Mask32, Can, Fifo, Rx0InterruptHandler, Rx1InterruptHandler, SceInterruptHandler,
+        TxInterruptHandler,
+    },
     gpio::{Input, Level, Output, Pull, Speed},
     i2c::I2c,
     init,
-    can::{Can, Fifo, Rx0InterruptHandler, Rx1InterruptHandler, SceInterruptHandler, TxInterruptHandler},
-    can::filter::Mask32,
     mode::Blocking,
     peripherals::CAN1,
     spi::{self, BitOrder, Spi},
@@ -33,17 +35,16 @@ use hyped_boards_stm32f767zi::{
     tasks::{
         can::send::{can_sender, CAN_SEND},
         sensors::{
-            read_accelerometers_from_mux::{read_accelerometers_from_mux, AccelerometerMuxReadings},
+            read_accelerometers_from_mux::{
+                read_accelerometers_from_mux, AccelerometerMuxReadings,
+            },
             read_keyence::read_keyence,
             read_optical_flow::read_optical_flow,
         },
     },
 };
 use hyped_communications::{
-    boards::Board,
-    data::CanData,
-    measurements::MeasurementReading,
-    messages::CanMessage,
+    boards::Board, data::CanData, measurements::MeasurementReading, messages::CanMessage,
 };
 use hyped_core::config::{MeasurementId, LOCALISATION_CONFIG};
 use hyped_localisation::{control::localizer::Localizer, types::RawAccelerometerData};
