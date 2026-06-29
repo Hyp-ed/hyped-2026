@@ -1,5 +1,4 @@
 use crate::{state::State, state_machine::StateMachine};
-use defmt::warn;
 use hyped_communications::events::Event;
 use hyped_core::logging::{debug, info, warn};
 
