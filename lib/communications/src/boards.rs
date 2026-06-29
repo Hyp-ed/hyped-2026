@@ -9,6 +9,8 @@ pub enum Board {
     StateMachineTester = 6,
     Mqtt = 7,
     MotorControl = 8,
+    Sensors1 = 9,
+    Sensors2 = 10,
 }
 
 impl From<Board> for u8 {
@@ -30,6 +32,8 @@ impl TryFrom<u8> for Board {
             5 => Ok(Board::KeyenceTester),
             6 => Ok(Board::StateMachineTester),
             7 => Ok(Board::Mqtt),
+            9 => Ok(Board::Sensors1),
+            10 => Ok(Board::Sensors2),
             8 => Ok(Board::MotorControl),
             _ => Err("Invalid Board index"),
         }
@@ -69,9 +73,19 @@ mod tests {
         );
         assert_eq!(Board::Mqtt, Board::try_from(Board::Mqtt as u8).unwrap());
         assert_eq!(
+            Board::Sensors1,
+            Board::try_from(Board::Sensors1 as u8).unwrap()
+        );
+        assert_eq!(
+            Board::Sensors2,
+            Board::try_from(Board::Sensors2 as u8).unwrap()
+        );
+
+        assert_eq!(Board::try_from(11), Err("Invalid Board index"));
+
+        assert_eq!(
             Board::MotorControl,
             Board::try_from(Board::MotorControl as u8).unwrap()
         );
-        assert_eq!(Board::try_from(9), Err("Invalid Board index"));
     }
 }
