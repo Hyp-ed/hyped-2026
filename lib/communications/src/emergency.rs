@@ -10,6 +10,7 @@ pub enum Reason {
     TemperatureUpperLimitFailure = 6,
     TemperatureLowerLimitFailure = 7,
     AccelerometerCriticalLimit = 8,
+    Pressure = 8,
 }
 
 impl TryFrom<u8> for Reason {

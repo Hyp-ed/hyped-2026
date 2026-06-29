@@ -40,6 +40,11 @@ pub async fn event_to_can(mut events: DynSubscriber<'static, Event>) -> ! {
                 Some(CanMessage::StartPropulsionAccelerationCommand)
             }
             Event::StartPropulsionBrakingCommand => Some(CanMessage::StartPropulsionBrakingCommand),
+            Event::MotorControllerSetOperationalCommand => {
+                Some(CanMessage::MotorControllerSetOperationalCommand)
+            }
+            Event::MotorControllerSetupCommand => Some(CanMessage::MotorControllerSetupCommand),
+            Event::OpenPrechargeRelaysCommand => Some(CanMessage::OpenPrechargeRelaysCommand),
 
             // Ingress-only: status and completion events from other boards
             Event::PrechargeStarted
@@ -55,6 +60,8 @@ pub async fn event_to_can(mut events: DynSubscriber<'static, Event>) -> ! {
             | Event::BatteryPrechargeRelayClosed
             | Event::MotorControllerRelayOpen
             | Event::MotorControllerRelayClosed
+            | Event::MotorControllerSetupComplete
+            | Event::MotorControllerOperational
             | Event::DischargeRelayOpen
             | Event::DischargeRelayClosed
             | Event::BrakesClamped { .. }

@@ -26,8 +26,20 @@ export const edges: CustomEdgeType[] = [
 		markerEnd: arrow,
 	},
 	{
-		id: 'calibrate-precharge',
+		id: 'calibrate-setup-motor',
 		source: 'calibrate',
+		target: 'setup-motor',
+		sourceHandle: 'top',
+		targetHandle: 'bottom',
+		type: 'smoothstep',
+		pathOptions: {
+			borderRadius: 20,
+		},
+		markerEnd: arrow,
+	},
+	{
+		id: 'setup-motor-precharge',
+		source: 'setup-motor',
 		target: 'precharge',
 		sourceHandle: 'top',
 		targetHandle: 'bottom',
