@@ -30,12 +30,11 @@ impl FromStr for MqttTopic {
             "hyped/the_podigal_son/logs" => Ok(MqttTopic::Logs),
             "hyped/the_podigal_son/latency/request" => Ok(MqttTopic::LatencyRequest),
             "hyped/the_podigal_son/latency/response" => Ok(MqttTopic::LatencyResponse),
+            "hyped/the_podigal_son/controls" => Ok(MqttTopic::Controls),
             "debug" => Ok(MqttTopic::Debug),
             "test" => Ok(MqttTopic::Test),
             _ => {
-                if s.starts_with("hyped/the_podigal_son/controls/") {
-                    Ok(MqttTopic::Controls)
-                } else if s.starts_with(MQTT_MEASUREMENT_TOPIC_PREFIX) {
+                if s.starts_with(MQTT_MEASUREMENT_TOPIC_PREFIX) {
                     let measurement_id_string = &s[MQTT_MEASUREMENT_TOPIC_PREFIX.len()..s.len()];
                     let measurement_id = measurement_id_string.into();
                     Ok(MqttTopic::Measurement(measurement_id))
@@ -52,7 +51,7 @@ impl From<MqttTopic> for String<100> {
         let mut topic = String::<100>::new();
         match v {
             MqttTopic::State => topic.push_str("hyped/the_podigal_son/state").unwrap(),
-            MqttTopic::Controls => topic.push_str("hyped/the_podigal_son/controls/").unwrap(),
+            MqttTopic::Controls => topic.push_str("hyped/the_podigal_son/controls").unwrap(),
             MqttTopic::Heartbeat => topic.push_str("hyped/the_podigal_son/heartbeat").unwrap(),
             MqttTopic::Logs => topic.push_str("hyped/the_podigal_son/logs").unwrap(),
             MqttTopic::LatencyRequest => topic
