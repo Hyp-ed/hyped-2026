@@ -44,6 +44,17 @@ const NUM_LATENCIES_AVG = 10 as const;
  */
 const LATENCY_REQUEST_INTERVAL = 100 as const;
 
+const STATE_ALIASES: Record<string, PodStateType> = {
+	idle: ALL_POD_STATES.IDLE,
+	setup_motor: ALL_POD_STATES.SETUP_MOTOR,
+	precharge: ALL_POD_STATES.PRECHARGE,
+	ready_for_propulsion: ALL_POD_STATES.READY_FOR_PROPULSION,
+	accelerate: ALL_POD_STATES.ACCELERATE,
+	brake: ALL_POD_STATES.BRAKE,
+	stopped: ALL_POD_STATES.STOPPED,
+	emergency: ALL_POD_STATES.EMERGENCY,
+};
+
 /**
  * The default pod ID to use
  */
@@ -212,17 +223,19 @@ export const PodsProvider = ({ children }: { children: React.ReactNode }) => {
 				if (topic === getTopic('state', podId)) {
 					const newPodState = message.toString();
 					const allowedStates = Object.values(ALL_POD_STATES);
-					if ((allowedStates as string[]).includes(newPodState)) {
+					const normalizedPodState =
+						STATE_ALIASES[newPodState] ?? (newPodState as PodStateType);
+					if ((allowedStates as string[]).includes(normalizedPodState)) {
 						setPodsState((prevState) => ({
 							...prevState,
 							[podId]: {
 								...prevState[podId],
-								podState: newPodState as PodStateType,
+								podState: normalizedPodState,
 							},
 						}));
 					}
 					// raise an error if we are in a failure state
-					if (Object.keys(FAILURE_STATES).includes(newPodState)) {
+					if ((Object.values(FAILURE_STATES) as string[]).includes(normalizedPodState)) {
 						raiseError(
 							ERROR_IDS.POD_FAILURE_STATE,
 							`Pod ${podId} in failure state!`,

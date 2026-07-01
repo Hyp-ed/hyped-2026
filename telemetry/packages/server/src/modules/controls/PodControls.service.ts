@@ -2,6 +2,15 @@ import { Logger } from '@/modules/logger/Logger.decorator';
 import { Inject, Injectable, type LoggerService } from '@nestjs/common';
 import { MqttService } from 'nest-mqtt';
 
+const CONTROL_STATE_UPDATES: Record<string, string> = {
+	setup_motor: 'SETUP_MOTOR',
+	precharge: 'PRECHARGE',
+	'ready-for-propulsion': 'READY_FOR_PROPULSION',
+	accelerate: 'ACCELERATE',
+	stop: 'BRAKE',
+	'emergency-stop': 'EMERGENCY',
+};
+
 @Injectable()
 export class PodControlsService {
 	constructor(
@@ -21,6 +30,10 @@ export class PodControlsService {
 			`hyped/${podId}/controls/${control}`,
 			control,
 		);
+		const nextState = CONTROL_STATE_UPDATES[control];
+		if (nextState) {
+			await this.mqttService.publish(`hyped/${podId}/state`, nextState);
+		}
 		this.logger.log(
 			`Control message "${control}" sent to pod "${podId}"`,
 			PodControlsService.name,

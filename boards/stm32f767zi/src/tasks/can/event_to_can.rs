@@ -17,6 +17,7 @@ pub async fn event_to_can(mut events: DynSubscriber<'static, Event>) -> ! {
             Event::AccelerateOperatorCommand => None,
             Event::BrakeOperatorCommand => None,
             Event::StartRunOperatorCommand => None,
+            Event::ReadyForPropulsionOperatorCommand => None,
 
             // Emergency
             Event::Emergency { from, reason } => Some(CanMessage::Emergency(from, reason)),

@@ -90,7 +90,7 @@ async fn simulator_receiver(mut rx: CanRx<'static>) {
 
         let frame = HypedCanFrame::new(raw_id, data);
         let message: CanMessage = frame.into();
-        defmt::info!("Simulator received CAN message: {:?}", message);
+        //defmt::info!("Simulator received CAN message: {:?}", message);
 
         respond_to_message(message).await;
     }

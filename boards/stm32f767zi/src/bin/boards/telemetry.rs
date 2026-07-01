@@ -49,12 +49,7 @@ use panic_probe as _;
 use rand_core::RngCore;
 use static_cell::StaticCell;
 
-const HEARTBEAT_BOARDS: [Board; 4] = [
-    Board::MotorControl,
-    Board::Sensors1,
-    Board::Sensors2,
-    Board::Navigation,
-];
+const HEARTBEAT_BOARDS: [Board; 1] = [Board::TemperatureTester];
 
 bind_interrupts!(struct Irqs {
     ETH => eth::InterruptHandler;
