@@ -1,4 +1,4 @@
-use core::str::FromStr;
+use core::fmt::Write;
 
 use crate::tasks::{can::send::CAN_SEND, mqtt::send::MQTT_SEND};
 use heapless::String;
@@ -14,6 +14,15 @@ pub async fn event_to_can(mut events: DynSubscriber<'static, Event>) -> ! {
 
     loop {
         let event = events.next_message_pure().await;
+
+        let mut event_log = String::<512>::new();
+        let _ = write!(event_log, "event={:?}", event);
+        mqtt_sender
+            .send(MqttMessage::new_json_string(
+                MqttTopic::Logs,
+                event_log.as_str(),
+            ))
+            .await;
 
         let can_message: Option<CanMessage> = match event {
             // Operator Commands (not sent over CAN)
@@ -31,10 +40,7 @@ pub async fn event_to_can(mut events: DynSubscriber<'static, Event>) -> ! {
             Event::Heartbeat { .. } => None,
             Event::StateChanged { state } => {
                 mqtt_sender
-                    .send(MqttMessage::new(
-                        MqttTopic::State,
-                        String::from_str(state).expect("Failed to convert state to MQTT payload"),
-                    ))
+                    .send(MqttMessage::new_json_string(MqttTopic::State, state))
                     .await;
                 None
             }

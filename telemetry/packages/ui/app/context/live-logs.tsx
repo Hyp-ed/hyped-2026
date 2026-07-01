@@ -7,6 +7,8 @@ const socket = io(config.SERVER_ENDPOINT, {
 	path: '/live-logs',
 });
 
+const MAX_LOGS = 500;
+
 /**
  * Log levels for the live logs. These are the same as the Winston log levels.
  */
@@ -59,11 +61,7 @@ export const LiveLogsProvider = ({
 
 		// When we receive a new log from the server, add it to the logs array
 		function onLog(log: Log) {
-			// Only keep the last 100 logs
-			if (logs.length > 100) {
-				setLogs((logs) => logs.slice(1));
-			}
-			setLogs((logs) => [...logs, log]);
+			setLogs((logs) => [...logs, log].slice(-MAX_LOGS));
 		}
 
 		socket.on('connect', onConnect);
@@ -75,7 +73,7 @@ export const LiveLogsProvider = ({
 			socket.off('disconnect', onDisconnect);
 			socket.off('log', onLog);
 		};
-	}, [logs.length]);
+	}, []);
 
 	/**
 	 * Clears all logs.

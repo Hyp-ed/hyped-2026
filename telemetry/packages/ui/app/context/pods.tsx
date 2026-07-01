@@ -55,6 +55,16 @@ const STATE_ALIASES: Record<string, PodStateType> = {
 	emergency: ALL_POD_STATES.EMERGENCY,
 };
 
+const decodeMqttStringPayload = (message: Buffer) => {
+	const payload = message.toString();
+	try {
+		const parsedPayload = JSON.parse(payload);
+		return typeof parsedPayload === 'string' ? parsedPayload : payload;
+	} catch {
+		return payload;
+	}
+};
+
 /**
  * The default pod ID to use
  */
@@ -221,10 +231,11 @@ export const PodsProvider = ({ children }: { children: React.ReactNode }) => {
 			if (!client) return;
 			const processMessage = (podId: PodId, topic: string, message: Buffer) => {
 				if (topic === getTopic('state', podId)) {
-					const newPodState = message.toString();
+					const newPodState = decodeMqttStringPayload(message);
 					const allowedStates = Object.values(ALL_POD_STATES);
 					const normalizedPodState =
-						STATE_ALIASES[newPodState] ?? (newPodState as PodStateType);
+						STATE_ALIASES[newPodState.toLowerCase()] ??
+						(newPodState as PodStateType);
 					if ((allowedStates as string[]).includes(normalizedPodState)) {
 						setPodsState((prevState) => ({
 							...prevState,

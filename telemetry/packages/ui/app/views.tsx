@@ -1,7 +1,8 @@
-import { Bug, GitBranch, LineChart, Terminal } from 'lucide-react';
+import { Bug, GitBranch, LineChart, Radio, Terminal } from 'lucide-react';
 import { DebugView } from './components/views/debug-view';
 import { LogViewer } from './components/views/log-viewer';
 import { OpenMCT } from './components/views/openmct';
+import { PodEvents } from './components/views/pod-events';
 import { StateMachine } from './components/views/state-machine';
 
 /**
@@ -17,6 +18,11 @@ export const VIEWS = {
 		name: 'Logs',
 		component: <LogViewer />,
 		icon: <Terminal width={18} />,
+	},
+	POD_EVENTS: {
+		name: 'Pod Events',
+		component: <PodEvents />,
+		icon: <Radio width={18} />,
 	},
 	DEBUG_VIEW: {
 		name: 'Debug View',
