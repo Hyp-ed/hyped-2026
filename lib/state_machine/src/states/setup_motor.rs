@@ -60,6 +60,7 @@ impl StateMachine {
             if self.motor_controller_setup_command_sent {
                 return;
             }
+            info!("Precharge relays open; sending MotorControllerSetupCommand");
             self.motor_controller_setup_command_sent = true;
             self.queue_publish(Event::MotorControllerSetupCommand);
         }

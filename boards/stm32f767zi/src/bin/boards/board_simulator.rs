@@ -53,7 +53,7 @@ async fn main(spawner: Spawner) -> ! {
     defmt::info!("Board simulator starting");
     defmt::info!("Setting up CAN...");
 
-    let mut can = Can::new(p.CAN1, p.PB8, p.PB9, Irqs);
+    let mut can = Can::new(p.CAN1, p.PD0, p.PD1, Irqs);
     default_can_config!(can);
     can.enable().await;
     let (can_tx, can_rx) = can.split();
