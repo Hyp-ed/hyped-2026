@@ -69,10 +69,17 @@ impl StateMachine {
         }
     }
 
+    fn publish_current_state(&mut self) {
+        self.queue_publish(Event::StateChanged {
+            state: self.current_state.telemetry_state(),
+        });
+    }
+
     // Actions when transitioning state
     pub(crate) async fn transition_to(&mut self, new_state: State) {
         info!("Transitioning: {:?} -> {:?}", self.current_state, new_state);
         self.current_state = new_state;
+        self.publish_current_state();
         self.entry().await;
     }
 
@@ -126,6 +133,7 @@ impl StateMachine {
 
 #[embassy_executor::task]
 pub async fn run(mut sm: StateMachine, mut events: DynSubscriber<'static, Event>) -> ! {
+    sm.publish_current_state();
     sm.entry().await;
     sm.drain_pending().await;
 

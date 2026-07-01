@@ -20,6 +20,21 @@ impl From<State> for u8 {
     }
 }
 
+impl State {
+    pub fn telemetry_state(self) -> &'static str {
+        match self {
+            State::Idle => "IDLE",
+            State::Precharge => "PRECHARGE",
+            State::ReadyForPropulsion => "READY_FOR_PROPULSION",
+            State::Accelerate => "ACCELERATE",
+            State::Brake => "BRAKE",
+            State::Stopped => "STOPPED",
+            State::Emergency => "EMERGENCY",
+            State::SetupMotor => "SETUP_MOTOR",
+        }
+    }
+}
+
 impl TryFrom<u8> for State {
     type Error = &'static str;
 

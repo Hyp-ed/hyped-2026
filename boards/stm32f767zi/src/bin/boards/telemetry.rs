@@ -40,7 +40,10 @@ use hyped_boards_stm32f767zi::{
     },
 };
 use hyped_communications::{boards::Board, bus, emergency::Reason, messages::CanMessage};
-use hyped_core::{config::{HEARTBEAT_CONFIG, TELEMETRY_CONFIG}, log_types::LogLevel};
+use hyped_core::{
+    config::{HEARTBEAT_CONFIG, TELEMETRY_CONFIG},
+    log_types::LogLevel,
+};
 use hyped_state_machine::{
     state::State,
     state_machine::{run, StateMachine},
@@ -151,20 +154,17 @@ async fn heartbeat_monitor() {
     }
 
     loop {
-        match with_timeout(
+        if let Ok(heartbeat) = with_timeout(
             Duration::from_millis(HEARTBEAT_CONFIG.boards.max_latency_ms as u64),
             INCOMING_HEARTBEATS.receive(),
         )
         .await
         {
-            Ok(heartbeat) => {
-                if heartbeat.to == Board::Telemetry {
-                    if let Some(index) = heartbeat_board_index(heartbeat.from) {
-                        last_seen[index] = Instant::now();
-                    }
+            if heartbeat.to == Board::Telemetry {
+                if let Some(index) = heartbeat_board_index(heartbeat.from) {
+                    last_seen[index] = Instant::now();
                 }
             }
-            Err(_) => {}
         }
 
         let now = Instant::now();

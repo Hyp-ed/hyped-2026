@@ -22,6 +22,9 @@ pub enum Event {
     Heartbeat {
         from: Board,
     },
+    StateChanged {
+        state: &'static str,
+    },
 
     // ------ Electronics ------
 
