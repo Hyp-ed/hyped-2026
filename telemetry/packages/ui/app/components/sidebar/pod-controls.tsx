@@ -1,11 +1,16 @@
 import { Button } from '@/components/ui/button';
+import { usePod } from '@/context/pods';
 import { CONTROLS, sendControlMessage } from '@/lib/controls';
 import { cn } from '@/lib/utils';
-import { Label } from '@radix-ui/react-label';
-import { ArrowUpFromLine, Rocket, Siren } from 'lucide-react';
-import { useState } from 'react';
-import { SetLevitationHeight } from '../shared/set-levitation-height';
-import { Switch } from '../ui/switch';
+import { ALL_POD_STATES } from '@hyped/telemetry-constants';
+import {
+	Gauge,
+	type LucideIcon,
+	PlugZap,
+	Rocket,
+	ShieldCheck,
+	Siren,
+} from 'lucide-react';
 
 /**
  * Displays the pod controls.
@@ -20,57 +25,78 @@ export const PodControls = ({
 	podId: string;
 	show: boolean;
 }) => {
+	const { podState } = usePod(podId);
+	const controls = [
+		{
+			label: 'Motor Setup',
+			control: CONTROLS.MOTOR_SETUP,
+			icon: PlugZap,
+			enabled:
+				podState === ALL_POD_STATES.IDLE ||
+				podState === ALL_POD_STATES.UNKNOWN,
+			className: 'bg-blue-700 hover:bg-blue-800',
+		},
+		{
+			label: 'Precharge',
+			control: CONTROLS.PRECHARGE,
+			icon: Gauge,
+			enabled: podState === ALL_POD_STATES.SETUP_MOTOR,
+			className: 'bg-amber-600 hover:bg-amber-700',
+		},
+		{
+			label: 'Ready Pod',
+			control: CONTROLS.READY_FOR_PROPULSION,
+			icon: ShieldCheck,
+			enabled: podState === ALL_POD_STATES.PRECHARGE,
+			className: 'bg-emerald-700 hover:bg-emerald-800',
+		},
+		{
+			label: 'Accelerate',
+			control: CONTROLS.ACCELERATE,
+			icon: Rocket,
+			enabled: podState === ALL_POD_STATES.READY_FOR_PROPULSION,
+			className: 'bg-green-700 hover:bg-green-800',
+		},
+	];
+
 	return (
-		<div className={cn('mt-2 space-y-8', show ? 'block' : 'hidden')}>
-			<div className="flex flex-col gap-2">
-				<div className="flex flex-col gap-2">
-					<SetLevitationHeight podId={podId} />
-					<LevitateButton podId={podId} />
-				</div>
-				<LaunchButton podId={podId} />
+		<div className={cn('mt-2 space-y-4', show ? 'block' : 'hidden')}>
+			<div className="flex flex-col gap-3">
+				{controls.map((control) => (
+					<PodControlButton key={control.control} podId={podId} {...control} />
+				))}
 				<EmergencyStopButton podId={podId} />
 			</div>
 		</div>
 	);
 };
 
-const LevitateButton = ({ podId }: { podId: string }) => (
+const PodControlButton = ({
+	podId,
+	label,
+	control,
+	icon: Icon,
+	enabled,
+	className,
+}: {
+	podId: string;
+	label: string;
+	control: (typeof CONTROLS)[keyof typeof CONTROLS];
+	icon: LucideIcon;
+	enabled: boolean;
+	className: string;
+}) => (
 	<Button
 		className={cn(
-			'px-2 py-6 rounded-md shadow-lg transition text-white font-bold flex gap-2',
-			'bg-blue-600 hover:bg-blue-700',
+			'w-full px-2 py-6 rounded-md shadow-lg transition text-white font-bold flex gap-2 disabled:bg-gray-400 disabled:cursor-not-allowed',
+			className,
 		)}
-		onClick={() => {
-			void sendControlMessage(podId, CONTROLS.LEVITATE);
-		}}
+		disabled={!enabled}
+		onClick={() => void sendControlMessage(podId, control)}
 	>
-		<ArrowUpFromLine /> LEVITATE
+		<Icon /> {label}
 	</Button>
 );
-
-const LaunchButton = ({ podId }: { podId: string }) => {
-	const [enabled, setEnabled] = useState(false);
-
-	return (
-		<div className="space-y-2 w-full">
-			{/* This switch is used to enable the launch button */}
-			<div className="flex items-center space-x-2">
-				<Switch id="enable" checked={enabled} onCheckedChange={setEnabled} />
-				<Label htmlFor="enable">Enable</Label>
-			</div>
-			<Button
-				className={cn(
-					'w-full px-2 py-6 rounded-md shadow-lg transition text-white font-bold flex gap-2',
-					'bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed',
-				)}
-				disabled={!enabled}
-				onClick={() => void sendControlMessage(podId, CONTROLS.START_RUN)}
-			>
-				<Rocket /> LAUNCH
-			</Button>
-		</div>
-	);
-};
 
 export const EmergencyStopButton = ({
 	podId,

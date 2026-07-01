@@ -1,7 +1,4 @@
-use crate::{
-    state::State,
-    state_machine::{DischargeStep, StateMachine},
-};
+use crate::{state::State, state_machine::StateMachine};
 use embassy_time::Instant;
 use hyped_communications::events::Event;
 use hyped_core::logging::{debug, info, warn};
@@ -10,7 +7,6 @@ impl StateMachine {
     pub(crate) async fn entry_stopped(&mut self) {
         info!("Pod is stopped");
         self.queue_publish(Event::StartDischargeCommand);
-        self.discharge_step = DischargeStep::Initial;
         self.discharge_voltage_ok = false;
     }
     pub(crate) async fn react_stopped(&mut self, event: Event) {
@@ -22,28 +18,15 @@ impl StateMachine {
             Event::DischargeComplete => {
                 // Sent from board
                 info!("Completed discharge at {}ms", Instant::now().as_millis(),);
-                if self.discharge_step == DischargeStep::SdcOpen && self.discharge_voltage_ok {
+                if self.discharge_voltage_ok {
                     info!("Discharge completed successfully ");
                     self.transition_to(State::Idle).await;
                 } else {
                     warn!("Discharge did not complete successfully")
                 }
             }
-            Event::DischargeRelayClosed => {
-                if self.discharge_step == DischargeStep::Initial {
-                    self.discharge_step = DischargeStep::DischargeClosed;
-                } else {
-                    warn!("Relays are out of order!");
-                    self.transition_to(State::Emergency).await;
-                }
-            }
             Event::ShutdownCircuitryRelayOpen => {
-                if self.discharge_step == DischargeStep::DischargeClosed {
-                    self.discharge_step = DischargeStep::SdcOpen;
-                } else {
-                    warn!("Relays are out of order!");
-                    self.transition_to(State::Emergency).await;
-                }
+                info!("Shutdown circuitry relay opened for discharge");
             }
 
             // Any other change in relays, goto Emergency
@@ -52,6 +35,7 @@ impl StateMachine {
             | Event::BatteryPrechargeRelayClosed
             | Event::MotorControllerRelayOpen
             | Event::MotorControllerRelayClosed
+            | Event::DischargeRelayClosed
             | Event::DischargeRelayOpen => {
                 warn!("Unexpected relay change during discharge");
                 self.transition_to(State::Emergency).await;
@@ -61,7 +45,7 @@ impl StateMachine {
                 self.discharge_voltage_ok = true;
 
                 // In case this event arrives after DischargeComplete
-                if self.discharge_step == DischargeStep::SdcOpen {
+                if self.discharge_voltage_ok {
                     self.transition_to(State::Idle).await;
                 }
             }

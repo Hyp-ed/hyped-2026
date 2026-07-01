@@ -22,7 +22,10 @@ use hyped_boards_stm32f767zi::{
     board_state::THIS_BOARD,
     default_can_config,
     io::Stm32f767ziAdc,
-    tasks::can::send::{can_sender, CAN_SEND},
+    tasks::can::{
+        board_heartbeat::send_heartbeat,
+        send::{can_sender, CAN_SEND},
+    },
 };
 use hyped_communications::{boards::Board, messages::CanMessage};
 use hyped_core::config::SENSORS_CONFIG;
@@ -40,11 +43,13 @@ bind_interrupts!(struct Irqs {
 
 /// The update frequency of the low pressure sensor.
 const UPDATE_FREQUENCY: Duration = Duration::from_hz(10);
+const PRECHARGE_SETTLE_TIME: Duration = Duration::from_secs(3);
+const DISCHARGE_SETTLE_TIME: Duration = Duration::from_secs(30);
 
 #[embassy_executor::main]
 async fn main(spawner: Spawner) -> ! {
     THIS_BOARD
-        .init(Board::Sensors1)
+        .init(Board::Sensors2)
         .expect("Failed to initialize board");
 
     let config = Config::default();
@@ -55,9 +60,6 @@ async fn main(spawner: Spawner) -> ! {
     let gpio2: gpio::Output<'static> = gpio::Output::new(p.PE9, gpio::Level::Low, gpio::Speed::Low);
     let gpio3: gpio::Output<'static> =
         gpio::Output::new(p.PE11, gpio::Level::Low, gpio::Speed::Low);
-    let gpio4: gpio::Output<'static> =
-        gpio::Output::new(p.PF14, gpio::Level::Low, gpio::Speed::Low);
-
     let adc1 = Adc::new(p.ADC1);
     let pin1 = p.PA3.degrade_adc();
 
@@ -79,7 +81,6 @@ async fn main(spawner: Spawner) -> ! {
         shutdown_circuitry_relay: gpio1,
         battery_precharge_relay: gpio2,
         motor_controller_relay: gpio3,
-        gpio4,
     };
     let pressure_sensors = PressureSensors {
         low_pressure_1,
@@ -92,6 +93,7 @@ async fn main(spawner: Spawner) -> ! {
     can.enable().await;
     let (can_tx, can_rx) = can.split();
     spawner.must_spawn(can_sender(can_tx));
+    spawner.must_spawn(send_heartbeat(Board::Telemetry));
     spawner.must_spawn(sensors_board_can_receiver(can_rx, gpio_pins));
     defmt::info!("CAN setup complete");
 
@@ -106,7 +108,6 @@ struct Pins {
     shutdown_circuitry_relay: gpio::Output<'static>,
     battery_precharge_relay: gpio::Output<'static>,
     motor_controller_relay: gpio::Output<'static>,
-    gpio4: gpio::Output<'static>,
 }
 
 struct PressureSensors {
@@ -183,32 +184,24 @@ async fn respond_to_message(message: CanMessage, gpio_pins: &mut Pins) {
             defmt::info!("StartPrechargeCommand received");
             CAN_SEND.send(CanMessage::PrechargeStarted).await;
 
-            gpio_pins.shutdown_circuitry_relay.set_high();
-            CAN_SEND
-                .send(CanMessage::ShutdownCircuitryRelayClosed)
-                .await;
-            gpio_pins.gpio4.set_high();
-
-            gpio_pins.battery_precharge_relay.set_low();
-            Timer::after_secs(4).await;
-            gpio_pins.gpio4.set_low();
-
-            gpio_pins.battery_precharge_relay.set_high();
-            CAN_SEND.send(CanMessage::BatteryPrechargeRelayClosed).await;
-
-            Timer::after_secs(2).await;
+            gpio_pins.close_shutdown_circuitry_relay().await;
+            gpio_pins.close_battery_precharge_relay().await;
+            Timer::after(PRECHARGE_SETTLE_TIME).await;
             CAN_SEND.send(CanMessage::PrechargeVoltageOK).await;
-
-            gpio_pins.motor_controller_relay.set_low();
-            Timer::after_secs(4).await;
-            gpio_pins.motor_controller_relay.set_high();
-            CAN_SEND.send(CanMessage::MotorControllerRelayClosed).await;
-
-            // there is a possibility that after 20s of this relay being on it needs to be turned back off,
-            // please have code for this commented for now until further confirmation
-            // Timer::after_secs(20).await;
-
+            gpio_pins.close_motor_controller_relay().await;
             CAN_SEND.send(CanMessage::PrechargeComplete).await;
+        }
+        CanMessage::OpenPrechargeRelaysCommand => {
+            defmt::info!("OpenPrechargeRelaysCommand received");
+            gpio_pins.open_precharge_relays().await;
+        }
+        CanMessage::StartDischargeCommand => {
+            defmt::info!("StartDischargeCommand received");
+            CAN_SEND.send(CanMessage::DischargeStarted).await;
+            gpio_pins.open_shutdown_circuitry_relay().await;
+            Timer::after(DISCHARGE_SETTLE_TIME).await;
+            CAN_SEND.send(CanMessage::DischargeVoltageOK).await;
+            CAN_SEND.send(CanMessage::DischargeComplete).await;
         }
         CanMessage::UnclampBrakesCommand => {
             defmt::info!("UnclampBrakesCommand received");
@@ -218,11 +211,52 @@ async fn respond_to_message(message: CanMessage, gpio_pins: &mut Pins) {
                 })
                 .await;
         }
+        CanMessage::ClampBrakesCommand => {
+            defmt::info!("ClampBrakesCommand received");
+            CAN_SEND
+                .send(CanMessage::BrakesClamped {
+                    from: Board::Sensors2,
+                })
+                .await;
+        }
         CanMessage::Emergency(from, reason) => {
             defmt::warn!("EMERGENCY: from {:?} reason={}", from, reason);
+            gpio_pins.open_shutdown_circuitry_relay().await;
         }
         _ => {
             defmt::debug!("Ignored CAN message: {:?}", message);
         }
+    }
+}
+
+impl Pins {
+    async fn open_precharge_relays(&mut self) {
+        self.battery_precharge_relay.set_low();
+        CAN_SEND.send(CanMessage::BatteryPrechargeRelayOpen).await;
+
+        self.motor_controller_relay.set_low();
+        CAN_SEND.send(CanMessage::MotorControllerRelayOpen).await;
+    }
+
+    async fn close_battery_precharge_relay(&mut self) {
+        self.battery_precharge_relay.set_high();
+        CAN_SEND.send(CanMessage::BatteryPrechargeRelayClosed).await;
+    }
+
+    async fn close_motor_controller_relay(&mut self) {
+        self.motor_controller_relay.set_high();
+        CAN_SEND.send(CanMessage::MotorControllerRelayClosed).await;
+    }
+
+    async fn close_shutdown_circuitry_relay(&mut self) {
+        self.shutdown_circuitry_relay.set_high();
+        CAN_SEND
+            .send(CanMessage::ShutdownCircuitryRelayClosed)
+            .await;
+    }
+
+    async fn open_shutdown_circuitry_relay(&mut self) {
+        self.shutdown_circuitry_relay.set_low();
+        CAN_SEND.send(CanMessage::ShutdownCircuitryRelayOpen).await;
     }
 }

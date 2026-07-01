@@ -91,7 +91,7 @@ pub async fn wait_for_first_heartbeat(target_board: Board) -> Result<(), Heartbe
 /// Sends heartbeats to the specified board.
 /// For the controller board, this should be spawned once for every other board.
 /// For all other boards, this should be spawned once for the controller board.
-#[embassy_executor::task]
+#[embassy_executor::task(pool_size = 8)]
 pub async fn send_heartbeat(to_board: Board) {
     let can_sender = CAN_SEND.sender();
 

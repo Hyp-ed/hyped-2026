@@ -13,13 +13,6 @@ pub enum PrechargeStep {
     AllClosed,
 }
 
-#[derive(Debug, PartialEq, defmt::Format, Clone, Copy)]
-pub enum DischargeStep {
-    Initial,
-    DischargeClosed,
-    SdcOpen,
-}
-
 pub struct StateMachine {
     pub current_state: State,
     pub(crate) ready_for_run: bool,
@@ -35,7 +28,6 @@ pub struct StateMachine {
     pub(crate) motor_controller_operational: bool,
 
     pub(crate) precharge_step: PrechargeStep,
-    pub(crate) discharge_step: DischargeStep,
     pending_events: HeaplessVec<Event, MAX_PENDING_EVENTS>,
 }
 
@@ -52,7 +44,6 @@ impl StateMachine {
             ready_for_run: false,
             brakes_clamped: true,
             precharge_step: PrechargeStep::Initial,
-            discharge_step: DischargeStep::Initial,
             motor_controller_setup_command_sent: false,
             motor_controller_setup_done: false,
             battery_precharge_relay_open: false,
@@ -78,10 +69,17 @@ impl StateMachine {
         }
     }
 
+    fn publish_current_state(&mut self) {
+        self.queue_publish(Event::StateChanged {
+            state: self.current_state.telemetry_state(),
+        });
+    }
+
     // Actions when transitioning state
     pub(crate) async fn transition_to(&mut self, new_state: State) {
         info!("Transitioning: {:?} -> {:?}", self.current_state, new_state);
         self.current_state = new_state;
+        self.publish_current_state();
         self.entry().await;
     }
 
@@ -102,12 +100,17 @@ impl StateMachine {
     }
 
     pub async fn react(&mut self, event: Event) {
-        debug!("React: {:?} in state {:?}", event, self.current_state);
+        info!("React: {:?} in state {:?}", event, self.current_state);
 
         match event {
             // Emergency
             Event::Emergency { from, reason } => {
                 warn!("EMERGENCY: from {:?} reason={}", from, reason);
+                self.transition_to(State::Emergency).await;
+                return;
+            }
+            Event::EmergencyStopOperatorCommand => {
+                warn!("EMERGENCY: Operator sent emergency stop command");
                 self.transition_to(State::Emergency).await;
                 return;
             }
@@ -135,6 +138,7 @@ impl StateMachine {
 
 #[embassy_executor::task]
 pub async fn run(mut sm: StateMachine, mut events: DynSubscriber<'static, Event>) -> ! {
+    sm.publish_current_state();
     sm.entry().await;
     sm.drain_pending().await;
 
@@ -159,6 +163,5 @@ mod tests {
         assert!(!sm.precharge_complete);
         assert!(!sm.discharge_voltage_ok);
         assert_eq!(sm.precharge_step, PrechargeStep::Initial);
-        assert_eq!(sm.discharge_step, DischargeStep::Initial);
     }
 }

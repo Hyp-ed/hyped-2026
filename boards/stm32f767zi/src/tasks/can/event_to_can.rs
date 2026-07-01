@@ -1,11 +1,16 @@
-use crate::tasks::can::send::CAN_SEND;
+use core::str::FromStr;
+
+use crate::tasks::{can::send::CAN_SEND, mqtt::send::MQTT_SEND};
+use heapless::String;
 use hyped_communications::{bus::DynSubscriber, events::Event, messages::CanMessage};
+use hyped_core::{mqtt::MqttMessage, mqtt_topics::MqttTopic};
 
 // Bridges event_bus to CAN bus.
 // Listens for events and converts them to Can massages
 #[embassy_executor::task]
 pub async fn event_to_can(mut events: DynSubscriber<'static, Event>) -> ! {
     let can_sender = CAN_SEND.sender();
+    let mqtt_sender = MQTT_SEND.sender();
 
     loop {
         let event = events.next_message_pure().await;
@@ -17,12 +22,22 @@ pub async fn event_to_can(mut events: DynSubscriber<'static, Event>) -> ! {
             Event::AccelerateOperatorCommand => None,
             Event::BrakeOperatorCommand => None,
             Event::StartRunOperatorCommand => None,
+            Event::ReadyForPropulsionOperatorCommand => None,
 
             // Emergency
             Event::Emergency { from, reason } => Some(CanMessage::Emergency(from, reason)),
 
             // Heartbeat (handled by separate heartbeat task)
             Event::Heartbeat { .. } => None,
+            Event::StateChanged { state } => {
+                mqtt_sender
+                    .send(MqttMessage::new(
+                        MqttTopic::State,
+                        String::from_str(state).expect("Failed to convert state to MQTT payload"),
+                    ))
+                    .await;
+                None
+            }
 
             // Outbound commands from the state machine
             Event::StartPrechargeCommand => Some(CanMessage::StartPrechargeCommand),

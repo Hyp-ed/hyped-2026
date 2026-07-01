@@ -18,7 +18,7 @@ use embassy_stm32::{
     time::Hertz,
     Config,
 };
-use embassy_time::{Duration, Timer};
+use embassy_time::{with_timeout, Duration, Instant, Timer};
 use hyped_boards_stm32f767zi::{
     board_state::{CURRENT_STATE, EMERGENCY, THIS_BOARD},
     configure_networking, default_can_config,
@@ -26,10 +26,10 @@ use hyped_boards_stm32f767zi::{
     set_up_network_stack,
     tasks::{
         can::{
-            board_heartbeat::{heartbeat_listener, send_heartbeat},
+            board_heartbeat::send_heartbeat,
             event_to_can::event_to_can,
-            receive::can_receiver,
-            send::can_sender,
+            receive::{can_receiver, INCOMING_HEARTBEATS},
+            send::{can_sender, CAN_SEND},
         },
         can_to_mqtt::can_to_mqtt,
         mqtt::{
@@ -39,8 +39,11 @@ use hyped_boards_stm32f767zi::{
         network::net_task,
     },
 };
-use hyped_communications::{boards::Board, bus};
-use hyped_core::{config::TELEMETRY_CONFIG, log_types::LogLevel};
+use hyped_communications::{boards::Board, bus, emergency::Reason, messages::CanMessage};
+use hyped_core::{
+    config::{HEARTBEAT_CONFIG, TELEMETRY_CONFIG},
+    log_types::LogLevel,
+};
 use hyped_state_machine::{
     state::State,
     state_machine::{run, StateMachine},
@@ -48,6 +51,8 @@ use hyped_state_machine::{
 use panic_probe as _;
 use rand_core::RngCore;
 use static_cell::StaticCell;
+
+const HEARTBEAT_BOARDS: [Board; 1] = [Board::TemperatureTester];
 
 bind_interrupts!(struct Irqs {
     ETH => eth::InterruptHandler;
@@ -81,7 +86,7 @@ async fn main(spawner: Spawner) -> ! {
 
     // CAN tasks: CAN send/receive, heartbeat controller, and state machine
     defmt::info!("Setting up CAN...");
-    let mut can = Can::new(p.CAN1, p.PD0, p.PD1, Irqs);
+    let mut can = Can::new(p.CAN1, p.PB8, p.PB9, Irqs);
     default_can_config!(can);
     can.enable().await;
     let (can_tx, can_rx) = can.split();
@@ -91,8 +96,10 @@ async fn main(spawner: Spawner) -> ! {
 
     spawner.must_spawn(can_to_mqtt());
     spawner.must_spawn(emergency_handler());
-    spawner.must_spawn(heartbeat_listener(Board::TemperatureTester));
-    spawner.must_spawn(send_heartbeat(Board::TemperatureTester));
+    for board in HEARTBEAT_BOARDS {
+        spawner.must_spawn(send_heartbeat(board));
+    }
+    spawner.must_spawn(heartbeat_monitor());
     spawner.must_spawn(mqtt_to_event_bus());
     spawner.must_spawn(event_to_can(can_bridge_events));
     // Let the CAN bridge start listening before the state machine entry publishes commands.
@@ -103,6 +110,86 @@ async fn main(spawner: Spawner) -> ! {
     loop {
         Timer::after(Duration::from_secs(1)).await;
     }
+}
+
+#[embassy_executor::task]
+async fn heartbeat_monitor() {
+    let emergency_sender = EMERGENCY.sender();
+    let can_sender = CAN_SEND.sender();
+    let mut seen = [false; HEARTBEAT_BOARDS.len()];
+    let mut last_seen = [Instant::now(); HEARTBEAT_BOARDS.len()];
+
+    let first_heartbeat_result = with_timeout(
+        Duration::from_secs(HEARTBEAT_CONFIG.boards.startup_timeout_s as u64),
+        async {
+            while !seen.iter().all(|board_seen| *board_seen) {
+                let heartbeat = INCOMING_HEARTBEATS.receive().await;
+                if heartbeat.to != Board::Telemetry {
+                    continue;
+                }
+                if let Some(index) = heartbeat_board_index(heartbeat.from) {
+                    seen[index] = true;
+                    last_seen[index] = Instant::now();
+                    defmt::info!("Initial heartbeat received from {:?}", heartbeat.from);
+                }
+            }
+        },
+    )
+    .await;
+
+    if first_heartbeat_result.is_err() {
+        for (index, board) in HEARTBEAT_BOARDS.iter().enumerate() {
+            if !seen[index] {
+                defmt::error!("No initial heartbeat from {:?}", board);
+            }
+        }
+        can_sender
+            .send(CanMessage::Emergency(
+                Board::Telemetry,
+                Reason::NoInitialHeartbeat,
+            ))
+            .await;
+        emergency_sender.send(true);
+        return;
+    }
+
+    loop {
+        if let Ok(heartbeat) = with_timeout(
+            Duration::from_millis(HEARTBEAT_CONFIG.boards.max_latency_ms as u64),
+            INCOMING_HEARTBEATS.receive(),
+        )
+        .await
+        {
+            if heartbeat.to == Board::Telemetry {
+                if let Some(index) = heartbeat_board_index(heartbeat.from) {
+                    last_seen[index] = Instant::now();
+                }
+            }
+        }
+
+        let now = Instant::now();
+        for (index, board) in HEARTBEAT_BOARDS.iter().enumerate() {
+            if now.duration_since(last_seen[index])
+                > Duration::from_millis(HEARTBEAT_CONFIG.boards.max_latency_ms as u64)
+            {
+                defmt::error!("Missing heartbeat from {:?}", board);
+                can_sender
+                    .send(CanMessage::Emergency(
+                        Board::Telemetry,
+                        Reason::MissingHeartbeat,
+                    ))
+                    .await;
+                emergency_sender.send(true);
+                return;
+            }
+        }
+    }
+}
+
+fn heartbeat_board_index(board: Board) -> Option<usize> {
+    HEARTBEAT_BOARDS
+        .iter()
+        .position(|heartbeat_board| *heartbeat_board == board)
 }
 
 #[embassy_executor::task]

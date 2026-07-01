@@ -1,4 +1,3 @@
-import { SetLevitationHeight } from '@/components/shared/set-levitation-height';
 import { Button } from '@/components/ui/button';
 import {
 	Card,
@@ -10,18 +9,14 @@ import {
 import { CONTROLS, sendControlMessage } from '@/lib/controls';
 import { cn } from '@/lib/utils';
 import {
-	ArrowDownToLine,
-	ArrowUpFromLine,
 	ChevronsDown,
 	ChevronsUp,
-	Italic,
-	MoveDown,
-	MoveUp,
-	PlugZap,
+	Gauge,
 	Rocket,
 	Settings2,
+	ShieldCheck,
 	Siren,
-	Unplug,
+	Wrench,
 } from 'lucide-react';
 import React from 'react';
 
@@ -40,108 +35,55 @@ export const FullControls = ({ podId }: { podId: string }) => {
 				<CardDescription>Granular pod controls</CardDescription>
 			</CardHeader>
 			<CardContent>
-				<div className="flex gap-4 flex-wrap">
-					<div className="space-y-2">
-						<ButtonLabel>Start/stop</ButtonLabel>
+				<div className="flex flex-row gap-3 overflow-x-auto">
+					<div className="flex flex-row gap-3 shrink-0">
+						<ButtonLabel>Run sequence</ButtonLabel>
 						<ButtonPair>
 							<LeftButton
-								onClick={() => void sendControlMessage(podId, CONTROLS.START_RUN)}
+								onClick={() =>
+									void sendControlMessage(podId, CONTROLS.MOTOR_SETUP)
+								}
 							>
-								Start <Rocket size={16} />
+								Motor Setup <Wrench size={16} />
 							</LeftButton>
 							<RightButton
-								onClick={() => void sendControlMessage(podId, CONTROLS.STOP)}
+								onClick={() => void sendControlMessage(podId, CONTROLS.PRECHARGE)}
 							>
-								Stop <Siren size={16} />
+								Precharge <Gauge size={16} />
 							</RightButton>
 						</ButtonPair>
 						<ButtonPair>
 							<LeftButton
+								onClick={() =>
+									void sendControlMessage(
+										podId,
+										CONTROLS.READY_FOR_PROPULSION,
+									)
+								}
+							>
+								Ready Pod <ShieldCheck size={16} />
+							</LeftButton>
+							<RightButton
 								onClick={() => void sendControlMessage(podId, CONTROLS.ACCELERATE)}
 							>
 								Accelerate <ChevronsUp size={16} />
-							</LeftButton>
-							<RightButton
-								onClick={() => void sendControlMessage(podId, CONTROLS.EMERGENCY_STOP)}
-								className="bg-red-700 hover:bg-red-800 text-white"
-							>
-								E-Stop <Siren size={16} />
 							</RightButton>
 						</ButtonPair>
 					</div>
-					<div className="space-y-2">
-						<ButtonLabel>Active suspension</ButtonLabel>
-						<ButtonPair>
-							<LeftButton
-								onClick={() => void sendControlMessage(podId, CONTROLS.RAISE)}
-							>
-								Raise <ChevronsUp size={16} />
-							</LeftButton>
-							<RightButton
-								onClick={() => void sendControlMessage(podId, CONTROLS.LOWER)}
-							>
-								Lower <ChevronsDown size={16} />
-							</RightButton>
-						</ButtonPair>
-						<ControlButton
-							className="flex gap-2"
-							onClick={() => void sendControlMessage(podId, CONTROLS.TILT)}
-						>
-							Tilt <Italic size={16} />
-						</ControlButton>
-					</div>
-					<div className="space-y-2">
-						<ButtonLabel>Friction brakes</ButtonLabel>
-						<ButtonPair>
-							<LeftButton
-								onClick={() => void sendControlMessage(podId, CONTROLS.CLAMP)}
-							>
-								Clamp <ArrowDownToLine size={16} />
-							</LeftButton>
-							<RightButton
-								onClick={() => void sendControlMessage(podId, CONTROLS.RETRACT)}
-							>
-								Retract <ArrowUpFromLine size={16} />
-							</RightButton>
-						</ButtonPair>
-					</div>
-					<div className="space-y-2">
-						<ButtonLabel>High power</ButtonLabel>
-						<ButtonPair>
-							<LeftButton
-								onClick={() =>
-									void sendControlMessage(podId, CONTROLS.START_HP)
-								}
-							>
-								Start HP <PlugZap size={16} />
-							</LeftButton>
-							<RightButton
-								onClick={() => void sendControlMessage(podId, CONTROLS.STOP_HP)}
-							>
-								Stop HP <Unplug size={16} />
-							</RightButton>
-						</ButtonPair>
-					</div>
-					<div className="space-y-2">
-						<ButtonLabel>Levitation</ButtonLabel>
-						<ButtonPair>
-							<LeftButton
-								onClick={() =>
-									void sendControlMessage(podId, CONTROLS.LEVITATE)
-								}
-							>
-								Levitate <MoveUp size={16} />
-							</LeftButton>
-							<RightButton
-								onClick={() =>
-									void sendControlMessage(podId, CONTROLS.STOP_LEVITATING)
-								}
-							>
-								Descend <MoveDown size={16} />
-							</RightButton>
-						</ButtonPair>
-						<SetLevitationHeight podId={podId} />
-					</div>
+					<ControlButton
+						className="bg-openmct-dark-gray hover:bg-openmct-light-gray flex gap-2"
+						onClick={() => void sendControlMessage(podId, CONTROLS.STOP)}
+					>
+						Brake <ChevronsDown size={16} />
+					</ControlButton>
+					<ControlButton
+						className="bg-red-700 hover:bg-red-800 text-white flex gap-2"
+						onClick={() =>
+							void sendControlMessage(podId, CONTROLS.EMERGENCY_STOP)
+						}
+					>
+						E-Stop <Siren size={16} />
+					</ControlButton>
 				</div>
 			</CardContent>
 		</Card>
@@ -149,14 +91,14 @@ export const FullControls = ({ podId }: { podId: string }) => {
 };
 
 const ButtonLabel = ({ children }: { children: React.ReactNode }) => (
-	<p className="text-sm font-bold">{children}</p>
+	<p className="text-sm font-bold self-center whitespace-nowrap">{children}</p>
 );
 
 /**
  * Sets up the default styling for a pair of buttons. (space-x-0.5)
  */
 const ButtonPair = ({ children }: { children: React.ReactNode }) => {
-	return <div className="flex flex-row space-x-0.5">{children}</div>;
+	return <div className="flex flex-row gap-3">{children}</div>;
 };
 
 /**
@@ -172,7 +114,7 @@ const ControlButton = React.forwardRef<
 			ref={ref}
 			{...props}
 			className={cn(
-				'bg-openmct-dark-gray hover:bg-openmct-light-gray w-32 py-6',
+				'bg-openmct-dark-gray hover:bg-openmct-light-gray w-40 shrink-0 py-6',
 				props.className,
 			)}
 		/>
@@ -193,7 +135,7 @@ const LeftButton = React.forwardRef<
 			ref={ref}
 			{...props}
 			className={cn(
-				'bg-openmct-dark-gray hover:bg-openmct-light-gray rounded-r-none pr-2 flex gap-2',
+				'bg-openmct-dark-gray hover:bg-openmct-light-gray pr-2 flex gap-2',
 				props.className,
 			)}
 		/>
@@ -214,7 +156,7 @@ const RightButton = React.forwardRef<
 			ref={ref}
 			{...props}
 			className={cn(
-				'bg-openmct-dark-gray hover:bg-openmct-light-gray rounded-l-none pl-2 flex gap-2',
+				'bg-openmct-dark-gray hover:bg-openmct-light-gray pl-2 flex gap-2',
 				props.className,
 			)}
 		/>

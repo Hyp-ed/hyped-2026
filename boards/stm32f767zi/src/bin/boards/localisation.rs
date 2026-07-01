@@ -1,7 +1,10 @@
 #![no_std]
 #![no_main]
 
-use core::cell::RefCell;
+use core::{
+    cell::RefCell,
+    sync::atomic::{AtomicBool, Ordering},
+};
 
 use defmt::*;
 use embassy_executor::Spawner;
@@ -33,7 +36,11 @@ use hyped_boards_stm32f767zi::{
     default_can_config,
     io::{Stm32f767ziGpioOutput, Stm32f767ziSpi},
     tasks::{
-        can::send::{can_sender, CAN_SEND},
+        can::{
+            board_heartbeat::send_heartbeat,
+            receive::can_receiver,
+            send::{can_sender, CAN_SEND},
+        },
         sensors::{
             read_accelerometers_from_mux::{
                 read_accelerometers_from_mux, AccelerometerMuxReadings,
@@ -44,7 +51,8 @@ use hyped_boards_stm32f767zi::{
     },
 };
 use hyped_communications::{
-    boards::Board, data::CanData, measurements::MeasurementReading, messages::CanMessage,
+    boards::Board, bus, bus::DynSubscriber, data::CanData, events::Event,
+    measurements::MeasurementReading, messages::CanMessage,
 };
 use hyped_core::config::{MeasurementId, LOCALISATION_CONFIG};
 use hyped_localisation::{control::localizer::Localizer, types::RawAccelerometerData};
@@ -63,6 +71,8 @@ static OPTICAL_FLOW_DATA: Watch<CriticalSectionRawMutex, Vec<f64, 2>, 1> = Watch
 /// A Watch to hold the latest accelerometer data
 static ACCELEROMETERS_DATA: Watch<CriticalSectionRawMutex, AccelerometerMuxReadings, 1> =
     Watch::new();
+static NAVIGATION_ARMED: AtomicBool = AtomicBool::new(false);
+static END_OF_TRACK_BRAKE_SENT: AtomicBool = AtomicBool::new(false);
 
 bind_interrupts!(struct Irqs {
     CAN1_RX0 => Rx0InterruptHandler<CAN1>;
@@ -71,7 +81,7 @@ bind_interrupts!(struct Irqs {
     CAN1_TX => TxInterruptHandler<CAN1>;
 });
 
-const TRACK_LENGTH_M: f64 = 100.0;
+const TRACK_LENGTH_M: f64 = 3.0;
 
 #[embassy_executor::main]
 async fn main(spawner: Spawner) -> ! {
@@ -81,20 +91,24 @@ async fn main(spawner: Spawner) -> ! {
     THIS_BOARD
         .init(Board::Navigation)
         .expect("Failed to initialize board identity");
+    bus::init().expect("Failed to initialise event bus");
+    let navigation_events =
+        bus::subscriber().expect("Failed to create navigation event subscriber");
     defmt::info!("Board identity initialised");
 
     let mut can = Can::new(p.CAN1, p.PD0, p.PD1, Irqs);
     default_can_config!(can);
     can.enable().await;
-    let (can_tx, _) = can.split();
+    let (can_tx, can_rx) = can.split();
+    spawner.must_spawn(can_receiver(can_rx));
     spawner.must_spawn(can_sender(can_tx));
+    spawner.must_spawn(send_heartbeat(Board::Telemetry));
+    spawner.must_spawn(navigation_command_task(navigation_events));
     defmt::info!("CAN sender task started");
 
     let can_message_sender = CAN_SEND.sender();
 
     let board = *THIS_BOARD.get().await;
-    let mut end_of_track_brake_sent = false;
-
     let mut spi_config = spi::Config::default();
     spi_config.frequency = khz(400);
     spi_config.bit_order = BitOrder::MsbFirst;
@@ -196,15 +210,16 @@ async fn main(spawner: Spawner) -> ! {
                     )))
                     .await;
 
-                //For demonstration purposes just brake when we're halfway down the track
-                //In reality we would calculate the braking point based on localiser data
-                if !end_of_track_brake_sent && localizer.displacement >= TRACK_LENGTH_M / 2.0 {
+                // For the test run, brake when armed and halfway down the track.
+                if NAVIGATION_ARMED.load(Ordering::Acquire)
+                    && localizer.displacement >= TRACK_LENGTH_M / 2.0
+                    && !END_OF_TRACK_BRAKE_SENT.swap(true, Ordering::AcqRel)
+                {
                     defmt::info!(
                         "Halfway to track end reached ({} m) — sending EndOfTrackBrake",
                         localizer.displacement
                     );
                     can_message_sender.send(CanMessage::EndOfTrackBrake).await;
-                    end_of_track_brake_sent = true;
                 }
             }
             Err(e) => {
@@ -213,5 +228,23 @@ async fn main(spawner: Spawner) -> ! {
         }
 
         Timer::after(Duration::from_millis(100)).await;
+    }
+}
+
+#[embassy_executor::task]
+async fn navigation_command_task(mut events: DynSubscriber<'static, Event>) {
+    loop {
+        match events.next_message_pure().await {
+            Event::StartPropulsionAccelerationCommand => {
+                defmt::info!("Navigation armed for end-of-track braking");
+                END_OF_TRACK_BRAKE_SENT.store(false, Ordering::Release);
+                NAVIGATION_ARMED.store(true, Ordering::Release);
+            }
+            Event::StartPropulsionBrakingCommand | Event::EndOfTrackBrakeCommand => {
+                defmt::info!("Navigation disarmed");
+                NAVIGATION_ARMED.store(false, Ordering::Release);
+            }
+            _ => {}
+        }
     }
 }

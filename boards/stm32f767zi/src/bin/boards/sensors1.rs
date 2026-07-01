@@ -23,6 +23,7 @@ use hyped_boards_stm32f767zi::{
     default_can_config,
     io::{Stm32f767ziAdc, Stm32f767ziGpioInput},
     tasks::can::{
+        board_heartbeat::send_heartbeat,
         receive::can_receiver,
         send::{can_sender, CAN_SEND},
     },
@@ -50,7 +51,7 @@ const UPDATE_FREQUENCY: Duration = Duration::from_hz(10);
 #[embassy_executor::main]
 async fn main(spawner: Spawner) -> ! {
     THIS_BOARD
-        .init(Board::Sensors2)
+        .init(Board::Sensors1)
         .expect("Failed to initialize board");
 
     let config = Config::default();
@@ -96,6 +97,7 @@ async fn main(spawner: Spawner) -> ! {
     let (can_tx, can_rx) = can.split();
     spawner.must_spawn(can_receiver(can_rx));
     spawner.must_spawn(can_sender(can_tx));
+    spawner.must_spawn(send_heartbeat(Board::Telemetry));
     defmt::info!("CAN setup complete");
 
     let pressure_sensors = PressureSensors {
@@ -151,7 +153,7 @@ async fn sensors_board_response_task(mut pressure_sensors: PressureSensors) {
 
             CAN_SEND
                 .send(CanMessage::Emergency(
-                    Board::Sensors2,
+                    Board::Sensors1,
                     hyped_communications::events::Reason::Pressure,
                 ))
                 .await;
