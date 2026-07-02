@@ -121,7 +121,6 @@ impl<U: HypedUart> BmsUart<U> {
 
     /// Reads a full response frame of exactly N bytes, retrying until a frame
     /// with a matching start byte (0xAA) and expected command byte is received.
-    /// Unsolicited broadcasts with a different command byte are silently discarded.
     async fn read_exact<const N: usize>(&mut self, expected_cmd: u8) -> Result<[u8; N], UartErr> {
         loop {
             let mut buf = [0u8; N];
@@ -333,8 +332,6 @@ impl<U: HypedUart> BmsUart<U> {
         // The BMS re-emits its startup banner after reset before sending the ACK.
         defmt::info!("BMS: reset sent, draining post-reset banner");
         self.drain_banner().await?;
-
-        todo!();
 
         // ACK response: [0xAA, 0x01, 0x02, CRC:LSB, CRC:MSB] = 5 bytes
         self.read_response::<5>(BmsCmd::RESET_OR_CLEAN_EVENT_OR_STATUS)
