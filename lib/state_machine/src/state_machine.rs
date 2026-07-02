@@ -100,12 +100,17 @@ impl StateMachine {
     }
 
     pub async fn react(&mut self, event: Event) {
-        debug!("React: {:?} in state {:?}", event, self.current_state);
+        info!("React: {:?} in state {:?}", event, self.current_state);
 
         match event {
             // Emergency
             Event::Emergency { from, reason } => {
                 warn!("EMERGENCY: from {:?} reason={}", from, reason);
+                self.transition_to(State::Emergency).await;
+                return;
+            }
+            Event::EmergencyStopOperatorCommand => {
+                warn!("EMERGENCY: Operator sent emergency stop command");
                 self.transition_to(State::Emergency).await;
                 return;
             }
