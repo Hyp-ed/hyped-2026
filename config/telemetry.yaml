@@ -1,12 +1,12 @@
 networking:
   board:
-    ip: '192.168.1.3'
+    ip: '192.168.0.206'
     subnet_mask: 24
   gateway:
-    ip: '192.168.1.1'
+    ip: '192.168.0.1'
 mqtt:
   broker:
-    ip: '192.168.1.2'
+    ip: '192.168.0.86'
     port: 1883
   receiver:
     client_id: 'telemetry_receiver'

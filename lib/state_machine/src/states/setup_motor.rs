@@ -63,6 +63,12 @@ impl StateMachine {
             info!("Precharge relays open; sending MotorControllerSetupCommand");
             self.motor_controller_setup_command_sent = true;
             self.queue_publish(Event::MotorControllerSetupCommand);
+        } else {
+            warn!(
+                "Waiting for precharge relays to open before motor setup: battery_precharge_relay_open={}, motor_controller_relay_open={}",
+                self.battery_precharge_relay_open,
+                self.motor_controller_relay_open,
+            );
         }
     }
 }

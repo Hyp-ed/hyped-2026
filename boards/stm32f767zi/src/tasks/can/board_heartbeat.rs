@@ -99,7 +99,7 @@ pub async fn send_heartbeat(to_board: Board) {
         // Send a heartbeat to the controller board every 100ms
         let heartbeat = Heartbeat::new(to_board, *THIS_BOARD.get().await);
         defmt::debug!("Sending heartbeat: {:?}", heartbeat);
-        can_sender.send(CanMessage::Heartbeat(heartbeat)).await;
+        let _ = can_sender.try_send(CanMessage::Heartbeat(heartbeat));
 
         Timer::after(Duration::from_hz(HEARTBEAT_CONFIG.boards.frequency as u64)).await;
     }
