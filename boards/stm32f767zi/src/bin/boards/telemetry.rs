@@ -52,7 +52,16 @@ use panic_probe as _;
 use rand_core::RngCore;
 use static_cell::StaticCell;
 
-const HEARTBEAT_BOARDS: [Board; 1] = [Board::TemperatureTester];
+// const HEARTBEAT_BOARDS: [Board; 4] = [
+//     Board::Navigation,
+//     Board::MotorControl,
+//     Board::Sensors1,
+//     Board::Sensors2,
+// ];
+
+//const HEARTBEAT_BOARDS: [Board; 1] = [Board::TemperatureTester];s
+const HEARTBEAT_BOARDS: [Board; 1] = [Board::Navigation];
+
 
 bind_interrupts!(struct Irqs {
     ETH => eth::InterruptHandler;

@@ -5,7 +5,12 @@ use core::cell::RefCell;
 
 use defmt_rtt as _;
 use embassy_executor::Spawner;
-use embassy_stm32::{i2c::I2c, mode::Blocking, time::Hertz};
+use embassy_stm32::{
+    gpio::{Level, Output, Speed},
+    i2c::I2c,
+    mode::Blocking,
+    time::Hertz,
+};
 use embassy_sync::{
     blocking_mutex::{
         raw::{CriticalSectionRawMutex, NoopRawMutex},
@@ -32,6 +37,8 @@ static ACCELERATION_MUX_READINGS: Watch<
 #[embassy_executor::main]
 async fn main(spawner: Spawner) -> ! {
     let p = embassy_stm32::init(Default::default());
+    let _accelerometer_mux_reset = Output::new(p.PB15, Level::High, Speed::High);
+
     let i2c = I2c::new_blocking(p.I2C1, p.PB8, p.PB9, Hertz(200_000), Default::default());
 
     // Initialize the I2C bus and store it in a static cell so that it can be accessed from the task.

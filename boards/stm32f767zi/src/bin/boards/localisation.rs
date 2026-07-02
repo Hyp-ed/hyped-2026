@@ -87,6 +87,7 @@ const TRACK_LENGTH_M: f64 = 3.0;
 async fn main(spawner: Spawner) -> ! {
     // Import `init` so that we can initialize board peripherals.
     let p = init(Default::default());
+    let _accelerometer_mux_reset = Output::new(p.PB15, Level::High, Speed::High);
 
     THIS_BOARD
         .init(Board::Navigation)
