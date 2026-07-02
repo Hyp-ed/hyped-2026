@@ -9,6 +9,7 @@ pub enum Reason {
     MissingHeartbeat = 5,
     TemperatureUpperLimitFailure = 6,
     TemperatureLowerLimitFailure = 7,
+    IMD = 8,
     AccelerometerCriticalLimit = 8,
     Pressure = 8,
 }

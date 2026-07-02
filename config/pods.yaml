@@ -3,6 +3,14 @@ pods:
     label: 'The Podigal Son'
     mode: 'LEVITATION_ONLY'
     measurements:
+      imd_iso_corrected:
+        label: 'IMD Corrected Resistance'
+        kind: "voltage"
+        unit: "Ω"
+        format: 'int'
+        limits:
+          critical:
+            low: 500
       accelerometer_1:
         label: 'Accelerometer 1'
         kind: 'acceleration'
