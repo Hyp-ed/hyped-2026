@@ -1,15 +1,14 @@
 use crate::tasks::can::send::CAN_SEND;
-use hyped_communications::{bus::EVENT_BUS, events::Event, messages::CanMessage};
+use hyped_communications::{bus::DynSubscriber, events::Event, messages::CanMessage};
 
 // Bridges event_bus to CAN bus.
 // Listens for events and converts them to Can massages
 #[embassy_executor::task]
-pub async fn event_to_can() -> ! {
+pub async fn event_to_can(mut events: DynSubscriber<'static, Event>) -> ! {
     let can_sender = CAN_SEND.sender();
-    let event_receiver = EVENT_BUS.receiver();
 
     loop {
-        let event = event_receiver.receive().await;
+        let event = events.next_message_pure().await;
 
         let can_message: Option<CanMessage> = match event {
             // Operator Commands (not sent over CAN)
@@ -25,31 +24,10 @@ pub async fn event_to_can() -> ! {
             // Heartbeat (handled by separate heartbeat task)
             Event::Heartbeat { .. } => None,
 
-            // Electronics
+            // Outbound commands from the state machine
             Event::StartPrechargeCommand => Some(CanMessage::StartPrechargeCommand),
             Event::StartDischargeCommand => Some(CanMessage::StartDischargeCommand),
-            Event::PrechargeStarted => Some(CanMessage::PrechargeStarted),
-            Event::DischargeStarted => Some(CanMessage::DischargeStarted),
-            Event::PrechargeComplete => Some(CanMessage::PrechargeComplete),
-            Event::DischargeComplete => Some(CanMessage::DischargeComplete),
-            Event::VoltageStatus { voltage } => Some(CanMessage::VoltageStatus { voltage }),
-            Event::PrechargeVoltageOK => Some(CanMessage::PrechargeVoltageOK),
-            Event::DischargeVoltageOK => Some(CanMessage::DischargeVoltageOK),
-
-            // Relays
-            Event::ShutdownCircuitryRelayOpen => Some(CanMessage::ShutdownCircuitryRelayOpen),
-            Event::ShutdownCircuitryRelayClosed => Some(CanMessage::ShutdownCircuitryRelayClosed),
-            Event::BatteryPrechargeRelayOpen => Some(CanMessage::BatteryPrechargeRelayOpen),
-            Event::BatteryPrechargeRelayClosed => Some(CanMessage::BatteryPrechargeRelayClosed),
-            Event::MotorControllerRelayOpen => Some(CanMessage::MotorControllerRelayOpen),
-            Event::MotorControllerRelayClosed => Some(CanMessage::MotorControllerRelayClosed),
-            Event::DischargeRelayOpen => Some(CanMessage::DischargeRelayOpen),
-            Event::DischargeRelayClosed => Some(CanMessage::DischargeRelayClosed),
-
-            // Navigation
             Event::EndOfTrackBrakeCommand => Some(CanMessage::EndOfTrackBrake),
-
-            // Dynamics
             Event::UnclampBrakesCommand => Some(CanMessage::UnclampBrakesCommand),
             Event::ClampBrakesCommand => Some(CanMessage::ClampBrakesCommand),
             Event::RetractLateralSuspensionCommand => {
@@ -58,42 +36,43 @@ pub async fn event_to_can() -> ! {
             Event::ExtendLateralSuspensionCommand => {
                 Some(CanMessage::ExtendLateralSuspensionCommand)
             }
-
-            Event::BrakesClamped { from } => Some(CanMessage::BrakesClamped { from }),
-            Event::BrakesUnclamped { from } => Some(CanMessage::BrakesUnclamped { from }),
-            Event::LateralSuspensionRetracted { from } => {
-                Some(CanMessage::LateralSuspensionRetracted { from })
-            }
-            Event::LateralSuspensionExtended { from } => {
-                Some(CanMessage::LateralSuspensionExtended { from })
-            }
-            Event::DynamicsStatus {
-                from,
-                actuator_pressure_bar,
-            } => Some(CanMessage::DynamicsStatus {
-                from,
-                actuator_pressure_bar,
-            }),
-
-            //   Propulsion
             Event::StartPropulsionAccelerationCommand => {
                 Some(CanMessage::StartPropulsionAccelerationCommand)
             }
             Event::StartPropulsionBrakingCommand => Some(CanMessage::StartPropulsionBrakingCommand),
-            Event::PropulsionAccelerationStarted => Some(CanMessage::PropulsionAccelerationStarted),
-            Event::PropulsionBrakingStarted => Some(CanMessage::PropulsionBrakingStarted),
-            Event::PropulsionStatus {
-                current_ma,
-                velocity_kmh,
-                temperature_c,
-                voltage_cv,
-            } => Some(CanMessage::PropulsionStatus {
-                current_ma,
-                velocity_kmh,
-                temperature_c,
-                voltage_cv,
-            }),
-            Event::PropulsionForce { force_n } => Some(CanMessage::PropulsionForce { force_n }),
+            Event::MotorControllerSetOperationalCommand => {
+                Some(CanMessage::MotorControllerSetOperationalCommand)
+            }
+            Event::MotorControllerSetupCommand => Some(CanMessage::MotorControllerSetupCommand),
+            Event::OpenPrechargeRelaysCommand => Some(CanMessage::OpenPrechargeRelaysCommand),
+
+            // Ingress-only: status and completion events from other boards
+            Event::PrechargeStarted
+            | Event::DischargeStarted
+            | Event::PrechargeComplete
+            | Event::DischargeComplete
+            | Event::VoltageStatus { .. }
+            | Event::PrechargeVoltageOK
+            | Event::DischargeVoltageOK
+            | Event::ShutdownCircuitryRelayOpen
+            | Event::ShutdownCircuitryRelayClosed
+            | Event::BatteryPrechargeRelayOpen
+            | Event::BatteryPrechargeRelayClosed
+            | Event::MotorControllerRelayOpen
+            | Event::MotorControllerRelayClosed
+            | Event::MotorControllerSetupComplete
+            | Event::MotorControllerOperational
+            | Event::DischargeRelayOpen
+            | Event::DischargeRelayClosed
+            | Event::BrakesClamped { .. }
+            | Event::BrakesUnclamped { .. }
+            | Event::LateralSuspensionRetracted { .. }
+            | Event::LateralSuspensionExtended { .. }
+            | Event::DynamicsStatus { .. }
+            | Event::PropulsionAccelerationStarted
+            | Event::PropulsionBrakingStarted
+            | Event::PropulsionStatus { .. }
+            | Event::PropulsionForce { .. } => None,
         };
 
         if let Some(msg) = can_message {

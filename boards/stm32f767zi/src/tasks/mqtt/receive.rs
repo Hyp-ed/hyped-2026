@@ -95,6 +95,16 @@ pub async fn mqtt_receive(
                             ))
                             .await;
                     }
+                    Ok(MqttTopic::Controls) => {
+                        MQTT_RECEIVE
+                            .send(MqttMessage::new(
+                                MqttTopic::Controls,
+                                String::from_str(message)
+                                    .expect("Failed to convert message to string"),
+                            ))
+                            .await;
+                    }
+
                     Ok(_) => {}
                     Err(_) => {
                         // Log warning for unknown topic

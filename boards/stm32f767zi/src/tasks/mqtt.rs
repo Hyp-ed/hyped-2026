@@ -1,4 +1,5 @@
 pub mod base_station_heartbeat;
+pub mod mqtt_to_event_bus;
 pub mod receive;
 pub mod send;
 

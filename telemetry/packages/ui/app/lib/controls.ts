@@ -6,8 +6,10 @@ import toast from 'react-hot-toast';
  * Defines the controls that can be sent to a pod.
  */
 export const CONTROLS = {
-	START: 'start',
+	START_RUN: 'start-run',
+	ACCELERATE: 'accelerate',
 	STOP: 'stop',
+	EMERGENCY_STOP: 'emergency-stop',
 	LEVITATE: 'levitate',
 	STOP_LEVITATING: 'stop-levitating',
 	CLAMP: 'clamp',

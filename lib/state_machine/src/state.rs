@@ -11,6 +11,7 @@ pub enum State {
     Brake = 4,
     Stopped = 5,
     Emergency = 6,
+    SetupMotor = 7,
 }
 
 impl From<State> for u8 {
@@ -31,6 +32,7 @@ impl TryFrom<u8> for State {
             0x04 => Ok(State::Brake),
             0x05 => Ok(State::Stopped),
             0x06 => Ok(State::Emergency),
+            0x07 => Ok(State::SetupMotor),
             _ => Err("Invalid state"),
         }
     }
@@ -46,6 +48,7 @@ impl From<State> for &str {
             State::Brake => "brake",
             State::Stopped => "stopped",
             State::Emergency => "emergency",
+            State::SetupMotor => "setup_motor",
         }
     }
 }
@@ -62,6 +65,7 @@ impl FromStr for State {
             "brake" => Ok(State::Brake),
             "stopped" => Ok(State::Stopped),
             "emergency" => Ok(State::Emergency),
+            "setup_motor" => Ok(State::SetupMotor),
             _ => Err("Invalid state"),
         }
     }
@@ -72,5 +76,59 @@ impl From<State> for String<20> {
         let mut s = String::new();
         s.push_str(val.into()).unwrap();
         s
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn state_u8_round_trip() {
+        let states = [
+            State::Idle,
+            State::Precharge,
+            State::ReadyForPropulsion,
+            State::Accelerate,
+            State::Brake,
+            State::Stopped,
+            State::Emergency,
+            State::SetupMotor,
+        ];
+
+        for state in states {
+            let encoded: u8 = state.into();
+            let decoded = State::try_from(encoded).expect("decode state");
+            assert_eq!(state, decoded);
+        }
+    }
+
+    #[test]
+    fn state_string_round_trip() {
+        let states = [
+            State::Idle,
+            State::Precharge,
+            State::ReadyForPropulsion,
+            State::Accelerate,
+            State::Brake,
+            State::Stopped,
+            State::Emergency,
+            State::SetupMotor,
+        ];
+
+        for state in states {
+            let name: &str = state.into();
+            let parsed = State::from_str(name).expect("parse state");
+            assert_eq!(state, parsed);
+
+            let heapless: String<20> = state.into();
+            assert_eq!(name, heapless.as_str());
+        }
+    }
+
+    #[test]
+    fn invalid_state_rejected() {
+        assert!(State::try_from(0xFF).is_err());
+        assert!(State::from_str("unknown").is_err());
     }
 }

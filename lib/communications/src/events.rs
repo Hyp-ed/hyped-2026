@@ -5,11 +5,11 @@ use hyped_core::types::{Current, Force, Pressure, Temperature, Velocity, Voltage
 #[derive(Debug, Clone, defmt::Format)]
 pub enum Event {
     // ------ Operator Commands ------
-    EmergencyStopOperatorCommand,
-    PrechargeOperatorCommand,  // Idle -> Precharge
-    AccelerateOperatorCommand, // ReadyForPropulsion -> Accelerate
-    BrakeOperatorCommand,      // Accelerate -> Brake
-    StartRunOperatorCommand,   // Start a run (Propulsion Only)
+    EmergencyStopOperatorCommand, // Emergency stop
+    PrechargeOperatorCommand,     // Idle -> SetupMotor
+    AccelerateOperatorCommand,    // ReadyForPropulsion -> Accelerate
+    BrakeOperatorCommand,         // Accelerate -> Brake
+    StartRunOperatorCommand,      // SetupMotor -> Precharge
 
     // ------ Emergency Events ------
     Emergency {
@@ -27,6 +27,9 @@ pub enum Event {
     // Commands from FSM
     StartPrechargeCommand,
     StartDischargeCommand,
+    MotorControllerSetupCommand,
+    MotorControllerSetOperationalCommand,
+    OpenPrechargeRelaysCommand,
 
     // Confirmation
     PrechargeStarted,
@@ -43,6 +46,10 @@ pub enum Event {
     // Voltage checks
     PrechargeVoltageOK,
     DischargeVoltageOK,
+
+    // Motor controller
+    MotorControllerSetupComplete,
+    MotorControllerOperational,
 
     // Relays
     ShutdownCircuitryRelayOpen,

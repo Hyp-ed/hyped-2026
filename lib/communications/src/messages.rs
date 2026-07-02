@@ -30,6 +30,13 @@ pub enum CanMessage {
     PrechargeVoltageOK,
     DischargeVoltageOK,
 
+    // Motor Controller
+    MotorControllerSetupCommand,
+    MotorControllerSetOperationalCommand,
+    OpenPrechargeRelaysCommand,
+    MotorControllerSetupComplete,
+    MotorControllerOperational,
+
     // Relays
     ShutdownCircuitryRelayOpen,
     ShutdownCircuitryRelayClosed,
@@ -130,7 +137,7 @@ impl From<CanMessage> for HypedCanFrame {
             }
             CanMessage::PrechargeStarted => {
                 let can_id: CanId = CanId::new(
-                    Board::Telemetry,
+                    Board::MotorControl,
                     CanDataType::U32,
                     MessageIdentifier::Event(EventId::PrechargeStarted),
                 );
@@ -138,7 +145,7 @@ impl From<CanMessage> for HypedCanFrame {
             }
             CanMessage::DischargeStarted => {
                 let can_id: CanId = CanId::new(
-                    Board::Telemetry,
+                    Board::MotorControl,
                     CanDataType::U32,
                     MessageIdentifier::Event(EventId::DischargeStarted),
                 );
@@ -146,7 +153,7 @@ impl From<CanMessage> for HypedCanFrame {
             }
             CanMessage::PrechargeComplete => {
                 let can_id = CanId::new(
-                    Board::Telemetry,
+                    Board::MotorControl,
                     CanDataType::U32,
                     MessageIdentifier::Event(EventId::PrechargeComplete),
                 );
@@ -154,7 +161,7 @@ impl From<CanMessage> for HypedCanFrame {
             }
             CanMessage::DischargeComplete => {
                 let can_id = CanId::new(
-                    Board::Telemetry,
+                    Board::MotorControl,
                     CanDataType::U32,
                     MessageIdentifier::Event(EventId::DischargeComplete),
                 );
@@ -162,7 +169,7 @@ impl From<CanMessage> for HypedCanFrame {
             }
             CanMessage::VoltageStatus { voltage } => {
                 let can_id = CanId::new(
-                    Board::Telemetry,
+                    Board::MotorControl,
                     CanDataType::U16,
                     MessageIdentifier::Event(EventId::VoltageStatus),
                 );
@@ -171,7 +178,7 @@ impl From<CanMessage> for HypedCanFrame {
             }
             CanMessage::PrechargeVoltageOK => {
                 let can_id = CanId::new(
-                    Board::Telemetry,
+                    Board::MotorControl,
                     CanDataType::U32,
                     MessageIdentifier::Event(EventId::PrechargeVoltageOK),
                 );
@@ -179,7 +186,7 @@ impl From<CanMessage> for HypedCanFrame {
             }
             CanMessage::DischargeVoltageOK => {
                 let can_id = CanId::new(
-                    Board::Telemetry,
+                    Board::MotorControl,
                     CanDataType::U32,
                     MessageIdentifier::Event(EventId::DischargeVoltageOK),
                 );
@@ -189,7 +196,7 @@ impl From<CanMessage> for HypedCanFrame {
             // Relays
             CanMessage::ShutdownCircuitryRelayOpen => {
                 let can_id = CanId::new(
-                    Board::Telemetry,
+                    Board::MotorControl,
                     CanDataType::U32,
                     MessageIdentifier::Event(EventId::ShutdownCircuitryRelayOpen),
                 );
@@ -197,7 +204,7 @@ impl From<CanMessage> for HypedCanFrame {
             }
             CanMessage::ShutdownCircuitryRelayClosed => {
                 let can_id = CanId::new(
-                    Board::Telemetry,
+                    Board::MotorControl,
                     CanDataType::U32,
                     MessageIdentifier::Event(EventId::ShutdownCircuitryRelayClosed),
                 );
@@ -205,7 +212,7 @@ impl From<CanMessage> for HypedCanFrame {
             }
             CanMessage::BatteryPrechargeRelayOpen => {
                 let can_id = CanId::new(
-                    Board::Telemetry,
+                    Board::MotorControl,
                     CanDataType::U32,
                     MessageIdentifier::Event(EventId::BatteryPrechargeRelayOpen),
                 );
@@ -213,7 +220,7 @@ impl From<CanMessage> for HypedCanFrame {
             }
             CanMessage::BatteryPrechargeRelayClosed => {
                 let can_id = CanId::new(
-                    Board::Telemetry,
+                    Board::MotorControl,
                     CanDataType::U32,
                     MessageIdentifier::Event(EventId::BatteryPrechargeRelayClosed),
                 );
@@ -221,7 +228,7 @@ impl From<CanMessage> for HypedCanFrame {
             }
             CanMessage::MotorControllerRelayOpen => {
                 let can_id = CanId::new(
-                    Board::Telemetry,
+                    Board::MotorControl,
                     CanDataType::U32,
                     MessageIdentifier::Event(EventId::MotorControllerRelayOpen),
                 );
@@ -229,7 +236,7 @@ impl From<CanMessage> for HypedCanFrame {
             }
             CanMessage::MotorControllerRelayClosed => {
                 let can_id = CanId::new(
-                    Board::Telemetry,
+                    Board::MotorControl,
                     CanDataType::U32,
                     MessageIdentifier::Event(EventId::MotorControllerRelayClosed),
                 );
@@ -237,7 +244,7 @@ impl From<CanMessage> for HypedCanFrame {
             }
             CanMessage::DischargeRelayOpen => {
                 let can_id = CanId::new(
-                    Board::Telemetry,
+                    Board::MotorControl,
                     CanDataType::U32,
                     MessageIdentifier::Event(EventId::DischargeRelayOpen),
                 );
@@ -245,9 +252,51 @@ impl From<CanMessage> for HypedCanFrame {
             }
             CanMessage::DischargeRelayClosed => {
                 let can_id = CanId::new(
-                    Board::Telemetry,
+                    Board::MotorControl,
                     CanDataType::U32,
                     MessageIdentifier::Event(EventId::DischargeRelayClosed),
+                );
+                HypedCanFrame::new(can_id.into(), [0u8; 8])
+            }
+
+            // Motor Controller
+            CanMessage::MotorControllerSetOperationalCommand => {
+                let can_id = CanId::new_high_priority(
+                    Board::Telemetry,
+                    CanDataType::U32,
+                    MessageIdentifier::Event(EventId::MotorControllerSetOperationalCommand),
+                );
+                HypedCanFrame::new(can_id.into(), [0u8; 8])
+            }
+            CanMessage::MotorControllerSetupCommand => {
+                let can_id = CanId::new_high_priority(
+                    Board::Telemetry,
+                    CanDataType::U32,
+                    MessageIdentifier::Event(EventId::MotorControllerSetupCommand),
+                );
+                HypedCanFrame::new(can_id.into(), [0u8; 8])
+            }
+            CanMessage::OpenPrechargeRelaysCommand => {
+                let can_id = CanId::new_high_priority(
+                    Board::Telemetry,
+                    CanDataType::U32,
+                    MessageIdentifier::Event(EventId::OpenPrechargeRelaysCommand),
+                );
+                HypedCanFrame::new(can_id.into(), [0u8; 8])
+            }
+            CanMessage::MotorControllerSetupComplete => {
+                let can_id = CanId::new(
+                    Board::MotorControl,
+                    CanDataType::U32,
+                    MessageIdentifier::Event(EventId::MotorControllerSetupComplete),
+                );
+                HypedCanFrame::new(can_id.into(), [0u8; 8])
+            }
+            CanMessage::MotorControllerOperational => {
+                let can_id = CanId::new(
+                    Board::MotorControl,
+                    CanDataType::U32,
+                    MessageIdentifier::Event(EventId::MotorControllerOperational),
                 );
                 HypedCanFrame::new(can_id.into(), [0u8; 8])
             }
@@ -342,7 +391,6 @@ impl From<CanMessage> for HypedCanFrame {
             }
 
             // Propulsion
-            // TODOLater: Boards for these events are placeholders, replace with MotorControl once merged
             CanMessage::PropulsionStatus {
                 current_ma,
                 velocity_kmh,
@@ -350,7 +398,7 @@ impl From<CanMessage> for HypedCanFrame {
                 voltage_cv,
             } => {
                 let can_id: CanId = CanId::new(
-                    Board::Telemetry,
+                    Board::MotorControl,
                     CanDataType::PropulsionStatus,
                     MessageIdentifier::Event(EventId::PropulsionStatus),
                 );
@@ -366,7 +414,7 @@ impl From<CanMessage> for HypedCanFrame {
 
             CanMessage::PropulsionForce { force_n } => {
                 let can_id: CanId = CanId::new(
-                    Board::Telemetry,
+                    Board::MotorControl,
                     CanDataType::U16,
                     MessageIdentifier::Event(EventId::PropulsionForce),
                 );
@@ -375,7 +423,7 @@ impl From<CanMessage> for HypedCanFrame {
             }
             CanMessage::StartPropulsionAccelerationCommand => {
                 let can_id: CanId = CanId::new_high_priority(
-                    Board::Telemetry,
+                    Board::MotorControl,
                     CanDataType::U32,
                     MessageIdentifier::Event(EventId::StartPropulsionAccelerationCommand),
                 );
@@ -383,7 +431,7 @@ impl From<CanMessage> for HypedCanFrame {
             }
             CanMessage::StartPropulsionBrakingCommand => {
                 let can_id: CanId = CanId::new_high_priority(
-                    Board::Telemetry,
+                    Board::MotorControl,
                     CanDataType::U32,
                     MessageIdentifier::Event(EventId::StartPropulsionBrakingCommand),
                 );
@@ -391,7 +439,7 @@ impl From<CanMessage> for HypedCanFrame {
             }
             CanMessage::PropulsionAccelerationStarted => {
                 let can_id: CanId = CanId::new(
-                    Board::Telemetry,
+                    Board::MotorControl,
                     CanDataType::U32,
                     MessageIdentifier::Event(EventId::PropulsionAccelerationStarted),
                 );
@@ -399,7 +447,7 @@ impl From<CanMessage> for HypedCanFrame {
             }
             CanMessage::PropulsionBrakingStarted => {
                 let can_id: CanId = CanId::new(
-                    Board::Telemetry,
+                    Board::MotorControl,
                     CanDataType::U32,
                     MessageIdentifier::Event(EventId::PropulsionBrakingStarted),
                 );
@@ -492,6 +540,23 @@ impl From<HypedCanFrame> for CanMessage {
                 CanMessage::DischargeRelayClosed
             }
 
+            // Motor Controller
+            MessageIdentifier::Event(EventId::MotorControllerSetOperationalCommand) => {
+                CanMessage::MotorControllerSetOperationalCommand
+            }
+            MessageIdentifier::Event(EventId::MotorControllerSetupCommand) => {
+                CanMessage::MotorControllerSetupCommand
+            }
+            MessageIdentifier::Event(EventId::MotorControllerSetupComplete) => {
+                CanMessage::MotorControllerSetupComplete
+            }
+            MessageIdentifier::Event(EventId::MotorControllerOperational) => {
+                CanMessage::MotorControllerOperational
+            }
+            MessageIdentifier::Event(EventId::OpenPrechargeRelaysCommand) => {
+                CanMessage::OpenPrechargeRelaysCommand
+            }
+
             // Navigation
             MessageIdentifier::Event(EventId::EndOfTrackBrake) => CanMessage::EndOfTrackBrake,
 
@@ -576,8 +641,8 @@ mod tests {
     use hyped_core::config::MeasurementId;
 
     use crate::{
-        boards::Board, data::CanData, heartbeat::Heartbeat, measurements::MeasurementReading,
-        messages::CanMessage,
+        boards::Board, data::CanData, emergency::Reason, heartbeat::Heartbeat,
+        measurements::MeasurementReading, messages::CanMessage,
     };
 
     #[test]
@@ -601,5 +666,36 @@ mod tests {
         let can_frame: HypedCanFrame = heartbeat.clone().into();
         let can_message_from_frame: CanMessage = can_frame.into();
         assert_eq!(heartbeat, can_message_from_frame)
+    }
+
+    #[test]
+    fn can_message_round_trip_measurement() {
+        let measurement_reading = MeasurementReading::new(
+            CanData::F32(1.25),
+            Board::Telemetry,
+            MeasurementId::Acceleration,
+        );
+        let can_message = CanMessage::MeasurementReading(measurement_reading);
+
+        let can_frame: HypedCanFrame = can_message.clone().into();
+        let decoded: CanMessage = can_frame.into();
+
+        assert_eq!(can_message, decoded)
+    }
+
+    #[test]
+    fn can_message_round_trip_heartbeat() {
+        let heartbeat = CanMessage::Heartbeat(Heartbeat::new(Board::Mqtt, Board::Telemetry));
+        let can_frame: HypedCanFrame = heartbeat.clone().into();
+        let decoded: CanMessage = can_frame.into();
+        assert_eq!(heartbeat, decoded)
+    }
+
+    #[test]
+    fn can_message_round_trip_emergency() {
+        let message = CanMessage::Emergency(Board::Navigation, Reason::MissingHeartbeat);
+        let can_frame: HypedCanFrame = message.clone().into();
+        let decoded: CanMessage = can_frame.into();
+        assert_eq!(message, decoded)
     }
 }

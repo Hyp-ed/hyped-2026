@@ -1,5 +1,5 @@
 import type { InfluxRow } from '@/modules/common/types/InfluxRow';
-import type { InfluxService } from '@/modules/influx/Influx.service';
+import { InfluxService } from '@/modules/influx/Influx.service';
 import { Logger } from '@/modules/logger/Logger.decorator';
 import { ACTIVE_STATES } from '@hyped/telemetry-constants';
 import type {

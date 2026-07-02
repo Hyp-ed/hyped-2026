@@ -82,10 +82,38 @@ export function StateMachine() {
 				},
 				type: getNodeType(ALL_POD_STATES.CALIBRATE),
 			},
-			{
-				id: 'precharge',
-				data: {
-					label: 'Precharge',
+				{
+					id: 'setup-motor',
+					data: {
+						label: 'Motor Setup',
+						sourcePositions: [
+							{
+								position: Position.Right,
+								id: 'right',
+							},
+							{
+								position: Position.Top,
+								id: 'top',
+							},
+						],
+						targetPositions: [
+							{
+								position: Position.Bottom,
+								id: 'bottom',
+							},
+						],
+						active: currentState === ALL_POD_STATES.SETUP_MOTOR,
+					},
+					position: {
+						x: 200,
+						y: 250,
+					},
+					type: getNodeType(ALL_POD_STATES.SETUP_MOTOR),
+				},
+				{
+					id: 'precharge',
+					data: {
+						label: 'Precharge',
 					sourcePositions: [
 						{
 							position: Position.Right,

@@ -10,6 +10,8 @@ pub enum Reason {
     TemperatureUpperLimitFailure = 6,
     TemperatureLowerLimitFailure = 7,
     IMD = 8,
+    AccelerometerCriticalLimit = 8,
+    Pressure = 8,
 }
 
 impl TryFrom<u8> for Reason {
@@ -24,6 +26,7 @@ impl TryFrom<u8> for Reason {
             5 => Ok(Reason::MissingHeartbeat),
             6 => Ok(Reason::TemperatureUpperLimitFailure),
             7 => Ok(Reason::TemperatureLowerLimitFailure),
+            8 => Ok(Reason::AccelerometerCriticalLimit),
             _ => Err("Invalid reason for emergency stop"),
         }
     }
@@ -61,8 +64,12 @@ mod tests {
             Reason::try_from(Reason::TemperatureLowerLimitFailure as u8).unwrap()
         );
         assert_eq!(
+            Reason::AccelerometerCriticalLimit,
+            Reason::try_from(Reason::AccelerometerCriticalLimit as u8).unwrap()
+        );
+        assert_eq!(
             Err("Invalid reason for emergency stop"),
-            Reason::try_from(8)
+            Reason::try_from(9)
         );
     }
 }

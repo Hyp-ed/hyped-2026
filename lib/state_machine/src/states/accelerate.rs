@@ -1,15 +1,12 @@
 use crate::{state::State, state_machine::StateMachine};
 use embassy_time::Instant;
-use hyped_communications::{bus::EVENT_BUS, events::Event};
+use hyped_communications::events::Event;
 use hyped_core::logging::{debug, info, warn};
 
 impl StateMachine {
     pub(crate) async fn entry_accelerate(&mut self) {
         info!("Pod is accelerating");
-        EVENT_BUS
-            .sender()
-            .send(Event::StartPropulsionAccelerationCommand)
-            .await;
+        self.queue_publish(Event::StartPropulsionAccelerationCommand);
     }
     pub(crate) async fn react_accelerate(&mut self, event: Event) {
         match event {

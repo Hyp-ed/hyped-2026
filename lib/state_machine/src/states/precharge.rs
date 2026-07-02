@@ -1,15 +1,23 @@
-use crate::{state::State, state_machine::StateMachine};
+use crate::{
+    state::State,
+    state_machine::{PrechargeStep, StateMachine},
+};
 use embassy_time::Instant;
-use hyped_communications::{bus::EVENT_BUS, events::Event};
+use hyped_communications::events::Event;
 use hyped_core::logging::{debug, info, warn};
 
 impl StateMachine {
     pub(crate) async fn entry_precharge(&mut self) {
         info!("Starting precharge");
-        self.precharge_step = 0;
+        self.precharge_step = PrechargeStep::Initial;
         self.precharge_voltage_ok = false;
+        self.precharge_complete = false;
         self.ready_for_run = false;
-        EVENT_BUS.sender().send(Event::StartPrechargeCommand).await;
+        self.battery_precharge_relay_open = false;
+        self.motor_controller_relay_open = false;
+        self.motor_controller_operational_command_sent = false;
+        self.motor_controller_operational = false;
+        self.queue_publish(Event::StartPrechargeCommand);
     }
 
     pub(crate) async fn react_precharge(&mut self, event: Event) {
@@ -19,41 +27,42 @@ impl StateMachine {
             }
             Event::PrechargeComplete => {
                 info!("Completed precharge at {}ms", Instant::now().as_millis(),);
-                if self.precharge_voltage_ok && self.precharge_step == 3 {
-                    self.ready_for_run = true;
-                    info!("Awaiting start run command from operator")
-                } else {
-                    warn!("Precharge voltage not at accepted value")
-                }
+                self.precharge_complete = true;
+                self.transition_to_ready_for_propulsion_if_precharge_complete()
+                    .await;
             }
             Event::VoltageStatus { voltage } => {
                 info!("Voltage {} at {}ms", voltage, Instant::now().as_millis(),);
             }
             Event::ShutdownCircuitryRelayClosed => {
-                if self.precharge_step == 0 {
-                    self.precharge_step = 1;
+                if self.precharge_step == PrechargeStep::Initial {
+                    self.precharge_step = PrechargeStep::ShutdownClosed;
                 } else {
                     warn!("Relays are out of order!");
                     self.transition_to(State::Emergency).await;
                 }
             }
             Event::BatteryPrechargeRelayClosed => {
-                if self.precharge_step == 1 {
-                    self.precharge_step = 2;
+                if self.precharge_step == PrechargeStep::ShutdownClosed {
+                    self.precharge_step = PrechargeStep::BatteryPrechargeClosed;
+                    self.battery_precharge_relay_open = false;
                 } else {
                     warn!("Relays are out of order!");
                     self.transition_to(State::Emergency).await;
                 }
             }
             Event::MotorControllerRelayClosed => {
-                if self.precharge_step == 2 {
-                    self.precharge_step = 3;
+                if self.precharge_step == PrechargeStep::BatteryPrechargeClosed {
+                    self.precharge_step = PrechargeStep::AllClosed;
+                    self.motor_controller_relay_open = false;
                     info!("Necessary relays for precharge closed");
                 } else {
                     warn!("Relays are out of order!");
                     self.transition_to(State::Emergency).await;
                 }
             }
+
+            // todolater: consider adding in an exit (that's not emergency) if motor controller setup is not true
 
             // Any other change in relays, goto Emergency
             Event::DischargeRelayClosed
@@ -64,19 +73,10 @@ impl StateMachine {
                 self.transition_to(State::Emergency).await;
             }
 
-            Event::StartRunOperatorCommand => {
-                if self.ready_for_run {
-                    info!("Starting Propulsion run");
-                    self.transition_to(State::ReadyForPropulsion).await;
-                }
-            }
             Event::PrechargeVoltageOK => {
                 self.precharge_voltage_ok = true;
-
-                // In case this event arrives after PrechargeComplete
-                if self.precharge_step == 3 {
-                    self.ready_for_run = true;
-                }
+                self.transition_to_ready_for_propulsion_if_precharge_complete()
+                    .await;
             }
             Event::EmergencyStopOperatorCommand => {
                 warn!("EMERGENCY STOP PRESSED");
@@ -85,6 +85,19 @@ impl StateMachine {
             _ => {
                 debug!("Event {} is ignored in current state", event)
             }
+        }
+    }
+
+    async fn transition_to_ready_for_propulsion_if_precharge_complete(&mut self) {
+        if self.precharge_voltage_ok
+            && self.precharge_complete
+            && self.precharge_step == PrechargeStep::AllClosed
+        {
+            self.ready_for_run = true;
+            info!("Precharge complete; entering ready for propulsion");
+            self.transition_to(State::ReadyForPropulsion).await;
+        } else if self.precharge_complete && !self.precharge_voltage_ok {
+            warn!("Precharge voltage not at accepted value");
         }
     }
 }

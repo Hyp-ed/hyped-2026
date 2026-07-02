@@ -3,8 +3,19 @@ use hyped_can::{CanError, HypedCan, HypedCanFrame};
 
 /// All types of messages that can be sent to the motor controller
 pub enum Messages {
+    TestStepperFrequency,
     TestStepperEnable,
-    TestModeCommand,
+    TestModeCommand(u32),
+    ResetTestModeCommand,
+    ResetNode,
+    SetMaxCurrent,
+    SecondaryCurrentProtection,
+    MotorRatedCurrent,
+    OvervoltageLimit,
+    ModesOfOperation,
+    SensorType,
+    UndervoltageLimit,
+
     EnterStopState,
     EnterPreoperationalState,
     EnterOperationalState,
@@ -55,8 +66,24 @@ impl From<HypedCanFrame> for CanOpenMessage {
 impl From<Messages> for CanOpenMessage {
     fn from(message: Messages) -> Self {
         match message {
+            Messages::TestStepperFrequency => config_messages::TEST_STEPPER_FREQUENCY,
             Messages::TestStepperEnable => config_messages::TEST_STEPPER_ENABLE,
-            Messages::TestModeCommand => config_messages::TEST_MODE_COMMAND,
+            Messages::TestModeCommand(f) => CanOpenMessage {
+                id: config_messages::TEST_MODE_COMMAND.id,
+                command: config_messages::TEST_MODE_COMMAND.command,
+                index: config_messages::TEST_MODE_COMMAND.index,
+                sub_index: config_messages::TEST_MODE_COMMAND.sub_index,
+                data: f,
+            },
+            Messages::ResetTestModeCommand => config_messages::RESET_TEST_MODE_COMMAND,
+            Messages::ResetNode => messages::RESET_NODE,
+            Messages::SetMaxCurrent => config_messages::SET_MAX_CURRENT,
+            Messages::SecondaryCurrentProtection => config_messages::SECONDARY_CURRENT_PROTECTION,
+            Messages::MotorRatedCurrent => config_messages::MOTOR_RATED_CURRENT,
+            Messages::OvervoltageLimit => config_messages::OVERVOLTAGE_LIMIT,
+            Messages::ModesOfOperation => config_messages::MODES_OF_OPERATION,
+            Messages::SensorType => config_messages::SENSOR_TYPE,
+            Messages::UndervoltageLimit => config_messages::UNDERVOLTAGE_LIMIT,
             Messages::EnterStopState => messages::ENTER_STOP_STATE,
             Messages::EnterPreoperationalState => messages::ENTER_PREOPERATIONAL_STATE,
             Messages::EnterOperationalState => messages::ENTER_OPERATIONAL_STATE,
