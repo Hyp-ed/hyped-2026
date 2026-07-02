@@ -37,6 +37,7 @@ use hyped_boards_stm32f767zi::{
             mqtt_to_event_bus::mqtt_to_event_bus,
         },
         network::net_task,
+        sensors::read_imd,
     },
 };
 use hyped_communications::{boards::Board, bus, emergency::Reason, messages::CanMessage};
@@ -52,16 +53,12 @@ use panic_probe as _;
 use rand_core::RngCore;
 use static_cell::StaticCell;
 
-// const HEARTBEAT_BOARDS: [Board; 4] = [
-//     Board::Navigation,
-//     Board::MotorControl,
-//     Board::Sensors1,
-//     Board::Sensors2,
-// ];
-
-//const HEARTBEAT_BOARDS: [Board; 1] = [Board::TemperatureTester];s
-const HEARTBEAT_BOARDS: [Board; 1] = [Board::Navigation];
-
+const HEARTBEAT_BOARDS: [Board; 4] = [
+    Board::Navigation,
+    Board::MotorControl,
+    Board::Sensors1,
+    Board::Sensors2,
+];
 
 bind_interrupts!(struct Irqs {
     ETH => eth::InterruptHandler;
@@ -95,7 +92,7 @@ async fn main(spawner: Spawner) -> ! {
 
     // CAN tasks: CAN send/receive, heartbeat controller, and state machine
     defmt::info!("Setting up CAN...");
-    let mut can = Can::new(p.CAN1, p.PB8, p.PB9, Irqs);
+    let mut can = Can::new(p.CAN1, p.PD0, p.PD1, Irqs);
     default_can_config!(can);
     can.enable().await;
     let (can_tx, can_rx) = can.split();
@@ -109,6 +106,7 @@ async fn main(spawner: Spawner) -> ! {
         spawner.must_spawn(send_heartbeat(board));
     }
     spawner.must_spawn(heartbeat_monitor());
+    spawner.must_spawn(read_imd::read_imd());
     spawner.must_spawn(mqtt_to_event_bus());
     spawner.must_spawn(event_to_can(can_bridge_events));
     // Let the CAN bridge start listening before the state machine entry publishes commands.

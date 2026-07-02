@@ -10,6 +10,7 @@ use hyped_communications::{
     message_identifier::{EventId, MessageIdentifier},
     messages::CanMessage,
 };
+use hyped_sensors::imd::ImdFrame;
 
 use crate::board_state::{EMERGENCY, THIS_BOARD};
 
@@ -18,6 +19,8 @@ use panic_probe as _;
 
 /// Stores heartbeat messages coming in from other boards that we need to respond to.
 pub static INCOMING_HEARTBEATS: Channel<CriticalSectionRawMutex, Heartbeat, 10> = Channel::new();
+
+pub static INCOMING_IMD_MSGS: Channel<CriticalSectionRawMutex, ImdFrame, 10> = Channel::new();
 
 /// Stores measurement readings coming in from other boards.
 pub static INCOMING_MEASUREMENTS: Channel<CriticalSectionRawMutex, MeasurementReading, 10> =
@@ -38,6 +41,15 @@ pub async fn can_receiver(mut rx: CanRx<'static>) {
             continue;
         }
         let envelope = envelope.unwrap();
+
+        if let Id::Extended(id) = envelope.frame.id() {
+            const DEFAULT_IMD_ID: u32 = 0x18ff01f4;
+            if id.as_raw() == DEFAULT_IMD_ID {
+                let _ = INCOMING_IMD_MSGS.try_send(ImdFrame::from_data(envelope.frame.data()));
+                continue;
+            }
+        }
+
         let id = envelope.frame.id();
         let raw_id = match id {
             Id::Standard(id) => id.as_raw() as u32, // 11-bit ID
