@@ -5,6 +5,7 @@ use core::str::FromStr;
 use heapless::String;
 
 pub const MQTT_MEASUREMENT_TOPIC_PREFIX: &str = "hyped/the_podigal_son/measurement/";
+pub const MQTT_CONTROLS_TOPIC_PREFIX: &str = "hyped/the_podigal_son/controls/";
 
 /// Enum representing all MQTT topics used by the pod
 #[derive(Debug, defmt::Format, PartialEq, Eq)]
@@ -38,6 +39,8 @@ impl FromStr for MqttTopic {
                     let measurement_id_string = &s[MQTT_MEASUREMENT_TOPIC_PREFIX.len()..s.len()];
                     let measurement_id = measurement_id_string.into();
                     Ok(MqttTopic::Measurement(measurement_id))
+                } else if s.starts_with(MQTT_CONTROLS_TOPIC_PREFIX) {
+                    Ok(MqttTopic::Controls)
                 } else {
                     Err("Invalid topic")
                 }
