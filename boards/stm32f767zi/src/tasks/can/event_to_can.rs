@@ -19,6 +19,7 @@ pub async fn event_to_can(mut events: DynSubscriber<'static, Event>) -> ! {
         let can_message: Option<CanMessage> = match &event {
             // Operator Commands (not sent over CAN)
             Event::EmergencyStopOperatorCommand => None,
+            Event::IdleOperatorCommand => None,
             Event::PrechargeOperatorCommand => None,
             Event::AccelerateOperatorCommand => None,
             Event::BrakeOperatorCommand => None,

@@ -12,6 +12,7 @@ import {
 	ChevronsDown,
 	ChevronsUp,
 	Gauge,
+	Home,
 	Rocket,
 	Settings2,
 	ShieldCheck,
@@ -38,6 +39,12 @@ export const FullControls = ({ podId }: { podId: string }) => {
 				<div className="flex flex-row gap-3 overflow-x-auto">
 					<div className="flex flex-row gap-3 shrink-0">
 						<ButtonLabel>Run sequence</ButtonLabel>
+						<ControlButton
+							className="bg-openmct-dark-gray hover:bg-openmct-light-gray flex gap-2"
+							onClick={() => void sendControlMessage(podId, CONTROLS.IDLE)}
+						>
+							Idle <Home size={16} />
+						</ControlButton>
 						<ButtonPair>
 							<LeftButton
 								onClick={() =>

@@ -24,7 +24,10 @@ use hyped_boards_stm32f767zi::{
         send::{can_sender, CAN_SEND},
     },
 };
-use hyped_communications::{boards::Board, bus, bus::DynSubscriber, events::Event, messages::CanMessage};
+use hyped_communications::{
+    boards::Board, bus, bus::DynSubscriber, events::Event, messages::CanMessage,
+};
+use hyped_core::types::{Current, Temperature, Velocity, Voltage};
 use panic_probe as _;
 
 const BRAKE_DELAY_S: u64 = 2;
@@ -95,10 +98,26 @@ async fn navigation_simulator_task(
                 NAV_SIM_ARMED.store(false, Ordering::Release);
                 NAV_SIM_GENERATION.fetch_add(1, Ordering::AcqRel);
                 info!("Navigation simulator disarmed");
+                let _ = spawner.spawn(send_stopped_status());
             }
             _ => {}
         }
     }
+}
+
+#[embassy_executor::task(pool_size = 2)]
+async fn send_stopped_status() {
+    Timer::after(Duration::from_secs(2)).await;
+    info!("Navigation simulator reporting pod stopped");
+    CAN_SEND
+        .sender()
+        .send(CanMessage::PropulsionStatus {
+            current_ma: Current(0),
+            velocity_kmh: Velocity(0),
+            temperature_c: Temperature(0),
+            voltage_cv: Voltage(0),
+        })
+        .await;
 }
 
 #[embassy_executor::task(pool_size = 2)]

@@ -114,6 +114,11 @@ impl StateMachine {
                 self.transition_to(State::Emergency).await;
                 return;
             }
+            Event::IdleOperatorCommand => {
+                warn!("Operator requested idle transition");
+                self.transition_to(State::Idle).await;
+                return;
+            }
 
             // Global events
             Event::Heartbeat { from } => {

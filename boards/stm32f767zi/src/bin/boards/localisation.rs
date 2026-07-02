@@ -54,7 +54,10 @@ use hyped_communications::{
     boards::Board, bus, bus::DynSubscriber, data::CanData, events::Event,
     measurements::MeasurementReading, messages::CanMessage,
 };
-use hyped_core::config::{MeasurementId, LOCALISATION_CONFIG};
+use hyped_core::{
+    config::{MeasurementId, LOCALISATION_CONFIG},
+    types::{Current, Temperature, Velocity, Voltage},
+};
 use hyped_localisation::{control::localizer::Localizer, types::RawAccelerometerData};
 use hyped_spi::HypedSpiCsPin;
 use panic_probe as _;
@@ -104,7 +107,7 @@ async fn main(spawner: Spawner) -> ! {
     spawner.must_spawn(can_receiver(can_rx));
     spawner.must_spawn(can_sender(can_tx));
     spawner.must_spawn(send_heartbeat(Board::Telemetry));
-    spawner.must_spawn(navigation_command_task(navigation_events));
+    spawner.must_spawn(navigation_command_task(spawner, navigation_events));
     defmt::info!("CAN sender task started");
 
     let can_message_sender = CAN_SEND.sender();
@@ -233,7 +236,7 @@ async fn main(spawner: Spawner) -> ! {
 }
 
 #[embassy_executor::task]
-async fn navigation_command_task(mut events: DynSubscriber<'static, Event>) {
+async fn navigation_command_task(spawner: Spawner, mut events: DynSubscriber<'static, Event>) {
     loop {
         match events.next_message_pure().await {
             Event::StartPropulsionAccelerationCommand => {
@@ -244,8 +247,24 @@ async fn navigation_command_task(mut events: DynSubscriber<'static, Event>) {
             Event::StartPropulsionBrakingCommand | Event::EndOfTrackBrakeCommand => {
                 defmt::info!("Navigation disarmed");
                 NAVIGATION_ARMED.store(false, Ordering::Release);
+                let _ = spawner.spawn(send_stopped_status());
             }
             _ => {}
         }
     }
+}
+
+#[embassy_executor::task(pool_size = 2)]
+async fn send_stopped_status() {
+    Timer::after(Duration::from_secs(2)).await;
+    defmt::info!("Navigation reporting pod stopped");
+    CAN_SEND
+        .sender()
+        .send(CanMessage::PropulsionStatus {
+            current_ma: Current(0),
+            velocity_kmh: Velocity(0),
+            temperature_c: Temperature(0),
+            voltage_cv: Voltage(0),
+        })
+        .await;
 }

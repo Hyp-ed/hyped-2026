@@ -6,6 +6,7 @@ import toast from 'react-hot-toast';
  * Defines the controls that can be sent to a pod.
  */
 export const CONTROLS = {
+	IDLE: 'idle',
 	MOTOR_SETUP: 'setup_motor',
 	PRECHARGE: 'precharge',
 	READY_FOR_PROPULSION: 'ready-for-propulsion',

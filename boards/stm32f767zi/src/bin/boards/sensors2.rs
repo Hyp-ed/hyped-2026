@@ -210,6 +210,8 @@ async fn respond_to_message(message: CanMessage, gpio_pins: &mut Pins) {
 
 impl Pins {
     async fn open_precharge_relays(&mut self) {
+        self.open_shutdown_circuitry_relay().await;
+
         self.battery_precharge_relay.set_low();
         CAN_SEND.send(CanMessage::BatteryPrechargeRelayOpen).await;
 
