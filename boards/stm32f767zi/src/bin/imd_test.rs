@@ -30,7 +30,7 @@ async fn main(spawner: Spawner) -> ! {
     let p = embassy_stm32::init(Default::default());
 
     defmt::info!("Setting up CAN...");
-    let mut can = Can::new(p.CAN1, p.PD0, p.PD1, Irqs);
+    let mut can = Can::new(p.CAN1, p.PB8, p.PB9, Irqs);
     default_can_config!(can);
     can.enable().await;
     let (_, can_rx) = can.split();

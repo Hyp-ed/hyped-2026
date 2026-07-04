@@ -32,7 +32,31 @@ pub async fn event_to_can(mut events: DynSubscriber<'static, Event>) -> ! {
             // Heartbeat (handled by separate heartbeat task)
             Event::Heartbeat { .. } => None,
             Event::StateChanged { state } => {
-                let _ = mqtt_sender.try_send(MqttMessage::new_json_string(MqttTopic::State, state));
+                let _ = mqtt_sender.try_send(MqttMessage::new_retained_json_string(
+                    MqttTopic::State,
+                    state,
+                ));
+                None
+            }
+            Event::ControlStatusChanged {
+                can_setup_motor,
+                can_precharge,
+                can_ready_for_propulsion,
+                can_accelerate,
+            } => {
+                let mut payload = String::<512>::new();
+                let _ = write!(
+                    payload,
+                    "{{\"canSetupMotor\":{},\"canPrecharge\":{},\"canReadyForPropulsion\":{},\"canAccelerate\":{}}}",
+                    can_setup_motor,
+                    can_precharge,
+                    can_ready_for_propulsion,
+                    can_accelerate
+                );
+                let _ = mqtt_sender.try_send(MqttMessage::new_retained(
+                    MqttTopic::ControlStatus,
+                    payload,
+                ));
                 None
             }
 

@@ -76,7 +76,11 @@ pub async fn mqtt_send(
         defmt::debug!("Sending MQTT message: {}", message);
         let topic_string: String<100> = message.topic.into();
         mqtt_client
-            .send_message(topic_string.as_str(), message.payload.as_bytes(), false)
+            .send_message(
+                topic_string.as_str(),
+                message.payload.as_bytes(),
+                message.retain,
+            )
             .await;
     }
 }

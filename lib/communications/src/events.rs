@@ -26,6 +26,12 @@ pub enum Event {
     StateChanged {
         state: &'static str,
     },
+    ControlStatusChanged {
+        can_setup_motor: bool,
+        can_precharge: bool,
+        can_ready_for_propulsion: bool,
+        can_accelerate: bool,
+    },
 
     // ------ Electronics ------
 

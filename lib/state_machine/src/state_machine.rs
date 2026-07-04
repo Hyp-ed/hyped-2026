@@ -75,6 +75,19 @@ impl StateMachine {
         });
     }
 
+    fn publish_control_status(&mut self) {
+        self.queue_publish(Event::ControlStatusChanged {
+            can_setup_motor: self.current_state == State::Idle,
+            can_precharge: self.current_state == State::SetupMotor
+                && self.motor_controller_setup_done,
+            can_ready_for_propulsion: self.current_state == State::Precharge && self.ready_for_run,
+            can_accelerate: self.current_state == State::ReadyForPropulsion
+                && self.precharge_step == PrechargeStep::AllClosed
+                && self.motor_controller_operational
+                && !self.brakes_clamped,
+        });
+    }
+
     // Actions when transitioning state
     pub(crate) async fn transition_to(&mut self, new_state: State) {
         info!("Transitioning: {:?} -> {:?}", self.current_state, new_state);
@@ -145,11 +158,19 @@ impl StateMachine {
 pub async fn run(mut sm: StateMachine, mut events: DynSubscriber<'static, Event>) -> ! {
     sm.publish_current_state();
     sm.entry().await;
+    sm.publish_control_status();
     sm.drain_pending().await;
 
     loop {
         let ev = events.next_message_pure().await;
+        if matches!(
+            ev,
+            Event::StateChanged { .. } | Event::ControlStatusChanged { .. }
+        ) {
+            continue;
+        }
         sm.react(ev).await;
+        sm.publish_control_status();
         sm.drain_pending().await;
     }
 }

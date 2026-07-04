@@ -7,6 +7,7 @@ import 'victormono';
 import { App } from './App';
 import './globals.css';
 import { Errors } from './components/errors';
+import { HighPowerPrompt } from './components/high-power-prompt';
 import { Providers } from './providers';
 
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
@@ -20,6 +21,7 @@ ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
 					className: 'bg-gray-100 text-gray-900 shadow-xl',
 				}}
 			/>
+			<HighPowerPrompt />
 			<Errors />
 		</Providers>
 	</React.StrictMode>,

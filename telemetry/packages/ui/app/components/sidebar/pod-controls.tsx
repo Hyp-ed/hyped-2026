@@ -25,36 +25,42 @@ export const PodControls = ({
 	podId: string;
 	show: boolean;
 }) => {
-	const { podState } = usePod(podId);
+	const { podState, controlStatus } = usePod(podId);
 	const controls = [
 		{
 			label: 'Motor Setup',
 			control: CONTROLS.MOTOR_SETUP,
 			icon: PlugZap,
 			enabled:
-				podState === ALL_POD_STATES.IDLE ||
-				podState === ALL_POD_STATES.UNKNOWN,
+				podState === ALL_POD_STATES.UNKNOWN ||
+				podState === ALL_POD_STATES.IDLE,
 			className: 'bg-blue-700 hover:bg-blue-800',
 		},
 		{
 			label: 'Precharge',
 			control: CONTROLS.PRECHARGE,
 			icon: Gauge,
-			enabled: podState === ALL_POD_STATES.SETUP_MOTOR,
+			enabled:
+				podState === ALL_POD_STATES.SETUP_MOTOR &&
+				controlStatus.canPrecharge,
 			className: 'bg-amber-600 hover:bg-amber-700',
 		},
 		{
 			label: 'Ready Pod',
 			control: CONTROLS.READY_FOR_PROPULSION,
 			icon: ShieldCheck,
-			enabled: podState === ALL_POD_STATES.PRECHARGE,
+			enabled:
+				podState === ALL_POD_STATES.PRECHARGE &&
+				controlStatus.canReadyForPropulsion,
 			className: 'bg-emerald-700 hover:bg-emerald-800',
 		},
 		{
 			label: 'Accelerate',
 			control: CONTROLS.ACCELERATE,
 			icon: Rocket,
-			enabled: podState === ALL_POD_STATES.READY_FOR_PROPULSION,
+			enabled:
+				podState === ALL_POD_STATES.READY_FOR_PROPULSION &&
+				controlStatus.canAccelerate,
 			className: 'bg-green-700 hover:bg-green-800',
 		},
 	];

@@ -17,14 +17,35 @@ use rust_mqtt::{
 pub struct MqttMessage {
     pub topic: MqttTopic,
     pub payload: String<512>,
+    pub retain: bool,
 }
 
 impl MqttMessage {
     pub fn new(topic: MqttTopic, payload: String<512>) -> Self {
-        MqttMessage { topic, payload }
+        MqttMessage {
+            topic,
+            payload,
+            retain: false,
+        }
+    }
+
+    pub fn new_retained(topic: MqttTopic, payload: String<512>) -> Self {
+        MqttMessage {
+            topic,
+            payload,
+            retain: true,
+        }
     }
 
     pub fn new_json_string(topic: MqttTopic, value: &str) -> Self {
+        Self::new_json_string_with_retain(topic, value, false)
+    }
+
+    pub fn new_retained_json_string(topic: MqttTopic, value: &str) -> Self {
+        Self::new_json_string_with_retain(topic, value, true)
+    }
+
+    fn new_json_string_with_retain(topic: MqttTopic, value: &str, retain: bool) -> Self {
         let mut payload = String::<512>::new();
         let _ = payload.push('"');
 
@@ -64,7 +85,11 @@ impl MqttMessage {
         }
 
         let _ = payload.push('"');
-        MqttMessage { topic, payload }
+        MqttMessage {
+            topic,
+            payload,
+            retain,
+        }
     }
 }
 
