@@ -32,10 +32,10 @@ bind_interrupts!(struct Irqs {
     CAN1_RX1 => Rx1InterruptHandler<CAN1>;
     CAN1_SCE => SceInterruptHandler<CAN1>;
     CAN1_TX => TxInterruptHandler<CAN1>;
-    // CAN3_RX0 => Rx0InterruptHandler<CAN3>;
-    // CAN3_RX1 => Rx1InterruptHandler<CAN3>;
-    // CAN3_SCE => SceInterruptHandler<CAN3>;
-    // CAN3_TX => TxInterruptHandler<CAN3>;
+    CAN3_RX0 => Rx0InterruptHandler<CAN3>;
+    CAN3_RX1 => Rx1InterruptHandler<CAN3>;
+    CAN3_SCE => SceInterruptHandler<CAN3>;
+    CAN3_TX => TxInterruptHandler<CAN3>;
 });
 
 #[embassy_executor::main]
@@ -59,16 +59,16 @@ async fn main(spawner: Spawner) {
     spawner.must_spawn(send_heartbeat(Board::Telemetry));
     info!("CAN1 enabled");
 
-    // info!("Setting up CAN3 (motor bus)...");
-    // let mut can3 = Can::new(p.CAN3, p.PB3, p.PB4, Irqs);
-    // default_can_config!(can3);
-    // can3.enable().await;
-    // let (can3_tx, can3_rx) = can3.split();
-    // info!("CAN3 enabled");
+    info!("Setting up CAN3 (motor bus)...");
+    let mut can3 = Can::new(p.CAN3, p.PB3, p.PB4, Irqs);
+    default_can_config!(can3);
+    can3.enable().await;
+    let (can3_tx, can3_rx) = can3.split();
+    info!("CAN3 enabled");
 
-    //spawner.must_spawn(motor_rx_task(can3_rx));
+    spawner.must_spawn(motor_rx_task(can3_rx));
     spawner.must_spawn(motor_command_task(motor_control_events));
-    //spawner.must_spawn(motor_control_loop(can3_tx));
+    spawner.must_spawn(motor_control_loop(can3_tx));
 
     loop {
         Timer::after(Duration::from_secs(1)).await;

@@ -5,10 +5,7 @@ use crate::{
 use defmt_rtt as _;
 use embassy_time::Duration;
 use hyped_communications::{
-    boards::Board,
-    data::CanData,
-    events::Reason,
-    measurements::MeasurementReading,
+    boards::Board, data::CanData, events::Reason, measurements::MeasurementReading,
     messages::CanMessage,
 };
 use hyped_core::config::MeasurementId;

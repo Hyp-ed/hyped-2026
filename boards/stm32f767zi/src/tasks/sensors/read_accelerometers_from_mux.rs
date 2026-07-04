@@ -45,8 +45,9 @@ pub async fn read_accelerometers_from_mux(
 
     let mut i2c_for_accelerometer_1 = Stm32f767ziI2c::new(i2c_bus);
     let mut accelerometer_1 =
-        Accelerometer::new(&mut i2c_for_accelerometer_1, WORKING_ACCELEROMETER_ADDRESS)
-            .expect("Failed to create accelerometer. Check the wiring and the I2C address of the sensor.");
+        Accelerometer::new(&mut i2c_for_accelerometer_1, WORKING_ACCELEROMETER_ADDRESS).expect(
+            "Failed to create accelerometer. Check the wiring and the I2C address of the sensor.",
+        );
     defmt::info!("Accelerometer 1 initialized.");
 
     loop {

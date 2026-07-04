@@ -108,7 +108,7 @@ async fn main(spawner: Spawner) -> ! {
         spawner.must_spawn(send_heartbeat(board));
     }
     spawner.must_spawn(heartbeat_monitor());
-    //spawner.must_spawn(read_imd::read_imd());
+    spawner.must_spawn(read_imd::read_imd());
     spawner.must_spawn(mqtt_to_event_bus());
     spawner.must_spawn(event_to_can(can_bridge_events));
     // Let the CAN bridge start listening before the state machine entry publishes commands.

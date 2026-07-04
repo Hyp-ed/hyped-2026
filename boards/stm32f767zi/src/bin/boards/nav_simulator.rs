@@ -76,19 +76,13 @@ async fn main(spawner: Spawner) -> ! {
 }
 
 #[embassy_executor::task]
-async fn navigation_simulator_task(
-    spawner: Spawner,
-    mut events: DynSubscriber<'static, Event>,
-) {
+async fn navigation_simulator_task(spawner: Spawner, mut events: DynSubscriber<'static, Event>) {
     loop {
         match events.next_message_pure().await {
             Event::StartPropulsionAccelerationCommand => {
                 let generation = NAV_SIM_GENERATION.fetch_add(1, Ordering::AcqRel) + 1;
                 NAV_SIM_ARMED.store(true, Ordering::Release);
-                info!(
-                    "Navigation simulator armed; braking in {}s",
-                    BRAKE_DELAY_S
-                );
+                info!("Navigation simulator armed; braking in {}s", BRAKE_DELAY_S);
 
                 if spawner.spawn(send_delayed_brake(generation)).is_err() {
                     error!("Failed to spawn delayed brake task");
