@@ -129,7 +129,10 @@ pub async fn event_to_can(mut events: DynSubscriber<'static, Event>) -> ! {
                 .await
                 .is_err()
             {
-                defmt::error!("CAN bridge dropped {:?}: CAN_SEND remained full for 100ms", msg);
+                defmt::error!(
+                    "CAN bridge dropped {:?}: CAN_SEND remained full for 100ms",
+                    msg
+                );
                 continue;
             }
 
