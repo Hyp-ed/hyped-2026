@@ -63,7 +63,6 @@ pub async fn motor_command_task(mut events: DynSubscriber<'static, Event>) {
                 info!("Starting low-power test acceleration");
                 send_motor_command(Messages::StartDrive).await;
                 send_motor_command(Messages::TestModeCommand(200)).await;
-                Timer::after(Duration::from_secs(3)).await;
                 CAN_SEND
                     .send(CanMessage::PropulsionAccelerationStarted)
                     .await;

@@ -165,6 +165,12 @@ impl StateMachine {
             _ => {}
         }
 
+        if self.brake_signal_is_invalid(&event) {
+            warn!("Emergency braking signal is invalid for the current state");
+            self.transition_to(State::Emergency).await;
+            return;
+        }
+
         match self.current_state {
             State::Idle => self.react_idle(event).await,
             State::EnteringMaintenance => self.react_entering_maintenance(event).await,
@@ -177,6 +183,29 @@ impl StateMachine {
             State::Brake => self.react_brake(event).await,
             State::Stopped => self.react_stopped(event).await,
             State::Emergency => self.react_emergency(event).await,
+        }
+    }
+
+    fn brake_signal_is_invalid(&self, event: &Event) -> bool {
+        match event {
+            Event::BrakesClamped { from } => {
+                *from != hyped_communications::boards::Board::Pneumatics
+                    || matches!(self.current_state, State::Maintenance | State::Accelerate)
+            }
+            Event::BrakesUnclamped { from } => {
+                *from != hyped_communications::boards::Board::Pneumatics
+                    || matches!(
+                        self.current_state,
+                        State::Idle
+                            | State::SetupMotor
+                            | State::Precharge
+                            | State::HvActive
+                            | State::Brake
+                            | State::Stopped
+                            | State::Emergency
+                    )
+            }
+            _ => false,
         }
     }
 }
@@ -420,5 +449,16 @@ mod tests {
             event,
             Event::StartPropulsionBrakingCommand
         )));
+    }
+
+    #[test]
+    fn critical_brake_signal_from_wrong_board_forces_emergency() {
+        let mut sm = StateMachine::new();
+
+        block_on(sm.react(Event::BrakesClamped {
+            from: Board::Navigation,
+        }));
+
+        assert_eq!(sm.current_state, State::Emergency);
     }
 }

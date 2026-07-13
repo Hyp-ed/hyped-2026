@@ -63,7 +63,6 @@ pub async fn event_to_can(mut events: DynSubscriber<'static, Event>) -> ! {
             // Outbound commands from the state machine
             Event::StartPrechargeCommand => Some(CanMessage::StartPrechargeCommand),
             Event::StartDischargeCommand => Some(CanMessage::StartDischargeCommand),
-            Event::EndOfTrackBrakeCommand => Some(CanMessage::EndOfTrackBrake),
             Event::UnclampBrakesCommand => Some(CanMessage::UnclampBrakesCommand),
             Event::ClampBrakesCommand => Some(CanMessage::ClampBrakesCommand),
             Event::RetractLateralSuspensionCommand => {
@@ -105,6 +104,7 @@ pub async fn event_to_can(mut events: DynSubscriber<'static, Event>) -> ! {
             | Event::LateralSuspensionRetracted { .. }
             | Event::LateralSuspensionExtended { .. }
             | Event::DynamicsStatus { .. }
+            | Event::EndOfTrackBrakeCommand
             | Event::PropulsionAccelerationStarted
             | Event::PropulsionBrakingStarted
             | Event::PropulsionStatus { .. }
