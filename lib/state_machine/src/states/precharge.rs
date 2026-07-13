@@ -28,8 +28,7 @@ impl StateMachine {
             Event::PrechargeComplete => {
                 info!("Completed precharge at {}ms", Instant::now().as_millis(),);
                 self.precharge_complete = true;
-                self.transition_to_ready_for_propulsion_if_precharge_complete()
-                    .await;
+                self.mark_ready_for_run_if_precharge_complete();
             }
             Event::VoltageStatus { voltage } => {
                 info!("Voltage {} at {}ms", voltage, Instant::now().as_millis(),);
@@ -75,8 +74,15 @@ impl StateMachine {
 
             Event::PrechargeVoltageOK => {
                 self.precharge_voltage_ok = true;
-                self.transition_to_ready_for_propulsion_if_precharge_complete()
-                    .await;
+                self.mark_ready_for_run_if_precharge_complete();
+            }
+            Event::ReadyForPropulsionOperatorCommand => {
+                if self.ready_for_run {
+                    info!("Operator confirmed pod is ready for propulsion");
+                    self.transition_to(State::ReadyForPropulsion).await;
+                } else {
+                    warn!("Precharge incomplete, cannot enter ready for propulsion");
+                }
             }
             Event::EmergencyStopOperatorCommand => {
                 warn!("EMERGENCY STOP PRESSED");
@@ -88,14 +94,13 @@ impl StateMachine {
         }
     }
 
-    async fn transition_to_ready_for_propulsion_if_precharge_complete(&mut self) {
+    fn mark_ready_for_run_if_precharge_complete(&mut self) {
         if self.precharge_voltage_ok
             && self.precharge_complete
             && self.precharge_step == PrechargeStep::AllClosed
         {
             self.ready_for_run = true;
-            info!("Precharge complete; entering ready for propulsion");
-            self.transition_to(State::ReadyForPropulsion).await;
+            info!("Precharge complete; awaiting ready for propulsion command");
         } else if self.precharge_complete && !self.precharge_voltage_ok {
             warn!("Precharge voltage not at accepted value");
         }

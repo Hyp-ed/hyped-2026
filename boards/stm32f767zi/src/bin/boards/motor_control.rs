@@ -17,14 +17,14 @@ use hyped_boards_stm32f767zi::{
     board_state::THIS_BOARD,
     default_can_config,
     tasks::{
-        can::{receive::can_receiver, send::can_sender},
+        can::{board_heartbeat::send_heartbeat, receive::can_receiver, send::can_sender},
         motor_control::{
-            control::{motor_control_loop, motor_setup_task},
+            control::{motor_command_task, motor_control_loop},
             receive::motor_rx_task,
         },
     },
 };
-use hyped_communications::boards::Board;
+use hyped_communications::{boards::Board, bus};
 use panic_probe as _;
 
 bind_interrupts!(struct Irqs {
@@ -43,16 +43,20 @@ async fn main(spawner: Spawner) {
     THIS_BOARD
         .init(Board::MotorControl)
         .expect("Failed to initialize board");
+    bus::init().expect("Failed to initialise event bus");
+    let motor_control_events =
+        bus::subscriber().expect("Failed to create motor control event subscriber");
 
     let p = embassy_stm32::init(Default::default());
 
     info!("Setting up CAN1 (main bus)...");
-    let mut can = Can::new(p.CAN1, p.PD0, p.PD1, Irqs);
+    let mut can = Can::new(p.CAN1, p.PB8, p.PB9, Irqs);
     default_can_config!(can);
     can.enable().await;
     let (can_tx, can_rx) = can.split();
     spawner.must_spawn(can_receiver(can_rx));
     spawner.must_spawn(can_sender(can_tx));
+    spawner.must_spawn(send_heartbeat(Board::Telemetry));
     info!("CAN1 enabled");
 
     info!("Setting up CAN3 (motor bus)...");
@@ -63,7 +67,7 @@ async fn main(spawner: Spawner) {
     info!("CAN3 enabled");
 
     spawner.must_spawn(motor_rx_task(can3_rx));
-    spawner.must_spawn(motor_setup_task());
+    spawner.must_spawn(motor_command_task(motor_control_events));
     spawner.must_spawn(motor_control_loop(can3_tx));
 
     loop {

@@ -34,22 +34,18 @@ pub async fn can_receiver(mut rx: CanRx<'static>) {
     let incoming_heartbeat_sender = INCOMING_HEARTBEATS.sender();
 
     loop {
-        defmt::info!("Waiting for CAN message");
+        defmt::debug!("Waiting for CAN message");
 
         let envelope = rx.read().await;
-        defmt::info!("envelope: {:?}", envelope);
         if envelope.is_err() {
             continue;
         }
         let envelope = envelope.unwrap();
 
-        // TODO: identify imd frame
         if let Id::Extended(id) = envelope.frame.id() {
             const DEFAULT_IMD_ID: u32 = 0x18ff01f4;
             if id.as_raw() == DEFAULT_IMD_ID {
-                INCOMING_IMD_MSGS
-                    .send(ImdFrame::from_data(envelope.frame.data()))
-                    .await;
+                let _ = INCOMING_IMD_MSGS.try_send(ImdFrame::from_data(envelope.frame.data()));
                 continue;
             }
         }

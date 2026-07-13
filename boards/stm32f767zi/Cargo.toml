@@ -69,11 +69,14 @@ name = "localisation"
 path = "src/bin/boards/localisation.rs"
 
 [[bin]]
+name = "nav_simulator"
+path = "src/bin/boards/nav_simulator.rs"
+
+[[bin]]
 name = "board_simulator"
 path = "src/bin/boards/board_simulator.rs"
 
 [[bin]]
 name = "i2cdetect"
 path = "src/bin/tools/i2cdetect.rs"
-
 

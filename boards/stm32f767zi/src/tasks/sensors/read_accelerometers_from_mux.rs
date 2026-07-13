@@ -23,6 +23,9 @@ pub type AccelerometerMuxReadings = RawAccelerometerData<NUM_ACCELEROMETERS, NUM
 
 type I2c1Bus = Mutex<NoopRawMutex, RefCell<I2c<'static, Blocking>>>;
 
+const WORKING_ACCELEROMETER_MUX_CHANNEL: u8 = 1;
+const WORKING_ACCELEROMETER_ADDRESS: AccelerometerAddresses = AccelerometerAddresses::Address1e;
+
 /// Task that reads the accelerometers on the muxes given in `mux_address_channel_pairs`
 #[embassy_executor::task]
 pub async fn read_accelerometers_from_mux(
@@ -31,58 +34,29 @@ pub async fn read_accelerometers_from_mux(
 ) -> ! {
     let mut hyped_i2c = Stm32f767ziI2c::new(i2c_bus);
 
-    // Select channel 0
+    // Select the mux channel with the known working accelerometer.
     hyped_i2c
-        .write_byte(DEFAULT_MUX_ADDRESS, 1 << 0)
-        .expect("Failed to select channel 0 on mux");
-    defmt::info!("Mux initialized and channel 0 selected.");
+        .write_byte(DEFAULT_MUX_ADDRESS, 1 << WORKING_ACCELEROMETER_MUX_CHANNEL)
+        .expect("Failed to select working accelerometer channel on mux");
+    defmt::info!(
+        "Mux initialized and channel {} selected.",
+        WORKING_ACCELEROMETER_MUX_CHANNEL
+    );
 
     let mut i2c_for_accelerometer_1 = Stm32f767ziI2c::new(i2c_bus);
-    let mut accelerometer_1 = Accelerometer::new(
-        &mut i2c_for_accelerometer_1,
-        AccelerometerAddresses::Address1d,
-    )
-    .expect("Failed to create accelerometer. Check the wiring and the I2C address of the sensor.");
+    let mut accelerometer_1 =
+        Accelerometer::new(&mut i2c_for_accelerometer_1, WORKING_ACCELEROMETER_ADDRESS).expect(
+            "Failed to create accelerometer. Check the wiring and the I2C address of the sensor.",
+        );
     defmt::info!("Accelerometer 1 initialized.");
 
-    let mut i2c_for_accelerometer_2 = Stm32f767ziI2c::new(i2c_bus);
-    let mut accelerometer_2 = Accelerometer::new(
-        &mut i2c_for_accelerometer_2,
-        AccelerometerAddresses::Address1e,
-    )
-    .expect("Failed to create accelerometer. Check the wiring and the I2C address of the sensor.");
-    defmt::info!("Accelerometer 2 initialized.");
-
-    // Select channel 1
-    hyped_i2c
-        .write_byte(DEFAULT_MUX_ADDRESS, 1 << 1)
-        .expect("Failed to select channel 1 on mux");
-    defmt::info!("Channel 1 selected on mux.");
-
-    let mut i2c_for_accelerometer_3 = Stm32f767ziI2c::new(i2c_bus);
-    let mut accelerometer_3 = Accelerometer::new(
-        &mut i2c_for_accelerometer_3,
-        AccelerometerAddresses::Address1d,
-    )
-    .expect("Failed to create accelerometer. Check the wiring and the I2C address of the sensor.");
-    defmt::info!("Accelerometer 3 initialized.");
-
-    let mut i2c_for_accelerometer_4 = Stm32f767ziI2c::new(i2c_bus);
-    let mut accelerometer_4 = Accelerometer::new(
-        &mut i2c_for_accelerometer_4,
-        AccelerometerAddresses::Address1e,
-    )
-    .expect("Failed to create accelerometer. Check the wiring and the I2C address of the sensor.");
-    defmt::info!("Accelerometer 4 initialized.");
-
     loop {
-        // Read from all accelerometers
-        defmt::info!("Reading accelerometers from mux");
+        defmt::info!("Reading accelerometer from mux");
 
-        // Select channel 0
+        // Reselect the mux channel before each read in case another task touched the mux.
         hyped_i2c
-            .write_byte(DEFAULT_MUX_ADDRESS, 1 << 0)
-            .expect("Failed to select channel 0 on mux");
+            .write_byte(DEFAULT_MUX_ADDRESS, 1 << WORKING_ACCELEROMETER_MUX_CHANNEL)
+            .expect("Failed to select working accelerometer channel on mux");
 
         // Read the first accelerometer
         match accelerometer_1.check_status() {
@@ -96,49 +70,8 @@ pub async fn read_accelerometers_from_mux(
         }
         let reading_1 = accelerometer_1.read().unwrap();
 
-        // Read the second accelerometer
-        match accelerometer_2.check_status() {
-            accelerometer::Status::Ok => {}
-            accelerometer::Status::DataNotReady => {
-                defmt::warn!("Accelerometer is not ready to provide data")
-            }
-            accelerometer::Status::Unknown => {
-                panic!("Could not get status of accelerometer")
-            }
-        }
-        let reading_2 = accelerometer_2.read().unwrap();
-
-        // Select channel 1
-        hyped_i2c
-            .write_byte(DEFAULT_MUX_ADDRESS, 1 << 1)
-            .expect("Failed to select channel 1 on mux");
-
-        // Read the first accelerometer
-        match accelerometer_3.check_status() {
-            accelerometer::Status::Ok => {}
-            accelerometer::Status::DataNotReady => {
-                defmt::warn!("Accelerometer is not ready to provide data")
-            }
-            accelerometer::Status::Unknown => {
-                panic!("Could not get status of accelerometer")
-            }
-        }
-        let reading_3 = accelerometer_3.read().unwrap();
-
-        // Read the second accelerometer
-        match accelerometer_4.check_status() {
-            accelerometer::Status::Ok => {}
-            accelerometer::Status::DataNotReady => {
-                defmt::warn!("Accelerometer is not ready to provide data")
-            }
-            accelerometer::Status::Unknown => {
-                panic!("Could not get status of accelerometer")
-            }
-        }
-        let reading_4 = accelerometer_4.read().unwrap();
-
         let readings: RawAccelerometerData<NUM_ACCELEROMETERS, NUM_AXIS> =
-            Vec::from_slice(&[reading_1, reading_2, reading_3, reading_4]).unwrap();
+            Vec::from_slice(&[reading_1]).unwrap();
 
         sender.send(readings);
         Timer::after(Duration::from_hz(

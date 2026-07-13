@@ -1,6 +1,6 @@
 num_axis: 3
 accelerometers:
-  num_sensors: 4
+  num_sensors: 1
   num_allowed_outliers: 2
 keyence:
   num_sensors: 2

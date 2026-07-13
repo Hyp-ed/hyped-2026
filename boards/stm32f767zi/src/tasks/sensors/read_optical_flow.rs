@@ -23,8 +23,8 @@ pub async fn read_optical_flow(
 
         sender.send(optical_data);
 
-        Timer::after(Duration::from_hz(
-            SENSORS_CONFIG.sensors.optical_flow.update_frequency as u64,
+        Timer::after(Duration::from_millis(
+            SENSORS_CONFIG.sensors.optical_flow.retry_duration_ms as u64,
         ))
         .await;
     }

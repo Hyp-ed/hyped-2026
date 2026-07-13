@@ -14,7 +14,6 @@ hyped_i2c = { path = "../io/hyped_i2c" }
 hyped_gpio = { path = "../io/hyped_gpio" }
 hyped_adc = { path = "../io/hyped_adc" }
 hyped_spi = { path = "../io/hyped_spi" }
-bytemuck = { version = "1.25.0", features = ["derive"] }
 bitfield = "0.19.4"
 
 [dev-dependencies]

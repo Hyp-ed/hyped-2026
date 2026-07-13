@@ -1,6 +1,6 @@
 use heapless::Vec;
 
-#[derive(PartialEq)]
+#[derive(Debug, PartialEq)]
 pub enum SensorChecks {
     Unacceptable,
     Acceptable,

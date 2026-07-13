@@ -1,10 +1,11 @@
 use embassy_stm32::can::{CanTx, ExtendedId, Frame, Id};
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, channel::Channel};
+use embassy_time::{with_timeout, Duration};
 use hyped_can::HypedCanFrame;
 use hyped_communications::messages::CanMessage;
 
 /// Channel for sending CAN messages.
-pub static CAN_SEND: Channel<CriticalSectionRawMutex, CanMessage, 10> = Channel::new();
+pub static CAN_SEND: Channel<CriticalSectionRawMutex, CanMessage, 32> = Channel::new();
 
 /// Task that sends CAN messages from a channel.
 #[embassy_executor::task]
@@ -18,6 +19,18 @@ pub async fn can_sender(mut tx: CanTx<'static>) {
     loop {
         let message = can_sender.receive().await;
 
+        let log_motor_message = matches!(
+            &message,
+            CanMessage::MotorControllerSetupCommand
+                | CanMessage::MotorControllerSetOperationalCommand
+                | CanMessage::MotorControllerSetupComplete
+                | CanMessage::MotorControllerOperational
+        );
+
+        if log_motor_message {
+            defmt::info!("CAN TX dequeued: {:?}", message);
+        }
+
         defmt::debug!("Sending CAN message: {:?}", message);
 
         let can_frame: HypedCanFrame = message.into();
@@ -27,7 +40,17 @@ pub async fn can_sender(mut tx: CanTx<'static>) {
 
         let frame = Frame::new_data(id, &data).unwrap();
 
-        tx.write(&frame).await;
+        if with_timeout(Duration::from_millis(100), tx.write(&frame))
+            .await
+            .is_err()
+        {
+            defmt::warn!("CAN TX blocked for >100ms while sending {:?}", frame);
+            tx.write(&frame).await;
+        }
+
+        if log_motor_message {
+            defmt::info!("CAN TX complete");
+        }
         defmt::debug!("CAN message sent: {:?}", frame);
     }
 }

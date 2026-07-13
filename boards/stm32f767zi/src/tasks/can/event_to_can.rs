@@ -1,28 +1,40 @@
-use crate::tasks::can::send::CAN_SEND;
+use core::fmt::Write;
+
+use crate::tasks::{can::send::CAN_SEND, mqtt::send::MQTT_SEND};
+use embassy_time::{with_timeout, Duration};
+use heapless::String;
 use hyped_communications::{bus::DynSubscriber, events::Event, messages::CanMessage};
+use hyped_core::{mqtt::MqttMessage, mqtt_topics::MqttTopic};
 
 // Bridges event_bus to CAN bus.
 // Listens for events and converts them to Can massages
 #[embassy_executor::task]
 pub async fn event_to_can(mut events: DynSubscriber<'static, Event>) -> ! {
     let can_sender = CAN_SEND.sender();
+    let mqtt_sender = MQTT_SEND.sender();
 
     loop {
         let event = events.next_message_pure().await;
 
-        let can_message: Option<CanMessage> = match event {
+        let can_message: Option<CanMessage> = match &event {
             // Operator Commands (not sent over CAN)
             Event::EmergencyStopOperatorCommand => None,
+            Event::IdleOperatorCommand => None,
             Event::PrechargeOperatorCommand => None,
             Event::AccelerateOperatorCommand => None,
             Event::BrakeOperatorCommand => None,
             Event::StartRunOperatorCommand => None,
+            Event::ReadyForPropulsionOperatorCommand => None,
 
             // Emergency
-            Event::Emergency { from, reason } => Some(CanMessage::Emergency(from, reason)),
+            Event::Emergency { from, reason } => Some(CanMessage::Emergency(*from, *reason)),
 
             // Heartbeat (handled by separate heartbeat task)
             Event::Heartbeat { .. } => None,
+            Event::StateChanged { state } => {
+                let _ = mqtt_sender.try_send(MqttMessage::new_json_string(MqttTopic::State, state));
+                None
+            }
 
             // Outbound commands from the state machine
             Event::StartPrechargeCommand => Some(CanMessage::StartPrechargeCommand),
@@ -76,7 +88,34 @@ pub async fn event_to_can(mut events: DynSubscriber<'static, Event>) -> ! {
         };
 
         if let Some(msg) = can_message {
-            can_sender.send(msg).await;
+            let log_motor_message = matches!(
+                &msg,
+                CanMessage::MotorControllerSetupCommand
+                    | CanMessage::MotorControllerSetOperationalCommand
+            );
+
+            if log_motor_message {
+                defmt::info!("Bridging event to CAN: {:?}", msg);
+            }
+
+            if with_timeout(Duration::from_millis(100), can_sender.send(msg))
+                .await
+                .is_err()
+            {
+                defmt::error!("CAN bridge could not queue motor command: CAN_SEND is full");
+                continue;
+            }
+
+            if log_motor_message {
+                defmt::info!("CAN bridge queued motor command");
+            }
         }
+
+        let mut event_log = String::<512>::new();
+        let _ = write!(event_log, "event={event:?}");
+        let _ = mqtt_sender.try_send(MqttMessage::new_json_string(
+            MqttTopic::Logs,
+            event_log.as_str(),
+        ));
     }
 }

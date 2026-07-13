@@ -17,11 +17,14 @@ use nalgebra::{Matrix2, Vector1, Vector2};
 
 //TODOLater: Confirm values are correct
 
-// Time step (s)
-const DELTA_T: f64 = 0.01;
+// Time step (s). This matches the localisation firmware loop delay.
+const DELTA_T: f64 = 0.1;
 
 // Stripe width (m)
 const STRIPE_WIDTH: f64 = 1.0;
+
+const STANDARD_GRAVITY: f64 = 9.80665;
+const FORWARD_AXIS_INDEX: usize = 0;
 
 pub struct Localizer {
     pub displacement: f64,
@@ -42,7 +45,7 @@ impl Localizer {
         let initial_covariance = Matrix2::new(1.0, 0.0, 0.0, 1.0);
         let transition_matrix = Matrix2::new(1.0, DELTA_T, 0.0, 1.0);
         let control_matrix = Vector2::new(0.5 * DELTA_T * DELTA_T, DELTA_T);
-        let observation_matrix = Matrix2::new(1.0, 0.0, 0.0, DELTA_T);
+        let observation_matrix = Matrix2::new(1.0, 0.0, 0.0, 1.0);
 
         // Assuming frequency of 6400hz for IMU at 120 mu g / sqrt(Hz)
         // standard deviation = 120 * sqrt(6400) = 9600 mu g = 0.0096 g
@@ -62,7 +65,7 @@ impl Localizer {
         //  standard deviation = 0.01 * 10 = 0.1 m/s
         //  variance = 0.1^2 = 0.01 m/s^2
 
-        let measurement_noise: Matrix2<f64> = Matrix2::new(0.01, 0.0, 0.0, 0.0);
+        let measurement_noise: Matrix2<f64> = Matrix2::new(0.25, 0.0, 0.0, 0.05);
 
         let kalman_filter = KalmanFilter::new(
             initial_state,
@@ -123,21 +126,25 @@ impl Localizer {
             self.keyence_val = (keyence_data[0] as f64) * STRIPE_WIDTH;
         }
 
-        let processed_accelerometer_data = self
-            .accelerometer_preprocessor
-            .process_data(accelerometer_data);
-        if processed_accelerometer_data.is_none() {
-            return Err(PreprocessorError::AccelerometerUnnaceptable);
-        }
+        if NUM_ACCELEROMETERS == 1 {
+            self.accelerometer_val =
+                accelerometer_data[0][FORWARD_AXIS_INDEX] as f64 * STANDARD_GRAVITY;
+        } else {
+            let processed_accelerometer_data = self
+                .accelerometer_preprocessor
+                .process_data(accelerometer_data);
+            if processed_accelerometer_data.is_none() {
+                return Err(PreprocessorError::AccelerometerUnnaceptable);
+            }
 
-        let processed_accelerometer_data = processed_accelerometer_data.unwrap();
-        self.accelerometer_val = 0.0;
-        for i in 0..NUM_ACCELEROMETERS {
-            for _ in 0..NUM_AXIS {
+            let processed_accelerometer_data = processed_accelerometer_data.unwrap();
+            self.accelerometer_val = 0.0;
+            for i in 0..NUM_ACCELEROMETERS {
                 self.accelerometer_val += processed_accelerometer_data[i] as f64;
             }
+            self.accelerometer_val =
+                (self.accelerometer_val / NUM_ACCELEROMETERS as f64) * STANDARD_GRAVITY;
         }
-        self.accelerometer_val /= (NUM_ACCELEROMETERS * NUM_AXIS) as f64;
 
         Ok(())
     }
@@ -159,7 +166,7 @@ impl Localizer {
 
         self.kalman_filter.predict(&control_input);
 
-        let measurement = Vector2::new(self.keyence_val * STRIPE_WIDTH, self.optical_val);
+        let measurement = Vector2::new(self.keyence_val, self.optical_val);
 
         self.kalman_filter.update(&measurement);
 
@@ -185,13 +192,8 @@ mod tests {
         let optical_data: Vec<f64, 2> = Vec::from_slice(&[0.0, 0.0]).unwrap();
         let raw_keyence_data: Vec<u32, 2> = Vec::from_slice(&[0, 0]).unwrap();
         let raw_accelerometer_data: RawAccelerometerData<NUM_ACCELEROMETERS, NUM_AXIS> =
-            RawAccelerometerData::from_slice(&[
-                Vec::from_slice(&[0.0, 0.0, 0.0]).unwrap(),
-                Vec::from_slice(&[0.0, 0.0, 0.0]).unwrap(),
-                Vec::from_slice(&[0.0, 0.0, 0.0]).unwrap(),
-                Vec::from_slice(&[0.0, 0.0, 0.0]).unwrap(),
-            ])
-            .unwrap();
+            RawAccelerometerData::from_slice(&[Vec::from_slice(&[0.0, 0.0, 0.0]).unwrap()])
+                .unwrap();
 
         localizer.iteration(optical_data, raw_keyence_data, raw_accelerometer_data)?;
 

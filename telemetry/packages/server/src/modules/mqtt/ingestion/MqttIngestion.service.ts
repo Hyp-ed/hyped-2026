@@ -1,8 +1,9 @@
+import { Logger } from '@/modules/logger/Logger.decorator';
 import { StateService } from '@/modules/state/State.service';
 import { MeasurementService } from '@/modules/telemetry/Measurement.service';
 import { type PodStateType, podIds } from '@hyped/telemetry-constants';
 import { currentTime } from '@influxdata/influxdb-client';
-import { Injectable } from '@nestjs/common';
+import { Injectable, type LoggerService } from '@nestjs/common';
 import { Params, Payload, Subscribe } from 'nest-mqtt';
 import { MqttIngestionError } from './errors/MqttIngestionError';
 
@@ -11,6 +12,8 @@ export class MqttIngestionService {
 	constructor(
 		private measurementService: MeasurementService,
 		private stateService: StateService,
+		@Logger()
+		private readonly logger: LoggerService,
 	) {}
 
 	@Subscribe('hyped/+/measurement/+')
@@ -51,6 +54,17 @@ export class MqttIngestionService {
 			value,
 			timestamp,
 		});
+	}
+
+	@Subscribe('hyped/+/logs')
+	getPodLog(@Params() rawParams: string[], @Payload() rawValue: Buffer | string) {
+		const podId = rawParams[0];
+		const value = Buffer.isBuffer(rawValue) ? rawValue.toString() : rawValue;
+
+		this.validateMqttMessage({ podId, measurementKey: 'logs', value });
+		this.validatePodId(podId);
+
+		this.logger.log(`[${podId}] ${value}`, 'PodEvents');
 	}
 
 	private validateMqttMessage({

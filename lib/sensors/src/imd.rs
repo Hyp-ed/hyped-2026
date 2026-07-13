@@ -1,9 +1,8 @@
 use bitfield::bitfield;
-use bytemuck::{Pod, Zeroable};
 use defmt::Format;
 
 bitfield! {
-    #[derive(Zeroable, Pod, Copy, Clone, Format)]
+    #[derive(Copy, Clone, Format)]
     #[repr(C)]
     pub struct WarningsAndAlarms(u16);
     impl Debug;
@@ -20,7 +19,7 @@ bitfield! {
     pub earthlift_open,     _: 10;  // Internal earth disconnector relay is open
 }
 
-#[derive(Zeroable, Pod, Copy, Clone, Debug, Format)]
+#[derive(Copy, Clone, Debug, Format)]
 #[repr(C)]
 pub struct ImdFrame {
     pub corrected: u16,
@@ -33,7 +32,14 @@ pub struct ImdFrame {
 
 impl ImdFrame {
     pub fn from_data(data: &[u8]) -> Self {
-        *bytemuck::from_bytes(data)
+        Self {
+            corrected: u16::from_le_bytes([data[0], data[1]]),
+            status: data[2],
+            measurement_counter: data[3],
+            warnings_and_alarms: WarningsAndAlarms(u16::from_le_bytes([data[4], data[5]])),
+            device_activity: data[6],
+            reserved: data[7],
+        }
     }
 }
 

@@ -23,6 +23,49 @@ impl MqttMessage {
     pub fn new(topic: MqttTopic, payload: String<512>) -> Self {
         MqttMessage { topic, payload }
     }
+
+    pub fn new_json_string(topic: MqttTopic, value: &str) -> Self {
+        let mut payload = String::<512>::new();
+        let _ = payload.push('"');
+
+        for byte in value.bytes() {
+            match byte {
+                b'"' => {
+                    if payload.push_str("\\\"").is_err() {
+                        break;
+                    }
+                }
+                b'\\' => {
+                    if payload.push_str("\\\\").is_err() {
+                        break;
+                    }
+                }
+                b'\n' => {
+                    if payload.push_str("\\n").is_err() {
+                        break;
+                    }
+                }
+                b'\r' => {
+                    if payload.push_str("\\r").is_err() {
+                        break;
+                    }
+                }
+                b'\t' => {
+                    if payload.push_str("\\t").is_err() {
+                        break;
+                    }
+                }
+                _ => {
+                    if payload.push(byte as char).is_err() {
+                        break;
+                    }
+                }
+            }
+        }
+
+        let _ = payload.push('"');
+        MqttMessage { topic, payload }
+    }
 }
 
 pub struct HypedMqttClient<'a, T, R>

@@ -9,6 +9,8 @@ use heapless::Vec;
 #[cfg(test)]
 use libm;
 
+const FORWARD_AXIS_INDEX: usize = 0;
+
 /// Stores the quartiles of the data and the bounds for outliers
 /// which are calculated from the quartiles
 #[allow(dead_code)]
@@ -135,6 +137,10 @@ impl AccelerometerPreprocessor {
         &mut self,
         data: RawAccelerometerData<NUM_ACCELEROMETERS, NUM_AXIS>,
     ) -> Option<AccelerometerData<NUM_ACCELEROMETERS>> {
+        if NUM_ACCELEROMETERS == 1 {
+            return Some(AccelerometerData::from_slice(&[data[0][FORWARD_AXIS_INDEX]]).unwrap());
+        }
+
         let accelerometer_data: AccelerometerData<NUM_ACCELEROMETERS> = data
             .iter()
             .map(|axis| libm::sqrtf(axis.iter().fold(0.0, |acc, val| acc + val * val)))
@@ -164,7 +170,9 @@ impl AccelerometerPreprocessor {
                 }
             });
 
-        if self.num_reliable_accelerometers < NUM_ACCELEROMETERS as i32 - 1 {
+        if self.num_reliable_accelerometers == 0
+            || self.num_reliable_accelerometers < NUM_ACCELEROMETERS as i32 - 1
+        {
             return SensorChecks::Unacceptable;
         }
 
@@ -172,6 +180,10 @@ impl AccelerometerPreprocessor {
     }
 
     pub fn get_quartiles<const SIZE: usize>(&self, data: &AccelerometerData<SIZE>) -> Quartiles {
+        if SIZE == 1 {
+            return Quartiles::new(data[0], data[0], data[0], false);
+        }
+
         // Clone and sort data
         let mut sorted_data = data.clone();
         insertion_sort(sorted_data.as_mut_slice());
@@ -202,13 +214,15 @@ impl AccelerometerPreprocessor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use libm;
 
     #[test]
-    pub fn test_process_data() {
+    pub fn test_process_data_single_accelerometer() {
         let mut preprocessor = AccelerometerPreprocessor::new();
 
-        assert_eq!(preprocessor.num_reliable_accelerometers, 4);
+        assert_eq!(
+            preprocessor.num_reliable_accelerometers,
+            NUM_ACCELEROMETERS as i32
+        );
         assert_eq!(
             preprocessor.reliable_accelerometers,
             [true; NUM_ACCELEROMETERS]
@@ -219,142 +233,33 @@ mod tests {
         );
 
         let raw_data: RawAccelerometerData<NUM_ACCELEROMETERS, NUM_AXIS> =
-            RawAccelerometerData::from_slice(&[
-                Vec::from_slice(&[1.0, 2.0, 3.0]).unwrap(), // sqrt(14) ≈ 3.74
-                Vec::from_slice(&[4.0, 5.0, 6.0]).unwrap(), // sqrt(77) ≈ 8.77
-                Vec::from_slice(&[7.0, 8.0, 9.0]).unwrap(), // sqrt(194) ≈ 13.93
-                Vec::from_slice(&[10.0, 11.0, 12.0]).unwrap(), // sqrt(365) ≈ 19.1
-            ])
-            .unwrap();
+            RawAccelerometerData::from_slice(&[Vec::from_slice(&[1.0, 2.0, 3.0]).unwrap()])
+                .unwrap();
 
         let processed_data = preprocessor.process_data(raw_data);
         assert!(processed_data.is_some());
 
         let processed_data = processed_data.unwrap();
-        assert_eq!(processed_data[0], libm::sqrtf(14.0_f32));
-        assert_eq!(processed_data[1], libm::sqrtf(77.0_f32));
-        assert_eq!(processed_data[2], libm::sqrtf(194.0_f32));
-        assert_eq!(processed_data[3], libm::sqrtf(365.0_f32));
+        assert_eq!(processed_data[0], 1.0);
     }
 
     #[test]
-    pub fn test_process_data_one_unreliable() {
-        let mut preprocessor = AccelerometerPreprocessor::new();
-
-        assert_eq!(preprocessor.num_reliable_accelerometers, 4);
-        assert_eq!(
-            preprocessor.reliable_accelerometers,
-            [true; NUM_ACCELEROMETERS]
-        );
-        assert_eq!(
-            preprocessor.num_outliers_per_accelerometer,
-            [0; NUM_ACCELEROMETERS]
-        );
-
-        preprocessor.reliable_accelerometers = [true, false, true, true];
-        preprocessor.num_reliable_accelerometers = 3;
-
-        let raw_data: RawAccelerometerData<NUM_ACCELEROMETERS, NUM_AXIS> =
-            RawAccelerometerData::from_slice(&[
-                Vec::from_slice(&[1.0, 2.0, 3.0]).unwrap(), // sqrt(14) ≈ 3.74
-                Vec::from_slice(&[4.0, 5.0, 6.0]).unwrap(), // replaced with median (from sqrt(14), sqrt(194), sqrt(365))
-                Vec::from_slice(&[7.0, 8.0, 9.0]).unwrap(), // sqrt(194) ≈ 13.93
-                Vec::from_slice(&[10.0, 11.0, 12.0]).unwrap(), // sqrt(365) ≈ 19.1
-            ])
-            .unwrap();
-
-        let processed_data = preprocessor.process_data(raw_data);
-        assert!(processed_data.is_some());
-
-        let processed_data = processed_data.unwrap();
-        assert_eq!(processed_data[0], libm::sqrtf(14.0_f32));
-        assert_eq!(processed_data[1], libm::sqrtf(194.0_f32));
-        assert_eq!(processed_data[2], libm::sqrtf(194.0_f32));
-        assert_eq!(processed_data[3], libm::sqrtf(365.0_f32));
-    }
-
-    #[test]
-    pub fn test_get_quartiles() {
+    fn test_single_accelerometer_quartiles() {
         let preprocessor = AccelerometerPreprocessor::new();
-
         let data: AccelerometerData<NUM_ACCELEROMETERS> =
-            AccelerometerData::from_slice(&[1.0, 2.0, 3.0, 4.0]).unwrap();
+            AccelerometerData::from_slice(&[1.0]).unwrap();
         let processed_data = preprocessor.get_quartiles(&data);
 
-        assert_eq!(processed_data.q1, 1.5);
-        assert_eq!(processed_data.q2, 2.5);
-        assert_eq!(processed_data.q3, 3.5);
-    }
-
-    #[test]
-    fn test_calculate_quartiles_max_reliable() {
-        let preprocessor = AccelerometerPreprocessor::new();
-
-        let data: AccelerometerData<NUM_ACCELEROMETERS> =
-            AccelerometerData::from_slice(&[1.0, 2.0, 3.0, 4.0]).unwrap();
-        let processed_data = preprocessor.calculate_quartiles(&data);
-
-        assert!(processed_data.is_some());
-
-        let processed_data = processed_data.unwrap();
-        assert_eq!(processed_data.q1, 1.5);
-        assert_eq!(processed_data.q2, 2.5);
-        assert_eq!(processed_data.q3, 3.5);
-        assert_eq!(processed_data.iqr, 2.0);
-        assert_eq!((processed_data.lower_bound * 100.0).round(), -150.0);
-        assert_eq!((processed_data.upper_bound * 100.0).round(), 650.0);
-    }
-
-    #[test]
-    fn test_calculate_quartiles_one_unreliable() {
-        let mut preprocessor = AccelerometerPreprocessor::new();
-        preprocessor.reliable_accelerometers = [true, false, true, true];
-        preprocessor.num_reliable_accelerometers = 3;
-
-        let data: AccelerometerData<NUM_ACCELEROMETERS> =
-            AccelerometerData::from_slice(&[1.0, 2.0, 3.0, 4.0]).unwrap();
-        let processed_data = preprocessor.calculate_quartiles(&data);
-
-        assert!(processed_data.is_some());
-
-        let processed_data = processed_data.unwrap();
         assert_eq!(processed_data.q1, 1.0);
-        assert_eq!(processed_data.q2, 3.0);
-        assert_eq!(processed_data.q3, 4.0);
-        assert_eq!(processed_data.iqr, 3.0);
-        assert_eq!((processed_data.lower_bound * 100.0).round(), -260.0);
-        assert_eq!((processed_data.upper_bound * 100.0).round(), 760.0);
+        assert_eq!(processed_data.q2, 1.0);
+        assert_eq!(processed_data.q3, 1.0);
     }
 
     #[test]
-    fn test_handle_outlier_replace_median() {
+    fn test_single_accelerometer_unreliable_is_unacceptable() {
         let mut preprocessor = AccelerometerPreprocessor::new();
-        preprocessor.reliable_accelerometers = [true, false, true, true];
-        preprocessor.num_reliable_accelerometers = 3;
+        preprocessor.num_reliable_accelerometers = 0;
 
-        let data: AccelerometerData<NUM_ACCELEROMETERS> =
-            AccelerometerData::from_slice(&[1.0, 2.0, 3.0, 10.0]).unwrap();
-        let processed_data = preprocessor.handle_outliers(data);
-
-        assert!(processed_data.is_some());
-
-        let processed_data: AccelerometerData<NUM_ACCELEROMETERS> = processed_data.unwrap();
-        assert_eq!(processed_data[0], 1.0);
-        assert_eq!(processed_data[1], 3.0); // replace unreliable with median
-        assert_eq!(processed_data[2], 3.0);
-        assert_eq!(processed_data[3], 10.0);
-    }
-
-    #[test]
-    fn test_handle_outliers_no_quartiles() {
-        let mut preprocessor = AccelerometerPreprocessor::new();
-        preprocessor.reliable_accelerometers = [true, false, false, true];
-        preprocessor.num_reliable_accelerometers = 2;
-
-        let data: AccelerometerData<NUM_ACCELEROMETERS> =
-            AccelerometerData::from_slice(&[1.0, 2.0, 3.0, 10.0]).unwrap();
-        let processed_data = preprocessor.handle_outliers(data);
-
-        assert!(processed_data.is_none());
+        assert_eq!(preprocessor.check_reliable(), SensorChecks::Unacceptable);
     }
 }

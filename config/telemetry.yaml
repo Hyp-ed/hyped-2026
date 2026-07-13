@@ -6,7 +6,7 @@ networking:
     ip: '192.168.0.1'
 mqtt:
   broker:
-    ip: '192.168.0.116'
+    ip: '192.168.0.86'
     port: 1883
   receiver:
     client_id: 'telemetry_receiver'
