@@ -2,15 +2,14 @@
 pub enum Board {
     Telemetry = 0,
     Navigation = 1,
-    Pneumatics = 2,
     Test = 3,
     TemperatureTester = 4,
     KeyenceTester = 5,
     StateMachineTester = 6,
     Mqtt = 7,
     MotorControl = 8,
-    Sensors1 = 9,
-    Sensors2 = 10,
+    Pneumatics = 9,
+    HighPower = 10,
 }
 
 impl From<Board> for u8 {
@@ -26,14 +25,13 @@ impl TryFrom<u8> for Board {
         match index {
             0 => Ok(Board::Telemetry),
             1 => Ok(Board::Navigation),
-            2 => Ok(Board::Pneumatics),
             3 => Ok(Board::Test),
             4 => Ok(Board::TemperatureTester),
             5 => Ok(Board::KeyenceTester),
             6 => Ok(Board::StateMachineTester),
             7 => Ok(Board::Mqtt),
-            9 => Ok(Board::Sensors1),
-            10 => Ok(Board::Sensors2),
+            9 => Ok(Board::Pneumatics),
+            10 => Ok(Board::HighPower),
             8 => Ok(Board::MotorControl),
             _ => Err("Invalid Board index"),
         }
@@ -72,15 +70,14 @@ mod tests {
             Board::try_from(Board::StateMachineTester as u8).unwrap()
         );
         assert_eq!(Board::Mqtt, Board::try_from(Board::Mqtt as u8).unwrap());
+        assert_eq!(u8::from(Board::Pneumatics), 9);
         assert_eq!(
-            Board::Sensors1,
-            Board::try_from(Board::Sensors1 as u8).unwrap()
+            Board::HighPower,
+            Board::try_from(Board::HighPower as u8).unwrap()
         );
-        assert_eq!(
-            Board::Sensors2,
-            Board::try_from(Board::Sensors2 as u8).unwrap()
-        );
+        assert_eq!(u8::from(Board::HighPower), 10);
 
+        assert_eq!(Board::try_from(2), Err("Invalid Board index"));
         assert_eq!(Board::try_from(11), Err("Invalid Board index"));
 
         assert_eq!(

@@ -47,16 +47,10 @@ pub async fn event_to_can(mut events: DynSubscriber<'static, Event>) -> ! {
                 let mut payload = String::<512>::new();
                 let _ = write!(
                     payload,
-                    "{{\"canSetupMotor\":{},\"canPrecharge\":{},\"canReadyForPropulsion\":{},\"canAccelerate\":{}}}",
-                    can_setup_motor,
-                    can_precharge,
-                    can_ready_for_propulsion,
-                    can_accelerate
+                    "{{\"canSetupMotor\":{can_setup_motor},\"canPrecharge\":{can_precharge},\"canReadyForPropulsion\":{can_ready_for_propulsion},\"canAccelerate\":{can_accelerate}}}"
                 );
-                let _ = mqtt_sender.try_send(MqttMessage::new_retained(
-                    MqttTopic::ControlStatus,
-                    payload,
-                ));
+                let _ = mqtt_sender
+                    .try_send(MqttMessage::new_retained(MqttTopic::ControlStatus, payload));
                 None
             }
 
@@ -136,7 +130,7 @@ pub async fn event_to_can(mut events: DynSubscriber<'static, Event>) -> ! {
         }
 
         let mut event_log = String::<512>::new();
-        let _ = write!(event_log, "event={:?}", event);
+        let _ = write!(event_log, "event={event:?}");
         let _ = mqtt_sender.try_send(MqttMessage::new_json_string(
             MqttTopic::Logs,
             event_log.as_str(),

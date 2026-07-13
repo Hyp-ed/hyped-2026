@@ -1,7 +1,7 @@
 #![no_std]
 #![no_main]
 
-/// Sensors board 1
+/// Pneumatics board
 /// Uses PC12 and PC13 for high pressure
 /// Uses PA1, 2, and 3 for low pressure
 use embassy_executor::Spawner;
@@ -38,7 +38,7 @@ bind_interrupts!(struct Irqs {
 #[embassy_executor::main]
 async fn main(spawner: Spawner) -> ! {
     THIS_BOARD
-        .init(Board::Sensors1)
+        .init(Board::Pneumatics)
         .expect("Failed to initialize board");
 
     let config = Config::default();
@@ -85,7 +85,7 @@ async fn main(spawner: Spawner) -> ! {
     let (can_tx, can_rx) = can.split();
     spawner.must_spawn(can_sender(can_tx));
     spawner.must_spawn(send_heartbeat(Board::Telemetry));
-    spawner.must_spawn(sensors_board_can_receiver(can_rx, brake_gpio));
+    spawner.must_spawn(pneumatics_can_receiver(can_rx, brake_gpio));
     defmt::info!("CAN setup complete");
 
     // let pressure_sensors = PressureSensors {
@@ -95,7 +95,7 @@ async fn main(spawner: Spawner) -> ! {
     //     low_pressure_3,
     // };
 
-    // spawner.must_spawn(sensors_board_response_task(pressure_sensors));
+    // spawner.must_spawn(pneumatics_response_task(pressure_sensors));
 
     loop {
         yield_now().await;
@@ -110,7 +110,7 @@ async fn main(spawner: Spawner) -> ! {
 // }
 
 #[embassy_executor::task]
-async fn sensors_board_can_receiver(mut rx: CanRx<'static>, mut brake_gpio: gpio::Output<'static>) {
+async fn pneumatics_can_receiver(mut rx: CanRx<'static>, mut brake_gpio: gpio::Output<'static>) {
     loop {
         defmt::debug!("Waiting for CAN message");
 
@@ -148,7 +148,7 @@ async fn respond_to_message(message: CanMessage, brake_gpio: &mut gpio::Output<'
             brake_gpio.set_high();
             CAN_SEND
                 .send(CanMessage::BrakesUnclamped {
-                    from: Board::Sensors1,
+                    from: Board::Pneumatics,
                 })
                 .await;
         }
@@ -158,7 +158,7 @@ async fn respond_to_message(message: CanMessage, brake_gpio: &mut gpio::Output<'
             defmt::info!("Brakes clamped, sending BrakesClamped message");
             CAN_SEND
                 .send(CanMessage::BrakesClamped {
-                    from: Board::Sensors1,
+                    from: Board::Pneumatics,
                 })
                 .await;
         }
@@ -173,7 +173,7 @@ async fn respond_to_message(message: CanMessage, brake_gpio: &mut gpio::Output<'
 }
 
 // #[embassy_executor::task]
-// async fn sensors_board_response_task(mut pressure_sensors: PressureSensors) {
+// async fn pneumatics_response_task(mut pressure_sensors: PressureSensors) {
 //     loop {
 //         // Read high pressure sensor
 //         let high_pressure_ok = matches!(
@@ -204,7 +204,7 @@ async fn respond_to_message(message: CanMessage, brake_gpio: &mut gpio::Output<'
 //
 //             CAN_SEND
 //                 .send(CanMessage::Emergency(
-//                     Board::Sensors1,
+//                     Board::Pneumatics,
 //                     hyped_communications::emergency::Reason::Pressure,
 //                 ))
 //                 .await;
