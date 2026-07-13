@@ -40,7 +40,7 @@ impl CanId {
 
 impl From<CanId> for u32 {
     fn from(val: CanId) -> Self {
-        let priority: u32 = if val.priority { 1 } else { 0 };
+        let priority: u32 = if val.priority { 0 } else { 1 };
         let board: u32 = u8::from(val.board) as u32;
         let message_type: u32 = u8::from(val.message_data_type) as u32;
         let message_identifier: u32 = u16::from(val.message_identifier) as u32;
@@ -61,7 +61,7 @@ macro_rules! extract_bits {
 
 impl From<u32> for CanId {
     fn from(id: u32) -> Self {
-        let priority = extract_bits!(id, 28, 29) == 1;
+        let priority = extract_bits!(id, 28, 29) == 0;
         let message_type = CanDataType::try_from(extract_bits!(id, 20, 28) as u8)
             .expect("Failed to decode message type");
         let message_identifier = MessageIdentifier::try_from(extract_bits!(id, 8, 20) as u16)
