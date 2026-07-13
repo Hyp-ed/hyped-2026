@@ -9,6 +9,7 @@ import toast from 'react-hot-toast';
 import { Latency } from './latency';
 import { PodConnectionStatus } from './pod-connection-status';
 import { PodControls } from './pod-controls';
+import { PodSafetyStatuses } from './pod-safety-statuses';
 import { PodSelector } from './pod-selector';
 
 /**
@@ -45,6 +46,10 @@ export const Sidebar = ({
 					<p className="font-bold text-xl">Connection to pod</p>
 					<PodConnectionStatus podId={currentPod} />
 					<Latency podId={currentPod} />
+				</div>
+				<div className="flex flex-col gap-2">
+					<p className="font-bold text-xl">Safety systems</p>
+					<PodSafetyStatuses podId={currentPod} />
 				</div>
 				<div className="flex flex-col justify-start">
 					<p className="font-bold text-xl">Controls</p>

@@ -13,6 +13,8 @@ pub enum MqttTopic {
     Measurement(MeasurementId),
     State,
     ControlStatus,
+    ImdStatus,
+    BrakeClampStatus,
     Controls,
     Heartbeat,
     Logs,
@@ -31,6 +33,8 @@ impl FromStr for MqttTopic {
                 Ok(MqttTopic::State)
             }
             "hyped/the_podigal_son/control-status" => Ok(MqttTopic::ControlStatus),
+            "hyped/the_podigal_son/status/imd_status" => Ok(MqttTopic::ImdStatus),
+            "hyped/the_podigal_son/status/brake_clamp_status" => Ok(MqttTopic::BrakeClampStatus),
             "hyped/the_podigal_son/heartbeat" => Ok(MqttTopic::Heartbeat),
             "hyped/the_podigal_son/logs" => Ok(MqttTopic::Logs),
             "hyped/the_podigal_son/latency/request" => Ok(MqttTopic::LatencyRequest),
@@ -60,6 +64,12 @@ impl From<MqttTopic> for String<100> {
             MqttTopic::State => topic.push_str("hyped/the_podigal_son/state").unwrap(),
             MqttTopic::ControlStatus => topic
                 .push_str("hyped/the_podigal_son/control-status")
+                .unwrap(),
+            MqttTopic::ImdStatus => topic
+                .push_str("hyped/the_podigal_son/status/imd_status")
+                .unwrap(),
+            MqttTopic::BrakeClampStatus => topic
+                .push_str("hyped/the_podigal_son/status/brake_clamp_status")
                 .unwrap(),
             MqttTopic::Controls => topic.push_str("hyped/the_podigal_son/controls").unwrap(),
             MqttTopic::Heartbeat => topic.push_str("hyped/the_podigal_son/heartbeat").unwrap(),

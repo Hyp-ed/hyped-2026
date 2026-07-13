@@ -403,6 +403,19 @@ pods:
             label: 'CLAMPED'
           - value: 0
             label: 'UNCLAMPED'
+          - value: 2
+            label: 'UNKNOWN'
+      imd_status:
+        label: 'IMD Status'
+        kind: 'binary-status'
+        format: 'enum'
+        values:
+          - value: 1
+            label: 'HEALTHY'
+          - value: 0
+            label: 'FAULT'
+          - value: 2
+            label: 'UNKNOWN'
       pod_raised_status:
         label: 'Pod Raised Status'
         kind: 'binary-status'

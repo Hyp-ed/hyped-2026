@@ -38,6 +38,7 @@ use hyped_boards_stm32f767zi::{
         },
         network::net_task,
         sensors::read_imd,
+        status_to_mqtt::publish_safety_statuses,
     },
 };
 use hyped_communications::{boards::Board, bus, emergency::Reason, messages::CanMessage};
@@ -45,9 +46,7 @@ use hyped_core::{
     config::{HEARTBEAT_CONFIG, TELEMETRY_CONFIG},
     log_types::LogLevel,
 };
-use hyped_state_machine::{
-    state_machine::{run, StateMachine},
-};
+use hyped_state_machine::state_machine::{run, StateMachine};
 use panic_probe as _;
 use rand_core::RngCore;
 use static_cell::StaticCell;
@@ -102,6 +101,7 @@ async fn main(spawner: Spawner) -> ! {
     defmt::info!("CAN setup complete");
 
     spawner.must_spawn(can_to_mqtt());
+    spawner.must_spawn(publish_safety_statuses());
     for board in HEARTBEAT_BOARDS {
         spawner.must_spawn(send_heartbeat(board));
     }
