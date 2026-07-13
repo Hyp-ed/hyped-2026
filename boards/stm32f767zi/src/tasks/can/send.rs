@@ -19,7 +19,7 @@ pub async fn can_sender(mut tx: CanTx<'static>) {
     loop {
         let message = can_sender.receive().await;
 
-        let log_motor_message = matches!(
+        let log_command = matches!(
             &message,
             CanMessage::MotorControllerSetupCommand
                 | CanMessage::MotorControllerSetOperationalCommand
@@ -29,9 +29,11 @@ pub async fn can_sender(mut tx: CanTx<'static>) {
                 | CanMessage::StartPropulsionBrakingCommand
                 | CanMessage::PropulsionAccelerationStarted
                 | CanMessage::PropulsionBrakingStarted
+                | CanMessage::ClampBrakesCommand
+                | CanMessage::UnclampBrakesCommand
         );
 
-        if log_motor_message {
+        if log_command {
             defmt::info!("CAN TX dequeued: {:?}", message);
         }
 
@@ -52,8 +54,8 @@ pub async fn can_sender(mut tx: CanTx<'static>) {
             tx.write(&frame).await;
         }
 
-        if log_motor_message {
-            defmt::info!("CAN TX complete");
+        if log_command {
+            defmt::info!("CAN TX complete: {:?}", frame);
         }
         defmt::debug!("CAN message sent: {:?}", frame);
     }

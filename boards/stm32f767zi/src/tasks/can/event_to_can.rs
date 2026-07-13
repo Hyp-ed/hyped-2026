@@ -106,26 +106,38 @@ pub async fn event_to_can(mut events: DynSubscriber<'static, Event>) -> ! {
         };
 
         if let Some(msg) = can_message {
-            let log_motor_message = matches!(
+            let log_command = matches!(
                 &msg,
                 CanMessage::MotorControllerSetupCommand
                     | CanMessage::MotorControllerSetOperationalCommand
+                    | CanMessage::StartPropulsionBrakingCommand
+                    | CanMessage::ClampBrakesCommand
+                    | CanMessage::UnclampBrakesCommand
+            );
+            let reliable_brake_command = matches!(
+                &msg,
+                CanMessage::ClampBrakesCommand | CanMessage::UnclampBrakesCommand
             );
 
-            if log_motor_message {
+            if log_command {
                 defmt::info!("Bridging event to CAN: {:?}", msg);
             }
 
-            if with_timeout(Duration::from_millis(100), can_sender.send(msg))
+            if reliable_brake_command {
+                can_sender.send(msg).await;
+            } else if with_timeout(Duration::from_millis(100), can_sender.send(msg.clone()))
                 .await
                 .is_err()
             {
-                defmt::error!("CAN bridge could not queue motor command: CAN_SEND is full");
+                defmt::error!(
+                    "CAN bridge dropped {:?}: CAN_SEND remained full for 100ms",
+                    msg
+                );
                 continue;
             }
 
-            if log_motor_message {
-                defmt::info!("CAN bridge queued motor command");
+            if log_command {
+                defmt::info!("CAN bridge queued command");
             }
         }
 
