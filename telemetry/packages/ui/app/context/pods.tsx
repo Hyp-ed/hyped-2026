@@ -46,8 +46,11 @@ const LATENCY_REQUEST_INTERVAL = 100 as const;
 
 const STATE_ALIASES: Record<string, PodStateType> = {
 	idle: ALL_POD_STATES.IDLE,
+	maintenance: ALL_POD_STATES.MAINTENANCE,
+	entering_maintenance: ALL_POD_STATES.ENTERING_MAINTENANCE,
 	setup_motor: ALL_POD_STATES.SETUP_MOTOR,
 	precharge: ALL_POD_STATES.PRECHARGE,
+	hv_active: ALL_POD_STATES.HV_ACTIVE,
 	ready_for_propulsion: ALL_POD_STATES.READY_FOR_PROPULSION,
 	accelerate: ALL_POD_STATES.ACCELERATE,
 	brake: ALL_POD_STATES.BRAKE,
@@ -292,7 +295,11 @@ export const PodsProvider = ({ children }: { children: React.ReactNode }) => {
 						}));
 					}
 					// raise an error if we are in a failure state
-					if ((Object.values(FAILURE_STATES) as string[]).includes(normalizedPodState)) {
+					if (
+						(Object.values(FAILURE_STATES) as string[]).includes(
+							normalizedPodState,
+						)
+					) {
 						raiseError(
 							ERROR_IDS.POD_FAILURE_STATE,
 							`Pod ${podId} in failure state!`,

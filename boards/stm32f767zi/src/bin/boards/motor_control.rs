@@ -19,7 +19,7 @@ use hyped_boards_stm32f767zi::{
     tasks::{
         can::{board_heartbeat::send_heartbeat, receive::can_receiver, send::can_sender},
         motor_control::{
-            control::{motor_command_task, motor_control_loop},
+            control::{motor_command_task, motor_control_loop, motor_emergency_task},
             receive::motor_rx_task,
         },
     },
@@ -46,6 +46,8 @@ async fn main(spawner: Spawner) {
     bus::init().expect("Failed to initialise event bus");
     let motor_control_events =
         bus::subscriber().expect("Failed to create motor control event subscriber");
+    let motor_emergency_events =
+        bus::subscriber().expect("Failed to create motor emergency event subscriber");
 
     let p = embassy_stm32::init(Default::default());
 
@@ -68,6 +70,7 @@ async fn main(spawner: Spawner) {
 
     spawner.must_spawn(motor_rx_task(can3_rx));
     spawner.must_spawn(motor_command_task(motor_control_events));
+    spawner.must_spawn(motor_emergency_task(motor_emergency_events));
     spawner.must_spawn(motor_control_loop(can3_tx));
 
     loop {

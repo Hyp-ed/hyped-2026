@@ -61,21 +61,26 @@ pub async fn motor_command_task(mut events: DynSubscriber<'static, Event>) {
                 }
 
                 info!("Starting low-power test acceleration");
+                send_motor_command(Messages::StartDrive).await;
                 send_motor_command(Messages::TestModeCommand(200)).await;
                 Timer::after(Duration::from_secs(3)).await;
                 CAN_SEND
                     .send(CanMessage::PropulsionAccelerationStarted)
                     .await;
             }
-            Event::StartPropulsionBrakingCommand => {
-                if !operational {
-                    warn!("Ignoring braking command before motor controller is operational");
-                    continue;
-                }
+            _ => {}
+        }
+    }
+}
 
-                info!("Starting propulsion braking");
+/// Handles safety-stop commands independently of the long setup/operational sequences.
+#[embassy_executor::task]
+pub async fn motor_emergency_task(mut events: DynSubscriber<'static, Event>) {
+    loop {
+        match events.next_message_pure().await {
+            Event::StartPropulsionBrakingCommand | Event::Emergency { .. } => {
+                warn!("Stopping propulsion");
                 send_motor_command(Messages::QuickStop).await;
-                Timer::after(Duration::from_millis(100)).await;
                 CAN_SEND.send(CanMessage::PropulsionBrakingStarted).await;
             }
             _ => {}
@@ -120,10 +125,7 @@ async fn run_operational_sequence() {
     send_motor_command(Messages::SwitchOn).await;
     Timer::after(Duration::from_secs(30)).await;
 
-    send_motor_command(Messages::StartDrive).await;
-    Timer::after(Duration::from_secs(15)).await;
-
-    info!("Motor controller operational and drive started.");
+    info!("Motor controller operational; drive remains stopped until Demo starts.");
 }
 
 async fn send_motor_command(message: Messages) {

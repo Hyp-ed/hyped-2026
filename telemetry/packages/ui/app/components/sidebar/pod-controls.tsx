@@ -5,11 +5,13 @@ import { cn } from '@/lib/utils';
 import { ALL_POD_STATES } from '@hyped/telemetry-constants';
 import {
 	Gauge,
+	Home,
 	type LucideIcon,
 	PlugZap,
 	Rocket,
 	ShieldCheck,
 	Siren,
+	Wrench,
 } from 'lucide-react';
 
 /**
@@ -28,12 +30,25 @@ export const PodControls = ({
 	const { podState, controlStatus } = usePod(podId);
 	const controls = [
 		{
+			label: 'Maintenance',
+			control: CONTROLS.MAINTENANCE,
+			icon: Wrench,
+			enabled: podState === ALL_POD_STATES.IDLE,
+			className: 'bg-slate-700 hover:bg-slate-800',
+		},
+		{
+			label: 'Exit Maintenance',
+			control: CONTROLS.IDLE,
+			icon: Home,
+			enabled: podState === ALL_POD_STATES.MAINTENANCE,
+			className: 'bg-slate-700 hover:bg-slate-800',
+		},
+		{
 			label: 'Motor Setup',
 			control: CONTROLS.MOTOR_SETUP,
 			icon: PlugZap,
 			enabled:
-				podState === ALL_POD_STATES.UNKNOWN ||
-				podState === ALL_POD_STATES.IDLE,
+				podState === ALL_POD_STATES.UNKNOWN || podState === ALL_POD_STATES.IDLE,
 			className: 'bg-blue-700 hover:bg-blue-800',
 		},
 		{
@@ -41,8 +56,7 @@ export const PodControls = ({
 			control: CONTROLS.PRECHARGE,
 			icon: Gauge,
 			enabled:
-				podState === ALL_POD_STATES.SETUP_MOTOR &&
-				controlStatus.canPrecharge,
+				podState === ALL_POD_STATES.SETUP_MOTOR && controlStatus.canPrecharge,
 			className: 'bg-amber-600 hover:bg-amber-700',
 		},
 		{
@@ -59,9 +73,22 @@ export const PodControls = ({
 			control: CONTROLS.ACCELERATE,
 			icon: Rocket,
 			enabled:
-				podState === ALL_POD_STATES.READY_FOR_PROPULSION &&
-				controlStatus.canAccelerate,
+				podState === ALL_POD_STATES.HV_ACTIVE && controlStatus.canAccelerate,
 			className: 'bg-green-700 hover:bg-green-800',
+		},
+		{
+			label: 'Brake',
+			control: CONTROLS.STOP,
+			icon: ShieldCheck,
+			enabled: podState === ALL_POD_STATES.ACCELERATE,
+			className: 'bg-amber-700 hover:bg-amber-800',
+		},
+		{
+			label: 'Return to Idle',
+			control: CONTROLS.IDLE,
+			icon: Home,
+			enabled: podState === ALL_POD_STATES.STOPPED,
+			className: 'bg-slate-700 hover:bg-slate-800',
 		},
 	];
 

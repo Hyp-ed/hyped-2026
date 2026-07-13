@@ -77,6 +77,11 @@ pub async fn can_receiver(mut rx: CanRx<'static>) {
             CanMessage::Emergency(board, reason) => {
                 emergency_sender.send(true);
                 defmt::error!("Emergency message from board {}: {}", board, reason);
+                publish(Event::Emergency {
+                    from: board,
+                    reason,
+                })
+                .await;
             }
             CanMessage::MeasurementReading(measurement_reading) => {
                 defmt::info!("Received measurement reading: {:?}", measurement_reading);

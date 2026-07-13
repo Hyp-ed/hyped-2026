@@ -18,8 +18,13 @@ pub async fn event_to_can(mut events: DynSubscriber<'static, Event>) -> ! {
 
         let can_message: Option<CanMessage> = match &event {
             // Operator Commands (not sent over CAN)
-            Event::EmergencyStopOperatorCommand => None,
+            Event::EmergencyStopOperatorCommand => Some(CanMessage::Emergency(
+                hyped_communications::boards::Board::Telemetry,
+                hyped_communications::emergency::Reason::Unknown,
+            )),
+            Event::ResetEmergencyOperatorCommand => None,
             Event::IdleOperatorCommand => None,
+            Event::MaintenanceOperatorCommand => None,
             Event::PrechargeOperatorCommand => None,
             Event::AccelerateOperatorCommand => None,
             Event::BrakeOperatorCommand => None,
@@ -27,7 +32,8 @@ pub async fn event_to_can(mut events: DynSubscriber<'static, Event>) -> ! {
             Event::ReadyForPropulsionOperatorCommand => None,
 
             // Emergency
-            Event::Emergency { from, reason } => Some(CanMessage::Emergency(*from, *reason)),
+            // Ingress emergency frames are never echoed back onto CAN.
+            Event::Emergency { .. } => None,
 
             // Heartbeat (handled by separate heartbeat task)
             Event::Heartbeat { .. } => None,

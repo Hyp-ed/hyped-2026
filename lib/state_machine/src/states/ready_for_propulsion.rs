@@ -23,24 +23,22 @@ impl StateMachine {
             Event::BrakesUnclamped { from } => {
                 info!("Brakes unclamped. board ={}", from);
                 self.brakes_clamped = false;
-                info!("Awaiting accelerate command from operator");
-            }
-            Event::AccelerateOperatorCommand => {
-                if self.precharge_step != crate::state_machine::PrechargeStep::AllClosed {
-                    warn!("Precharge relays are not closed, cannot accelerate!");
-                } else if !self.motor_controller_operational {
-                    warn!("Motor controller not operational, cannot accelerate!");
-                } else if self.brakes_clamped {
-                    warn!("Brakes still clamped, cannot accelerate!");
-                } else {
-                    info!("Starting acceleration");
+                if self.motor_controller_operational {
+                    info!("Demo conditions confirmed; starting acceleration");
                     self.transition_to(State::Accelerate).await;
+                } else {
+                    warn!("Brakes retracted before the motor controller was operational");
+                    self.transition_to(State::Emergency).await;
                 }
             }
             Event::BatteryPrechargeRelayOpen
             | Event::MotorControllerRelayOpen
             | Event::ShutdownCircuitryRelayOpen => {
                 warn!("Unexpected relay opening while ready for propulsion");
+                self.transition_to(State::Emergency).await;
+            }
+            Event::BrakesClamped { .. } | Event::PropulsionAccelerationStarted => {
+                warn!("Demo preparation invariant violated");
                 self.transition_to(State::Emergency).await;
             }
             // Abort

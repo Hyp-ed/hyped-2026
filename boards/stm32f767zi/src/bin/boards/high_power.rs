@@ -5,7 +5,10 @@
 /// Uses PA1 and 2 for low pressure
 use defmt_rtt as _;
 use embassy_executor::Spawner;
-use embassy_futures::yield_now;
+use embassy_futures::{
+    select::{select, Either},
+    yield_now,
+};
 use embassy_stm32::{
     bind_interrupts,
     can::{
@@ -16,7 +19,7 @@ use embassy_stm32::{
     peripherals::{self, CAN1},
     rng, Config,
 };
-use embassy_time::{Duration, Timer};
+use embassy_time::{Duration, Instant, Timer};
 use hyped_boards_stm32f767zi::{
     board_state::THIS_BOARD,
     default_can_config,
@@ -166,11 +169,11 @@ async fn high_power_can_receiver(mut rx: CanRx<'static>, mut gpio_pins: Pins) {
         let message: CanMessage = frame.into();
         //defmt::info!("Received CAN message: {:?}", message);
 
-        respond_to_message(message, &mut gpio_pins).await;
+        respond_to_message(message, &mut gpio_pins, &mut rx).await;
     }
 }
 
-async fn respond_to_message(message: CanMessage, gpio_pins: &mut Pins) {
+async fn respond_to_message(message: CanMessage, gpio_pins: &mut Pins, rx: &mut CanRx<'static>) {
     match message {
         CanMessage::Heartbeat(_heartbeat) => {
             defmt::debug!("Heartbeat received");
@@ -180,9 +183,13 @@ async fn respond_to_message(message: CanMessage, gpio_pins: &mut Pins) {
             CAN_SEND.send(CanMessage::PrechargeStarted).await;
 
             gpio_pins.close_shutdown_circuitry_relay().await;
-            Timer::after(Duration::from_secs(10)).await;
+            if !wait_interruptibly(Duration::from_secs(10), rx, gpio_pins).await {
+                return;
+            }
             gpio_pins.close_battery_precharge_relay().await;
-            Timer::after(PRECHARGE_SETTLE_TIME).await;
+            if !wait_interruptibly(PRECHARGE_SETTLE_TIME, rx, gpio_pins).await {
+                return;
+            }
             CAN_SEND.send(CanMessage::PrechargeVoltageOK).await;
             gpio_pins.close_motor_controller_relay().await;
             CAN_SEND.send(CanMessage::PrechargeComplete).await;
@@ -195,16 +202,59 @@ async fn respond_to_message(message: CanMessage, gpio_pins: &mut Pins) {
             defmt::info!("StartDischargeCommand received");
             CAN_SEND.send(CanMessage::DischargeStarted).await;
             gpio_pins.open_shutdown_circuitry_relay().await;
-            Timer::after(DISCHARGE_SETTLE_TIME).await;
+            if !wait_interruptibly(DISCHARGE_SETTLE_TIME, rx, gpio_pins).await {
+                return;
+            }
             CAN_SEND.send(CanMessage::DischargeVoltageOK).await;
             CAN_SEND.send(CanMessage::DischargeComplete).await;
         }
         CanMessage::Emergency(from, reason) => {
             defmt::warn!("EMERGENCY: from {:?} reason={}", from, reason);
-            gpio_pins.open_shutdown_circuitry_relay().await;
+            gpio_pins.open_precharge_relays().await;
         }
         _ => {
             defmt::debug!("Ignored CAN message: {:?}", message);
+        }
+    }
+}
+
+/// Wait for relay settling while continuing to service isolation commands.
+async fn wait_interruptibly(
+    duration: Duration,
+    rx: &mut CanRx<'static>,
+    gpio_pins: &mut Pins,
+) -> bool {
+    let deadline = Instant::now() + duration;
+
+    loop {
+        match select(Timer::at(deadline), rx.read()).await {
+            Either::First(_) => return true,
+            Either::Second(Err(error)) => {
+                defmt::warn!("CAN receive error while waiting: {:?}", error);
+            }
+            Either::Second(Ok(envelope)) => {
+                let raw_id = match envelope.frame.id() {
+                    Id::Standard(id) => id.as_raw() as u32,
+                    Id::Extended(id) => id.as_raw(),
+                };
+                let mut data = [0u8; 8];
+                data.copy_from_slice(envelope.frame.data());
+                let message: CanMessage = hyped_can::HypedCanFrame::new(raw_id, data).into();
+
+                match message {
+                    CanMessage::OpenPrechargeRelaysCommand => {
+                        defmt::warn!("Relay sequence interrupted by isolation command");
+                        gpio_pins.open_precharge_relays().await;
+                        return false;
+                    }
+                    CanMessage::Emergency(from, reason) => {
+                        defmt::warn!("EMERGENCY: from {:?} reason={}", from, reason);
+                        gpio_pins.open_precharge_relays().await;
+                        return false;
+                    }
+                    _ => defmt::debug!("Ignored CAN message while waiting: {:?}", message),
+                }
+            }
         }
     }
 }

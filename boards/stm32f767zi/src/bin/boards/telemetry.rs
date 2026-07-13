@@ -1,7 +1,7 @@
 #![no_std]
 #![no_main]
 
-use core::{panic, str::FromStr};
+use core::str::FromStr;
 
 use defmt_rtt as _;
 use embassy_executor::Spawner;
@@ -20,7 +20,7 @@ use embassy_stm32::{
 };
 use embassy_time::{with_timeout, Duration, Instant, Timer};
 use hyped_boards_stm32f767zi::{
-    board_state::{CURRENT_STATE, EMERGENCY, THIS_BOARD},
+    board_state::THIS_BOARD,
     configure_networking, default_can_config,
     log::log,
     set_up_network_stack,
@@ -46,7 +46,6 @@ use hyped_core::{
     log_types::LogLevel,
 };
 use hyped_state_machine::{
-    state::State,
     state_machine::{run, StateMachine},
 };
 use panic_probe as _;
@@ -103,7 +102,6 @@ async fn main(spawner: Spawner) -> ! {
     defmt::info!("CAN setup complete");
 
     spawner.must_spawn(can_to_mqtt());
-    spawner.must_spawn(emergency_handler());
     for board in HEARTBEAT_BOARDS {
         spawner.must_spawn(send_heartbeat(board));
     }
@@ -123,7 +121,6 @@ async fn main(spawner: Spawner) -> ! {
 
 #[embassy_executor::task]
 async fn heartbeat_monitor() {
-    let emergency_sender = EMERGENCY.sender();
     let can_sender = CAN_SEND.sender();
     let mut seen = [false; HEARTBEAT_BOARDS.len()];
     let mut last_seen = [Instant::now(); HEARTBEAT_BOARDS.len()];
@@ -158,7 +155,11 @@ async fn heartbeat_monitor() {
                 Reason::NoInitialHeartbeat,
             ))
             .await;
-        emergency_sender.send(true);
+        bus::publish(hyped_communications::events::Event::Emergency {
+            from: Board::Telemetry,
+            reason: Reason::NoInitialHeartbeat,
+        })
+        .await;
         return;
     }
 
@@ -188,7 +189,11 @@ async fn heartbeat_monitor() {
                         Reason::MissingHeartbeat,
                     ))
                     .await;
-                emergency_sender.send(true);
+                bus::publish(hyped_communications::events::Event::Emergency {
+                    from: Board::Telemetry,
+                    reason: Reason::MissingHeartbeat,
+                })
+                .await;
                 return;
             }
         }
@@ -199,21 +204,4 @@ fn heartbeat_board_index(board: Board) -> Option<usize> {
     HEARTBEAT_BOARDS
         .iter()
         .position(|heartbeat_board| *heartbeat_board == board)
-}
-
-#[embassy_executor::task]
-async fn emergency_handler() {
-    let current_state_sender = CURRENT_STATE.sender();
-
-    loop {
-        // All main loops should have logic to handle an emergency signal...
-        if EMERGENCY.receiver().unwrap().get().await {
-            defmt::error!("Emergency signal received! Cleaning up...");
-            // ... and take appropriate action
-            current_state_sender.send(State::Emergency);
-            // Wait for the emergency signal to be sent
-            Timer::after(Duration::from_secs(1)).await;
-            panic!("Terminating due to emergency signal!");
-        }
-    }
 }

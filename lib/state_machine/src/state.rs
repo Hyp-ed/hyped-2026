@@ -12,6 +12,21 @@ pub enum State {
     Stopped = 5,
     Emergency = 6,
     SetupMotor = 7,
+    Maintenance = 8,
+    HvActive = 9,
+    EnteringMaintenance = 10,
+}
+
+/// Mapping used to demonstrate the regulatory conditions without forcing operational states to
+/// use the same names as the regulations.
+#[derive(PartialEq, Debug, defmt::Format, Clone, Copy)]
+pub enum RegulatoryState {
+    Idle,
+    Maintenance,
+    HvActive,
+    Demo,
+    Emergency,
+    Transitional,
 }
 
 impl From<State> for u8 {
@@ -21,6 +36,22 @@ impl From<State> for u8 {
 }
 
 impl State {
+    pub fn regulatory_state(self) -> RegulatoryState {
+        match self {
+            State::Idle => RegulatoryState::Idle,
+            State::Maintenance => RegulatoryState::Maintenance,
+            State::HvActive => RegulatoryState::HvActive,
+            State::Accelerate => RegulatoryState::Demo,
+            State::Emergency => RegulatoryState::Emergency,
+            State::EnteringMaintenance
+            | State::SetupMotor
+            | State::Precharge
+            | State::ReadyForPropulsion
+            | State::Brake
+            | State::Stopped => RegulatoryState::Transitional,
+        }
+    }
+
     pub fn telemetry_state(self) -> &'static str {
         match self {
             State::Idle => "IDLE",
@@ -31,6 +62,9 @@ impl State {
             State::Stopped => "STOPPED",
             State::Emergency => "EMERGENCY",
             State::SetupMotor => "SETUP_MOTOR",
+            State::Maintenance => "MAINTENANCE",
+            State::HvActive => "HV_ACTIVE",
+            State::EnteringMaintenance => "ENTERING_MAINTENANCE",
         }
     }
 }
@@ -48,6 +82,9 @@ impl TryFrom<u8> for State {
             0x05 => Ok(State::Stopped),
             0x06 => Ok(State::Emergency),
             0x07 => Ok(State::SetupMotor),
+            0x08 => Ok(State::Maintenance),
+            0x09 => Ok(State::HvActive),
+            0x0A => Ok(State::EnteringMaintenance),
             _ => Err("Invalid state"),
         }
     }
@@ -64,6 +101,9 @@ impl From<State> for &str {
             State::Stopped => "stopped",
             State::Emergency => "emergency",
             State::SetupMotor => "setup_motor",
+            State::Maintenance => "maintenance",
+            State::HvActive => "hv_active",
+            State::EnteringMaintenance => "entering_maintenance",
         }
     }
 }
@@ -81,6 +121,9 @@ impl FromStr for State {
             "stopped" => Ok(State::Stopped),
             "emergency" => Ok(State::Emergency),
             "setup_motor" => Ok(State::SetupMotor),
+            "maintenance" => Ok(State::Maintenance),
+            "hv_active" => Ok(State::HvActive),
+            "entering_maintenance" => Ok(State::EnteringMaintenance),
             _ => Err("Invalid state"),
         }
     }
@@ -109,6 +152,9 @@ mod tests {
             State::Stopped,
             State::Emergency,
             State::SetupMotor,
+            State::Maintenance,
+            State::HvActive,
+            State::EnteringMaintenance,
         ];
 
         for state in states {
@@ -129,6 +175,9 @@ mod tests {
             State::Stopped,
             State::Emergency,
             State::SetupMotor,
+            State::Maintenance,
+            State::HvActive,
+            State::EnteringMaintenance,
         ];
 
         for state in states {
@@ -145,5 +194,27 @@ mod tests {
     fn invalid_state_rejected() {
         assert!(State::try_from(0xFF).is_err());
         assert!(State::from_str("unknown").is_err());
+    }
+
+    #[test]
+    fn regulatory_state_mapping_is_explicit() {
+        assert_eq!(State::Idle.regulatory_state(), RegulatoryState::Idle);
+        assert_eq!(
+            State::Maintenance.regulatory_state(),
+            RegulatoryState::Maintenance
+        );
+        assert_eq!(
+            State::HvActive.regulatory_state(),
+            RegulatoryState::HvActive
+        );
+        assert_eq!(State::Accelerate.regulatory_state(), RegulatoryState::Demo);
+        assert_eq!(
+            State::Emergency.regulatory_state(),
+            RegulatoryState::Emergency
+        );
+        assert_eq!(
+            State::Precharge.regulatory_state(),
+            RegulatoryState::Transitional
+        );
     }
 }

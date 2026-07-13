@@ -7,6 +7,8 @@ import toast from 'react-hot-toast';
  */
 export const CONTROLS = {
 	IDLE: 'idle',
+	MAINTENANCE: 'maintenance',
+	RESET_EMERGENCY: 'reset-emergency',
 	MOTOR_SETUP: 'setup_motor',
 	PRECHARGE: 'precharge',
 	READY_FOR_PROPULSION: 'ready-for-propulsion',
