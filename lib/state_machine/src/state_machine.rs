@@ -64,7 +64,8 @@ impl StateMachine {
     }
 
     pub(crate) async fn drain_pending(&mut self) {
-        while let Some(event) = self.pending_events.pop() {
+        while !self.pending_events.is_empty() {
+            let event = self.pending_events.remove(0);
             bus::publish(event).await;
         }
     }

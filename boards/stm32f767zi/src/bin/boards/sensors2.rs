@@ -180,6 +180,7 @@ async fn respond_to_message(message: CanMessage, gpio_pins: &mut Pins) {
             CAN_SEND.send(CanMessage::PrechargeStarted).await;
 
             gpio_pins.close_shutdown_circuitry_relay().await;
+            Timer::after(Duration::from_secs(10)).await;
             gpio_pins.close_battery_precharge_relay().await;
             Timer::after(PRECHARGE_SETTLE_TIME).await;
             CAN_SEND.send(CanMessage::PrechargeVoltageOK).await;

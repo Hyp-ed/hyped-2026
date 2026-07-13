@@ -423,7 +423,7 @@ impl From<CanMessage> for HypedCanFrame {
             }
             CanMessage::StartPropulsionAccelerationCommand => {
                 let can_id: CanId = CanId::new_high_priority(
-                    Board::MotorControl,
+                    Board::Telemetry,
                     CanDataType::U32,
                     MessageIdentifier::Event(EventId::StartPropulsionAccelerationCommand),
                 );
@@ -431,7 +431,7 @@ impl From<CanMessage> for HypedCanFrame {
             }
             CanMessage::StartPropulsionBrakingCommand => {
                 let can_id: CanId = CanId::new_high_priority(
-                    Board::MotorControl,
+                    Board::Telemetry,
                     CanDataType::U32,
                     MessageIdentifier::Event(EventId::StartPropulsionBrakingCommand),
                 );
