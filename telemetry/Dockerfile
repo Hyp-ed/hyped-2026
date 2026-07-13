@@ -1,10 +1,10 @@
-FROM node:18.17.0
+FROM node:22.13.1
 
 # Create app directory
 WORKDIR /usr/src/app
 
-# Install pnpm
-RUN npm install -g pnpm
+# Keep pnpm aligned with the version declared in package.json.
+RUN npm install -g pnpm@9.5.0
 
 # Install dependencies
 COPY telemetry/package.json ./

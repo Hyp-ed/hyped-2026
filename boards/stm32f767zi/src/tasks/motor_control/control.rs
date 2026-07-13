@@ -67,6 +67,17 @@ pub async fn motor_command_task(mut events: DynSubscriber<'static, Event>) {
                     .send(CanMessage::PropulsionAccelerationStarted)
                     .await;
             }
+            Event::StartPropulsionBrakingCommand => {
+                if !operational {
+                    warn!("Ignoring braking command before motor controller is operational");
+                    continue;
+                }
+
+                info!("Starting propulsion braking");
+                send_motor_command(Messages::QuickStop).await;
+                Timer::after(Duration::from_millis(100)).await;
+                CAN_SEND.send(CanMessage::PropulsionBrakingStarted).await;
+            }
             _ => {}
         }
     }

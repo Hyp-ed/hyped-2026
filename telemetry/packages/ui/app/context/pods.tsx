@@ -65,6 +65,48 @@ const decodeMqttStringPayload = (message: Buffer) => {
 	}
 };
 
+type PodControlStatus = {
+	canSetupMotor: boolean;
+	canPrecharge: boolean;
+	canReadyForPropulsion: boolean;
+	canAccelerate: boolean;
+};
+
+type RawPodControlStatus = Partial<
+	PodControlStatus & {
+		can_setup_motor: boolean;
+		can_precharge: boolean;
+		can_ready_for_propulsion: boolean;
+		can_accelerate: boolean;
+	}
+>;
+
+const DEFAULT_CONTROL_STATUS: PodControlStatus = {
+	canSetupMotor: false,
+	canPrecharge: false,
+	canReadyForPropulsion: false,
+	canAccelerate: false,
+};
+
+const parseControlStatus = (message: Buffer): PodControlStatus | null => {
+	try {
+		const status = JSON.parse(message.toString()) as RawPodControlStatus;
+		return {
+			canSetupMotor:
+				status.canSetupMotor === true || status.can_setup_motor === true,
+			canPrecharge:
+				status.canPrecharge === true || status.can_precharge === true,
+			canReadyForPropulsion:
+				status.canReadyForPropulsion === true ||
+				status.can_ready_for_propulsion === true,
+			canAccelerate:
+				status.canAccelerate === true || status.can_accelerate === true,
+		};
+	} catch {
+		return null;
+	}
+};
+
 /**
  * The default pod ID to use
  */
@@ -85,6 +127,7 @@ type PodsStateType = {
 		latency?: number;
 		connectionEstablished?: Date;
 		podState: PodStateType;
+		controlStatus: PodControlStatus;
 	};
 };
 
@@ -110,6 +153,7 @@ function createPodsStateFromIds(ids: readonly PodId[]): PodsStateType {
 			operationMode: pods[podId].mode,
 			connectionStatus: POD_CONNECTION_STATUS.CONNECTED,
 			podState: ALL_POD_STATES.UNKNOWN,
+			controlStatus: DEFAULT_CONTROL_STATUS,
 		};
 	}
 	return podsContext;
@@ -148,6 +192,7 @@ export const PodsProvider = ({ children }: { children: React.ReactNode }) => {
 						) {
 							newPodsState[podId].connectionStatus =
 								POD_CONNECTION_STATUS.DISCONNECTED;
+							newPodsState[podId].controlStatus = DEFAULT_CONTROL_STATUS;
 							raiseError(
 								ERROR_IDS.POD_DISCONNECT,
 								`Pod ${podId} disconnected!`,
@@ -200,6 +245,7 @@ export const PodsProvider = ({ children }: { children: React.ReactNode }) => {
 							[podId]: {
 								...prevState[podId],
 								connectionStatus: POD_CONNECTION_STATUS.DISCONNECTED,
+								controlStatus: DEFAULT_CONTROL_STATUS,
 								// reset previous latencies
 								previousLatencies: [],
 								// reset latency
@@ -254,6 +300,16 @@ export const PodsProvider = ({ children }: { children: React.ReactNode }) => {
 							podId,
 						);
 					}
+				} else if (topic === getTopic('control-status', podId)) {
+					const controlStatus = parseControlStatus(message);
+					if (!controlStatus) return;
+					setPodsState((prevState) => ({
+						...prevState,
+						[podId]: {
+							...prevState[podId],
+							controlStatus,
+						},
+					}));
 				} else if (topic === getTopic('latency/response', podId)) {
 					// calculate the latency
 					const latency =
@@ -302,6 +358,7 @@ export const PodsProvider = ({ children }: { children: React.ReactNode }) => {
 			podIds.map((podId) => {
 				subscribe('latency/response', podId);
 				subscribe('state', podId);
+				subscribe('control-status', podId);
 				client.on('message', (topic, message) =>
 					processMessage(podId, topic, message),
 				);
@@ -314,6 +371,7 @@ export const PodsProvider = ({ children }: { children: React.ReactNode }) => {
 					);
 					unsubscribe('latency/response', podId);
 					unsubscribe('state', podId);
+					unsubscribe('control-status', podId);
 				});
 			};
 		},

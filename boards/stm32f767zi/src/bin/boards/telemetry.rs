@@ -56,8 +56,8 @@ use static_cell::StaticCell;
 const HEARTBEAT_BOARDS: [Board; 4] = [
     Board::Navigation,
     Board::MotorControl,
-    Board::Sensors1,
-    Board::Sensors2,
+    Board::Pneumatics,
+    Board::HighPower,
 ];
 
 //const HEARTBEAT_BOARDS: [Board; 1] = [Board::TemperatureTester];
@@ -112,7 +112,7 @@ async fn main(spawner: Spawner) -> ! {
     spawner.must_spawn(mqtt_to_event_bus());
     spawner.must_spawn(event_to_can(can_bridge_events));
     // Let the CAN bridge start listening before the state machine entry publishes commands.
-    //Timer::after(Duration::from_millis(10)).await;
+    Timer::after(Duration::from_millis(10)).await;
     // ... add more boards here
     spawner.must_spawn(run(StateMachine::new(), state_machine_events));
 

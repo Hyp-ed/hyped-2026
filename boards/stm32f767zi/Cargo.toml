@@ -53,13 +53,13 @@ name = "telemetry"
 path = "src/bin/boards/telemetry.rs"
 
 [[bin]]                                                                                   
-name = "sensors1"
-path = "src/bin/boards/sensors1.rs"
+name = "pneumatics"
+path = "src/bin/boards/pneumatics.rs"
 
 
 [[bin]]                                                                                   
-name = "sensors2"
-path = "src/bin/boards/sensors2.rs"
+name = "high_power"
+path = "src/bin/boards/high_power.rs"
 [[bin]]
 name = "motor_control"
 path = "src/bin/boards/motor_control.rs"
@@ -79,4 +79,3 @@ path = "src/bin/boards/board_simulator.rs"
 [[bin]]
 name = "i2cdetect"
 path = "src/bin/tools/i2cdetect.rs"
-

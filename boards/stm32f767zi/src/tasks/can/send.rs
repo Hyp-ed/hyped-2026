@@ -25,6 +25,10 @@ pub async fn can_sender(mut tx: CanTx<'static>) {
                 | CanMessage::MotorControllerSetOperationalCommand
                 | CanMessage::MotorControllerSetupComplete
                 | CanMessage::MotorControllerOperational
+                | CanMessage::StartPropulsionAccelerationCommand
+                | CanMessage::StartPropulsionBrakingCommand
+                | CanMessage::PropulsionAccelerationStarted
+                | CanMessage::PropulsionBrakingStarted
         );
 
         if log_motor_message {

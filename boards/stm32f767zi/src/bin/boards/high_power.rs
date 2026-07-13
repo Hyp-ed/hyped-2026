@@ -1,7 +1,7 @@
 #![no_std]
 #![no_main]
 
-/// Sensors board 2
+/// High-power board
 /// Uses PA1 and 2 for low pressure
 use defmt_rtt as _;
 use embassy_executor::Spawner;
@@ -43,7 +43,7 @@ const DISCHARGE_SETTLE_TIME: Duration = Duration::from_secs(30);
 #[embassy_executor::main]
 async fn main(spawner: Spawner) -> ! {
     THIS_BOARD
-        .init(Board::Sensors2)
+        .init(Board::HighPower)
         .expect("Failed to initialize board");
 
     let config = Config::default();
@@ -54,7 +54,7 @@ async fn main(spawner: Spawner) -> ! {
     let gpio2: gpio::Output<'static> = gpio::Output::new(p.PE9, gpio::Level::Low, gpio::Speed::Low);
     let gpio3: gpio::Output<'static> =
         gpio::Output::new(p.PE11, gpio::Level::Low, gpio::Speed::Low);
-    // Pressure sensors are temporarily disconnected on Sensors2.
+    // Pressure sensors are temporarily disconnected on the high-power board.
     // let adc1 = Adc::new(p.ADC1);
     // let pin1 = p.PA3.degrade_adc();
     //
@@ -89,10 +89,10 @@ async fn main(spawner: Spawner) -> ! {
     let (can_tx, can_rx) = can.split();
     spawner.must_spawn(can_sender(can_tx));
     spawner.must_spawn(send_heartbeat(Board::Telemetry));
-    spawner.must_spawn(sensors_board_can_receiver(can_rx, gpio_pins));
+    spawner.must_spawn(high_power_can_receiver(can_rx, gpio_pins));
     defmt::info!("CAN setup complete");
 
-    // spawner.must_spawn(sensors_board_pressure_sensors_task(pressure_sensors));
+    // spawner.must_spawn(high_power_pressure_sensors_task(pressure_sensors));
 
     loop {
         yield_now().await;
@@ -111,7 +111,7 @@ struct Pins {
 // }
 //
 // #[embassy_executor::task]
-// async fn sensors_board_pressure_sensors_task(mut pressure_sensors: PressureSensors) {
+// async fn high_power_pressure_sensors_task(mut pressure_sensors: PressureSensors) {
 //     loop {
 //         let low_pressures_ok = [
 //             !matches!(
@@ -130,7 +130,7 @@ struct Pins {
 //             defmt::warn!("Pressure sensor out of safe range, sending emergency");
 //             CAN_SEND
 //                 .send(CanMessage::Emergency(
-//                     Board::Sensors2,
+//                     Board::HighPower,
 //                     hyped_communications::emergency::Reason::Pressure,
 //                 ))
 //                 .await;
@@ -142,7 +142,7 @@ struct Pins {
 // }
 
 #[embassy_executor::task]
-async fn sensors_board_can_receiver(mut rx: CanRx<'static>, mut gpio_pins: Pins) {
+async fn high_power_can_receiver(mut rx: CanRx<'static>, mut gpio_pins: Pins) {
     loop {
         defmt::debug!("Waiting for CAN message");
 
@@ -180,6 +180,7 @@ async fn respond_to_message(message: CanMessage, gpio_pins: &mut Pins) {
             CAN_SEND.send(CanMessage::PrechargeStarted).await;
 
             gpio_pins.close_shutdown_circuitry_relay().await;
+            Timer::after(Duration::from_secs(10)).await;
             gpio_pins.close_battery_precharge_relay().await;
             Timer::after(PRECHARGE_SETTLE_TIME).await;
             CAN_SEND.send(CanMessage::PrechargeVoltageOK).await;

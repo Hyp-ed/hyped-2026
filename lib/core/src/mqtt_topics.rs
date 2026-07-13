@@ -12,6 +12,7 @@ pub const MQTT_CONTROLS_TOPIC_PREFIX: &str = "hyped/the_podigal_son/controls/";
 pub enum MqttTopic {
     Measurement(MeasurementId),
     State,
+    ControlStatus,
     Controls,
     Heartbeat,
     Logs,
@@ -29,6 +30,7 @@ impl FromStr for MqttTopic {
             "hyped/the_podigal_son/state" | "hyped/the_podigal_son/state/state" => {
                 Ok(MqttTopic::State)
             }
+            "hyped/the_podigal_son/control-status" => Ok(MqttTopic::ControlStatus),
             "hyped/the_podigal_son/heartbeat" => Ok(MqttTopic::Heartbeat),
             "hyped/the_podigal_son/logs" => Ok(MqttTopic::Logs),
             "hyped/the_podigal_son/latency/request" => Ok(MqttTopic::LatencyRequest),
@@ -56,6 +58,9 @@ impl From<MqttTopic> for String<100> {
         let mut topic = String::<100>::new();
         match v {
             MqttTopic::State => topic.push_str("hyped/the_podigal_son/state").unwrap(),
+            MqttTopic::ControlStatus => topic
+                .push_str("hyped/the_podigal_son/control-status")
+                .unwrap(),
             MqttTopic::Controls => topic.push_str("hyped/the_podigal_son/controls").unwrap(),
             MqttTopic::Heartbeat => topic.push_str("hyped/the_podigal_son/heartbeat").unwrap(),
             MqttTopic::Logs => topic.push_str("hyped/the_podigal_son/logs").unwrap(),
