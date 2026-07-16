@@ -38,7 +38,6 @@ use hyped_boards_stm32f767zi::{
         },
         network::net_task,
         sensors::read_imd,
-        status_to_mqtt::publish_safety_statuses,
     },
 };
 use hyped_communications::{boards::Board, bus, emergency::Reason, messages::CanMessage};
@@ -84,6 +83,7 @@ async fn main(spawner: Spawner) -> ! {
     spawner.must_spawn(mqtt(stack));
     Timer::after(Duration::from_secs(2)).await;
     spawner.must_spawn(base_station_heartbeat());
+    defmt::info!("Base station heartbeat task started");
 
     bus::init().expect("Failed to initialise event bus publisher");
     let state_machine_events =
@@ -101,7 +101,6 @@ async fn main(spawner: Spawner) -> ! {
     defmt::info!("CAN setup complete");
 
     spawner.must_spawn(can_to_mqtt());
-    spawner.must_spawn(publish_safety_statuses());
     for board in HEARTBEAT_BOARDS {
         spawner.must_spawn(send_heartbeat(board));
     }

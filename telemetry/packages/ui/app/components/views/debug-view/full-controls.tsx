@@ -45,14 +45,6 @@ export const FullControls = ({ podId }: { podId: string }) => {
 						>
 							Idle <Home size={16} />
 						</ControlButton>
-						<ControlButton
-							className="bg-openmct-dark-gray hover:bg-openmct-light-gray flex gap-2"
-							onClick={() =>
-								void sendControlMessage(podId, CONTROLS.MAINTENANCE)
-							}
-						>
-							Maintenance <Wrench size={16} />
-						</ControlButton>
 						<ButtonPair>
 							<LeftButton
 								onClick={() =>

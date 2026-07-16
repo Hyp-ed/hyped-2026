@@ -12,8 +12,6 @@ pub async fn mqtt_to_event_bus() {
         }
         let event = match message.payload.as_str() {
             "idle" => Some(Event::IdleOperatorCommand),
-            "maintenance" => Some(Event::MaintenanceOperatorCommand),
-            "reset-emergency" => Some(Event::ResetEmergencyOperatorCommand),
             "setup_motor" => Some(Event::PrechargeOperatorCommand),
             "precharge" => Some(Event::StartRunOperatorCommand),
             "ready-for-propulsion" => Some(Event::ReadyForPropulsionOperatorCommand),

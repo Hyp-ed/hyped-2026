@@ -1,9 +1,6 @@
 use crate::{
     board_state::EMERGENCY,
-    tasks::{
-        can::{receive::INCOMING_IMD_MSGS, send::CAN_SEND},
-        status_to_mqtt::set_imd_status,
-    },
+    tasks::can::{receive::INCOMING_IMD_MSGS, send::CAN_SEND},
 };
 use defmt_rtt as _;
 use embassy_time::Duration;
@@ -34,7 +31,6 @@ pub async fn read_imd() {
             break;
         }
 
-        set_imd_status(true);
         defmt::debug!("Received IMD frame: {}", frame);
 
         CAN_SEND
@@ -46,7 +42,6 @@ pub async fn read_imd() {
             .await;
     }
 
-    set_imd_status(false);
     EMERGENCY.sender().send(true);
     CAN_SEND
         .send(CanMessage::Emergency(Board::Telemetry, Reason::IMD))

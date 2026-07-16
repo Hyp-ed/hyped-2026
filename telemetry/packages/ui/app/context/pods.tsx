@@ -75,28 +75,6 @@ type PodControlStatus = {
 	canAccelerate: boolean;
 };
 
-export type ImdStatus = 'HEALTHY' | 'FAULT' | 'UNKNOWN';
-export type BrakeClampStatus = 'CLAMPED' | 'UNCLAMPED' | 'UNKNOWN';
-
-const parseStatusValue = (message: Buffer) => {
-	const value = Number.parseInt(decodeMqttStringPayload(message), 10);
-	return Number.isNaN(value) ? 2 : value;
-};
-
-const parseImdStatus = (message: Buffer): ImdStatus => {
-	const value = parseStatusValue(message);
-	if (value === 1) return 'HEALTHY';
-	if (value === 0) return 'FAULT';
-	return 'UNKNOWN';
-};
-
-const parseBrakeClampStatus = (message: Buffer): BrakeClampStatus => {
-	const value = parseStatusValue(message);
-	if (value === 1) return 'CLAMPED';
-	if (value === 0) return 'UNCLAMPED';
-	return 'UNKNOWN';
-};
-
 type RawPodControlStatus = Partial<
 	PodControlStatus & {
 		can_setup_motor: boolean;
@@ -153,8 +131,6 @@ type PodsStateType = {
 		connectionEstablished?: Date;
 		podState: PodStateType;
 		controlStatus: PodControlStatus;
-		imdStatus: ImdStatus;
-		brakeClampStatus: BrakeClampStatus;
 	};
 };
 
@@ -181,8 +157,6 @@ function createPodsStateFromIds(ids: readonly PodId[]): PodsStateType {
 			connectionStatus: POD_CONNECTION_STATUS.CONNECTED,
 			podState: ALL_POD_STATES.UNKNOWN,
 			controlStatus: DEFAULT_CONTROL_STATUS,
-			imdStatus: 'UNKNOWN',
-			brakeClampStatus: 'UNKNOWN',
 		};
 	}
 	return podsContext;
@@ -222,8 +196,6 @@ export const PodsProvider = ({ children }: { children: React.ReactNode }) => {
 							newPodsState[podId].connectionStatus =
 								POD_CONNECTION_STATUS.DISCONNECTED;
 							newPodsState[podId].controlStatus = DEFAULT_CONTROL_STATUS;
-							newPodsState[podId].imdStatus = 'UNKNOWN';
-							newPodsState[podId].brakeClampStatus = 'UNKNOWN';
 							raiseError(
 								ERROR_IDS.POD_DISCONNECT,
 								`Pod ${podId} disconnected!`,
@@ -277,8 +249,6 @@ export const PodsProvider = ({ children }: { children: React.ReactNode }) => {
 								...prevState[podId],
 								connectionStatus: POD_CONNECTION_STATUS.DISCONNECTED,
 								controlStatus: DEFAULT_CONTROL_STATUS,
-								imdStatus: 'UNKNOWN',
-								brakeClampStatus: 'UNKNOWN',
 								// reset previous latencies
 								previousLatencies: [],
 								// reset latency
@@ -347,22 +317,6 @@ export const PodsProvider = ({ children }: { children: React.ReactNode }) => {
 							controlStatus,
 						},
 					}));
-				} else if (topic === getTopic('status/imd_status', podId)) {
-					setPodsState((prevState) => ({
-						...prevState,
-						[podId]: {
-							...prevState[podId],
-							imdStatus: parseImdStatus(message),
-						},
-					}));
-				} else if (topic === getTopic('status/brake_clamp_status', podId)) {
-					setPodsState((prevState) => ({
-						...prevState,
-						[podId]: {
-							...prevState[podId],
-							brakeClampStatus: parseBrakeClampStatus(message),
-						},
-					}));
 				} else if (topic === getTopic('latency/response', podId)) {
 					// calculate the latency
 					const latency =
@@ -412,8 +366,6 @@ export const PodsProvider = ({ children }: { children: React.ReactNode }) => {
 				subscribe('latency/response', podId);
 				subscribe('state', podId);
 				subscribe('control-status', podId);
-				subscribe('status/imd_status', podId);
-				subscribe('status/brake_clamp_status', podId);
 				client.on('message', (topic, message) =>
 					processMessage(podId, topic, message),
 				);
@@ -427,8 +379,6 @@ export const PodsProvider = ({ children }: { children: React.ReactNode }) => {
 					unsubscribe('latency/response', podId);
 					unsubscribe('state', podId);
 					unsubscribe('control-status', podId);
-					unsubscribe('status/imd_status', podId);
-					unsubscribe('status/brake_clamp_status', podId);
 				});
 			};
 		},

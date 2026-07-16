@@ -11,7 +11,6 @@ import {
 	Rocket,
 	ShieldCheck,
 	Siren,
-	Wrench,
 } from 'lucide-react';
 
 /**
@@ -29,13 +28,6 @@ export const PodControls = ({
 }) => {
 	const { podState, controlStatus } = usePod(podId);
 	const controls = [
-		{
-			label: 'Maintenance',
-			control: CONTROLS.MAINTENANCE,
-			icon: Wrench,
-			enabled: podState === ALL_POD_STATES.IDLE,
-			className: 'bg-slate-700 hover:bg-slate-800',
-		},
 		{
 			label: 'Exit Maintenance',
 			control: CONTROLS.IDLE,
