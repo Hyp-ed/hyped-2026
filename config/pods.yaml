@@ -84,102 +84,42 @@ pods:
           critical:
             low: 0
             high: 5
-      pressure_back_pull:
-        label: 'Pressure – Back Pull'
+      low_pressure_1:
+        label: 'Low Pressure 1'
         kind: 'pressure'
         unit: 'bar'
         format: 'float'
         limits:
           critical:
-            low: -0.2
-            high: 5.5
+            low: 0
+            high: 10
           warning:
-            low: -0.19
-            high: 5.2
-      pressure_front_pull:
-        label: 'Pressure – Front Pull'
+            low: 2
+            high: 8
+      low_pressure_2:
+        label: 'Low Pressure 2'
         kind: 'pressure'
         unit: 'bar'
         format: 'float'
         limits:
           critical:
-            low: -0.2
-            high: 5.5
+            low: 0
+            high: 10
           warning:
-            low: -0.19
-            high: 5.2
-      pressure_front_push:
-        label: 'Pressure – Front Push'
+            low: 2
+            high: 8
+      low_pressure_3:
+        label: 'Low Pressure 3'
         kind: 'pressure'
         unit: 'bar'
         format: 'float'
         limits:
           critical:
-            low: -0.2
-            high: 5.5
+            low: 0
+            high: 10
           warning:
-            low: -0.19
-            high: 5.2
-      pressure_back_push:
-        label: 'Pressure – Back Push'
-        kind: 'pressure'
-        unit: 'bar'
-        format: 'float'
-        limits:
-          critical:
-            low: -0.2
-            high: 5.5
-          warning:
-            low: -0.19
-            high: 5.2
-      pressure_brakes_reservoir:
-        label: 'Pressure – Brakes Reservoir'
-        kind: 'pressure'
-        unit: 'bar'
-        format: 'float'
-        limits:
-          critical:
-            low: 3
-            high: 7.4
-          warning:
-            low: 3.5
-            high: 6.9
-      pressure_active_suspension_reservoir:
-        label: 'Pressure – Active Suspension Reservoir'
-        kind: 'pressure'
-        unit: 'bar'
-        format: 'float'
-        limits:
-          critical:
-            low: 3
-            high: 7.4
-          warning:
-            low: 3.5
-            high: 6.9
-      pressure_front_brake:
-        label: 'Pressure – Front Brake'
-        kind: 'pressure'
-        unit: 'bar'
-        format: 'float'
-        limits:
-          critical:
-            low: -0.2
-            high: 4.2
-          warning:
-            low: -0.19
-            high: 4
-      pressure_back_brake:
-        label: 'Pressure – Back Brake'
-        kind: 'pressure'
-        unit: 'bar'
-        format: 'float'
-        limits:
-          critical:
-            low: -0.2
-            high: 4.2
-          warning:
-            low: -0.19
-            high: 4
+            low: 2
+            high: 8
       thermistor_1:
         label: 'Thermistor 1'
         kind: 'temperature'

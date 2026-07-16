@@ -7,24 +7,31 @@
 use embassy_executor::Spawner;
 use embassy_futures::yield_now;
 use embassy_stm32::{
+    adc::{Adc, AdcChannel},
     bind_interrupts,
     can::{
         filter::Mask32, Can, CanRx, Fifo, Id, Rx0InterruptHandler, Rx1InterruptHandler,
         SceInterruptHandler, TxInterruptHandler,
     },
     eth, gpio,
-    peripherals::{self, CAN1},
+    peripherals::{self, ADC1, ADC2, ADC3, CAN1},
     rng, Config,
 };
+use embassy_time::{Duration, Timer};
 use hyped_boards_stm32f767zi::{
     board_state::THIS_BOARD,
     default_can_config,
+    io::Stm32f767ziAdc,
     tasks::can::{
         board_heartbeat::send_heartbeat,
         send::{can_sender, CAN_SEND},
     },
 };
-use hyped_communications::{boards::Board, messages::CanMessage};
+use hyped_communications::{
+    boards::Board, data::CanData, measurements::MeasurementReading, messages::CanMessage,
+};
+use hyped_core::config::{MeasurementId, SENSORS_CONFIG};
+use hyped_sensors::{low_pressure::LowPressure, SensorValueRange};
 
 bind_interrupts!(struct Irqs {
     ETH => eth::InterruptHandler;
@@ -44,38 +51,31 @@ async fn main(spawner: Spawner) -> ! {
     let config = Config::default();
     let p = embassy_stm32::init(config);
 
-    // High pressure sensor (digital GPIO inputs)
-    // let gpio1: Stm32f767ziGpioInput =
-    //     Stm32f767ziGpioInput::new(gpio::Input::new(p.PC12, gpio::Pull::Down));
-    // let gpio2: Stm32f767ziGpioInput =
-    //     Stm32f767ziGpioInput::new(gpio::Input::new(p.PC13, gpio::Pull::Down));
-    // let high_pressure = HighPressure::new(gpio1, gpio2);
-
     // Low pressure sensors on ADC1, ADC2, ADC3
-    // let adc1 = Adc::new(p.ADC1);
-    // let pin1 = p.PA3.degrade_adc();
+    let adc1 = Adc::new(p.ADC1);
+    let pin1 = p.PA3.degrade_adc();
 
-    // let adc2 = Adc::new(p.ADC2);
-    // let pin2 = p.PA2.degrade_adc();
+    let adc2 = Adc::new(p.ADC2);
+    let pin2 = p.PA2.degrade_adc();
 
-    // let adc3 = Adc::new(p.ADC3);
-    // let pin3 = p.PA1.degrade_adc();
+    let adc3 = Adc::new(p.ADC3);
+    let pin3 = p.PA1.degrade_adc();
 
-    // let low_pressure_1 = LowPressure::new(Stm32f767ziAdc::new(
-    //     adc1,
-    //     pin1,
-    //     SENSORS_CONFIG.sensors.low_pressure.v_ref as f32,
-    // ));
-    // let low_pressure_2 = LowPressure::new(Stm32f767ziAdc::new(
-    //     adc2,
-    //     pin2,
-    //     SENSORS_CONFIG.sensors.low_pressure.v_ref as f32,
-    // ));
-    // let low_pressure_3 = LowPressure::new(Stm32f767ziAdc::new(
-    //     adc3,
-    //     pin3,
-    //     SENSORS_CONFIG.sensors.low_pressure.v_ref as f32,
-    // ));
+    let low_pressure_1 = LowPressure::new(Stm32f767ziAdc::new(
+        adc1,
+        pin1,
+        SENSORS_CONFIG.sensors.low_pressure.v_ref as f32,
+    ));
+    let low_pressure_2 = LowPressure::new(Stm32f767ziAdc::new(
+        adc2,
+        pin2,
+        SENSORS_CONFIG.sensors.low_pressure.v_ref as f32,
+    ));
+    let low_pressure_3 = LowPressure::new(Stm32f767ziAdc::new(
+        adc3,
+        pin3,
+        SENSORS_CONFIG.sensors.low_pressure.v_ref as f32,
+    ));
     let brake_gpio = gpio::Output::new(p.PF15, gpio::Level::Low, gpio::Speed::Low);
 
     defmt::info!("Setting up CAN...");
@@ -88,26 +88,24 @@ async fn main(spawner: Spawner) -> ! {
     spawner.must_spawn(pneumatics_can_receiver(can_rx, brake_gpio));
     defmt::info!("CAN setup complete");
 
-    // let pressure_sensors = PressureSensors {
-    //     high_pressure,
-    //     low_pressure_1,
-    //     low_pressure_2,
-    //     low_pressure_3,
-    // };
+    let pressure_sensors = PressureSensors {
+        low_pressure_1,
+        low_pressure_2,
+        low_pressure_3,
+    };
 
-    // spawner.must_spawn(pneumatics_response_task(pressure_sensors));
+    spawner.must_spawn(pneumatics_response_task(pressure_sensors));
 
     loop {
         yield_now().await;
     }
 }
 
-// struct PressureSensors {
-//     high_pressure: HighPressure<Stm32f767ziGpioInput>,
-//     low_pressure_1: LowPressure<Stm32f767ziAdc<'static, ADC1>>,
-//     low_pressure_2: LowPressure<Stm32f767ziAdc<'static, ADC2>>,
-//     low_pressure_3: LowPressure<Stm32f767ziAdc<'static, ADC3>>,
-// }
+struct PressureSensors {
+    low_pressure_1: LowPressure<Stm32f767ziAdc<'static, ADC1>>,
+    low_pressure_2: LowPressure<Stm32f767ziAdc<'static, ADC2>>,
+    low_pressure_3: LowPressure<Stm32f767ziAdc<'static, ADC3>>,
+}
 
 #[embassy_executor::task]
 async fn pneumatics_can_receiver(mut rx: CanRx<'static>, mut brake_gpio: gpio::Output<'static>) {
@@ -172,46 +170,57 @@ async fn respond_to_message(message: CanMessage, brake_gpio: &mut gpio::Output<'
     }
 }
 
-// #[embassy_executor::task]
-// async fn pneumatics_response_task(mut pressure_sensors: PressureSensors) {
-//     loop {
-//         // Read high pressure sensor
-//         let high_pressure_ok = matches!(
-//             pressure_sensors.high_pressure.get_high_pressure_state(),
-//             Ok(high_pressure::State::LowRange)
-//         );
-//
-//         // Read all three low pressure sensors
-//         let low_pressures_ok = [
-//             !matches!(
-//                 pressure_sensors.low_pressure_1.read_pressure(),
-//                 Some(SensorValueRange::Critical(_))
-//             ),
-//             !matches!(
-//                 pressure_sensors.low_pressure_2.read_pressure(),
-//                 Some(SensorValueRange::Critical(_))
-//             ),
-//             !matches!(
-//                 pressure_sensors.low_pressure_3.read_pressure(),
-//                 Some(SensorValueRange::Critical(_))
-//             ),
-//         ]
-//         .iter()
-//         .all(|b| *b);
-//
-//         if !high_pressure_ok || !low_pressures_ok {
-//             defmt::warn!("Pressure sensor out of safe range, sending emergency");
-//
-//             CAN_SEND
-//                 .send(CanMessage::Emergency(
-//                     Board::Pneumatics,
-//                     hyped_communications::emergency::Reason::Pressure,
-//                 ))
-//                 .await;
-//
-//             return;
-//         }
-//
-//         Timer::after(UPDATE_FREQUENCY).await;
-//     }
-// }
+#[embassy_executor::task]
+async fn pneumatics_response_task(mut pressure_sensors: PressureSensors) {
+    loop {
+        let readings = [
+            pressure_sensors.low_pressure_1.read_pressure(),
+            pressure_sensors.low_pressure_2.read_pressure(),
+            pressure_sensors.low_pressure_3.read_pressure(),
+        ];
+        let measurement_ids = [
+            MeasurementId::LowPressure1,
+            MeasurementId::LowPressure2,
+            MeasurementId::LowPressure3,
+        ];
+
+        let mut low_pressures_ok = true;
+        for (reading, measurement_id) in readings.into_iter().zip(measurement_ids) {
+            if let Some(reading) = reading {
+                let value = match reading {
+                    SensorValueRange::Critical(value) => {
+                        low_pressures_ok = false;
+                        value
+                    }
+                    SensorValueRange::Warning(value) | SensorValueRange::Safe(value) => value,
+                };
+
+                CAN_SEND
+                    .send(CanMessage::MeasurementReading(MeasurementReading::new(
+                        CanData::F32(value),
+                        Board::Pneumatics,
+                        measurement_id,
+                    )))
+                    .await;
+            }
+        }
+
+        if !low_pressures_ok {
+            defmt::warn!("Pressure sensor out of safe range, sending emergency");
+
+            CAN_SEND
+                .send(CanMessage::Emergency(
+                    Board::Pneumatics,
+                    hyped_communications::emergency::Reason::Pressure,
+                ))
+                .await;
+
+            return;
+        }
+
+        Timer::after(Duration::from_hz(
+            SENSORS_CONFIG.sensors.low_pressure.update_frequency as u64,
+        ))
+        .await;
+    }
+}
