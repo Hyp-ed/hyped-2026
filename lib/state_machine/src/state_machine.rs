@@ -219,13 +219,14 @@ pub async fn run(mut sm: StateMachine, mut events: DynSubscriber<'static, Event>
 
     loop {
         let event = events.next_message_pure().await;
-        if !matches!(
+        if matches!(
             event,
             Event::StateChanged { .. } | Event::ControlStatusChanged { .. }
         ) {
-            sm.react(event).await;
+            continue;
         }
 
+        sm.react(event).await;
         sm.publish_control_status();
         sm.drain_pending().await;
     }

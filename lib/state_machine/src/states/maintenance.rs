@@ -52,7 +52,6 @@ impl StateMachine {
         }
     }
 
-    /// Regulatory Maintenance condition: HV contactors confirmed open and brakes retracted.
     pub(crate) async fn entry_maintenance(&mut self) {
         info!("Maintenance condition confirmed");
     }
