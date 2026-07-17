@@ -57,6 +57,10 @@ async fn main(spawner: Spawner) -> ! {
     let gpio2: gpio::Output<'static> = gpio::Output::new(p.PE9, gpio::Level::Low, gpio::Speed::Low);
     let gpio3: gpio::Output<'static> =
         gpio::Output::new(p.PE11, gpio::Level::Low, gpio::Speed::Low);
+    // Temporary read-only HVAL input assignments. Keep these adjacent so the
+    // physical wiring can change without touching the telemetry path.
+    let hval_red = gpio::Input::new(p.PF14, gpio::Pull::Down);
+    let hval_green = gpio::Input::new(p.PF15, gpio::Pull::Down);
     // Pressure sensors are temporarily disconnected on the high-power board.
     // let adc1 = Adc::new(p.ADC1);
     // let pin1 = p.PA3.degrade_adc();
@@ -92,6 +96,7 @@ async fn main(spawner: Spawner) -> ! {
     let (can_tx, can_rx) = can.split();
     spawner.must_spawn(can_sender(can_tx));
     spawner.must_spawn(send_heartbeat(Board::Telemetry));
+    spawner.must_spawn(read_hval_status(hval_red, hval_green));
     spawner.must_spawn(high_power_can_receiver(can_rx, gpio_pins));
     defmt::info!("CAN setup complete");
 
@@ -170,6 +175,31 @@ async fn high_power_can_receiver(mut rx: CanRx<'static>, mut gpio_pins: Pins) {
         //defmt::info!("Received CAN message: {:?}", message);
 
         respond_to_message(message, &mut gpio_pins, &mut rx).await;
+    }
+}
+
+#[embassy_executor::task]
+async fn read_hval_status(
+    hval_red: gpio::Input<'static>,
+    hval_green: gpio::Input<'static>,
+) {
+    let mut previous_red = None;
+    let mut previous_green = None;
+
+    loop {
+        let red = hval_red.is_high();
+        let green = hval_green.is_high();
+
+        if previous_red != Some(red) {
+            CAN_SEND.send(CanMessage::HvalRedStatus(red)).await;
+            previous_red = Some(red);
+        }
+        if previous_green != Some(green) {
+            CAN_SEND.send(CanMessage::HvalGreenStatus(green)).await;
+            previous_green = Some(green);
+        }
+
+        Timer::after(Duration::from_millis(100)).await;
     }
 }
 

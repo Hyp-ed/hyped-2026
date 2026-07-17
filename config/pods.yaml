@@ -356,6 +356,28 @@ pods:
             label: 'FAULT'
           - value: 2
             label: 'UNKNOWN'
+      hval_red_status:
+        label: 'HVAL Red Status'
+        kind: 'binary-status'
+        format: 'enum'
+        values:
+          - value: 1
+            label: 'ON'
+          - value: 0
+            label: 'OFF'
+          - value: 2
+            label: 'UNKNOWN'
+      hval_green_status:
+        label: 'HVAL Green Status'
+        kind: 'binary-status'
+        format: 'enum'
+        values:
+          - value: 1
+            label: 'ON'
+          - value: 0
+            label: 'OFF'
+          - value: 2
+            label: 'UNKNOWN'
       pod_raised_status:
         label: 'Pod Raised Status'
         kind: 'binary-status'

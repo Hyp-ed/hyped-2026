@@ -9,6 +9,7 @@ import { ConnectionStatuses } from './connection-statuses/connection-statuses';
 import { FullControls } from './full-controls';
 import { MqttSender } from './mqtt-sender';
 import { PodStateUpdater } from './pod-state-updater';
+import { SafetyStatuses } from './safety-statuses';
 
 /**
  * Debug view. Contains components for debugging.
@@ -28,12 +29,7 @@ export const DebugView = () => {
 			<ResizablePanel defaultSize={20}>
 				<ResizablePanelGroup direction="horizontal" className="w-full h-full">
 					<ResizablePanel defaultSize={50} className="flex items-center">
-						<div className="flex justify-center flex-col items-center w-full gap-2 p-2">
-							<h1 className="font-bold text-xl text-foreground">Placeholder</h1>
-							<p className="text-muted-foreground text-center">
-								Something useful will go here at some point...
-							</p>
-						</div>
+						<SafetyStatuses podId={podId} />
 					</ResizablePanel>
 					<ResizableHandle withHandle />
 					<ResizablePanel defaultSize={50} className="flex items-center gap-2">

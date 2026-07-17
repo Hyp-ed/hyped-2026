@@ -38,6 +38,7 @@ use hyped_boards_stm32f767zi::{
         },
         network::net_task,
         sensors::read_imd,
+        status_to_mqtt::publish_safety_statuses,
     },
 };
 use hyped_communications::{boards::Board, bus, emergency::Reason, messages::CanMessage};
@@ -101,6 +102,7 @@ async fn main(spawner: Spawner) -> ! {
     defmt::info!("CAN setup complete");
 
     spawner.must_spawn(can_to_mqtt());
+    spawner.must_spawn(publish_safety_statuses());
     for board in HEARTBEAT_BOARDS {
         spawner.must_spawn(send_heartbeat(board));
     }

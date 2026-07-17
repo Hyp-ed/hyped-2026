@@ -4,3 +4,4 @@ pub mod motor_control;
 pub mod mqtt;
 pub mod network;
 pub mod sensors;
+pub mod status_to_mqtt;

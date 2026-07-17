@@ -110,6 +110,12 @@ async fn respond_to_message(message: CanMessage) {
                 CanMessage::ShutdownCircuitryRelayClosed,
             )
             .await;
+            send_after(Duration::from_millis(100), CanMessage::HvalRedStatus(true)).await;
+            send_after(
+                Duration::from_millis(100),
+                CanMessage::HvalGreenStatus(false),
+            )
+            .await;
             send_after(
                 Duration::from_millis(2000),
                 CanMessage::BatteryPrechargeRelayClosed,
@@ -133,6 +139,12 @@ async fn respond_to_message(message: CanMessage) {
             send_after(
                 Duration::from_millis(100),
                 CanMessage::MotorControllerRelayOpen,
+            )
+            .await;
+            send_after(Duration::from_millis(100), CanMessage::HvalRedStatus(false)).await;
+            send_after(
+                Duration::from_millis(100),
+                CanMessage::HvalGreenStatus(true),
             )
             .await;
         }
@@ -198,6 +210,12 @@ async fn respond_to_message(message: CanMessage) {
             send_after(
                 Duration::from_millis(100),
                 CanMessage::ShutdownCircuitryRelayOpen,
+            )
+            .await;
+            send_after(Duration::from_millis(100), CanMessage::HvalRedStatus(false)).await;
+            send_after(
+                Duration::from_millis(100),
+                CanMessage::HvalGreenStatus(true),
             )
             .await;
             send_after(Duration::from_millis(100), CanMessage::DischargeVoltageOK).await;

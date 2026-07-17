@@ -27,6 +27,8 @@ pub enum CanMessage {
     VoltageStatus {
         voltage: Voltage,
     },
+    HvalRedStatus(bool),
+    HvalGreenStatus(bool),
     PrechargeVoltageOK,
     DischargeVoltageOK,
 
@@ -175,6 +177,22 @@ impl From<CanMessage> for HypedCanFrame {
                 );
                 let data = CanData::U16(voltage.0).into();
                 HypedCanFrame::new(can_id.into(), data)
+            }
+            CanMessage::HvalRedStatus(active) => {
+                let can_id = CanId::new(
+                    Board::HighPower,
+                    CanDataType::Bool,
+                    MessageIdentifier::Event(EventId::HvalRedStatus),
+                );
+                HypedCanFrame::new(can_id.into(), CanData::Bool(active).into())
+            }
+            CanMessage::HvalGreenStatus(active) => {
+                let can_id = CanId::new(
+                    Board::HighPower,
+                    CanDataType::Bool,
+                    MessageIdentifier::Event(EventId::HvalGreenStatus),
+                );
+                HypedCanFrame::new(can_id.into(), CanData::Bool(active).into())
             }
             CanMessage::PrechargeVoltageOK => {
                 let can_id = CanId::new(
@@ -513,6 +531,20 @@ impl From<HypedCanFrame> for CanMessage {
                     _ => panic!("Invalid CanData for VoltageStatus"),
                 }
             }
+            MessageIdentifier::Event(EventId::HvalRedStatus) => {
+                let reading: CanData = frame.data.into();
+                match reading {
+                    CanData::Bool(active) => CanMessage::HvalRedStatus(active),
+                    _ => panic!("Invalid CanData for HvalRedStatus"),
+                }
+            }
+            MessageIdentifier::Event(EventId::HvalGreenStatus) => {
+                let reading: CanData = frame.data.into();
+                match reading {
+                    CanData::Bool(active) => CanMessage::HvalGreenStatus(active),
+                    _ => panic!("Invalid CanData for HvalGreenStatus"),
+                }
+            }
             MessageIdentifier::Event(EventId::PrechargeVoltageOK) => CanMessage::PrechargeVoltageOK,
             MessageIdentifier::Event(EventId::DischargeVoltageOK) => CanMessage::DischargeVoltageOK,
 
@@ -697,5 +729,17 @@ mod tests {
         let can_frame: HypedCanFrame = message.clone().into();
         let decoded: CanMessage = can_frame.into();
         assert_eq!(message, decoded)
+    }
+
+    #[test]
+    fn can_message_round_trips_hval_statuses() {
+        for message in [
+            CanMessage::HvalRedStatus(true),
+            CanMessage::HvalGreenStatus(false),
+        ] {
+            let can_frame: HypedCanFrame = message.clone().into();
+            let decoded: CanMessage = can_frame.into();
+            assert_eq!(message, decoded);
+        }
     }
 }
