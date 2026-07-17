@@ -3,12 +3,11 @@ import {
 	ResizablePanel,
 	ResizablePanelGroup,
 } from '@/components/ui/resizable';
-import { config } from '@/config';
+import { PodState } from '@/components/shared/pod-state';
 import { useCurrentPod } from '@/context/pods';
 import { ConnectionStatuses } from './connection-statuses/connection-statuses';
 import { FullControls } from './full-controls';
 import { MqttSender } from './mqtt-sender';
-import { PodStateUpdater } from './pod-state-updater';
 import { SafetyStatuses } from './safety-statuses';
 
 /**
@@ -22,8 +21,6 @@ import { SafetyStatuses } from './safety-statuses';
 export const DebugView = () => {
 	const { currentPod: podId } = useCurrentPod();
 
-	const showExternalDebuggingTools = config.EXTENDED_DEBUGGING_TOOLS ?? false;
-
 	return (
 		<ResizablePanelGroup direction="vertical">
 			<ResizablePanel defaultSize={20}>
@@ -33,14 +30,7 @@ export const DebugView = () => {
 					</ResizablePanel>
 					<ResizableHandle withHandle />
 					<ResizablePanel defaultSize={50} className="flex items-center gap-2">
-						{showExternalDebuggingTools ? (
-							<PodStateUpdater podId={podId} />
-						) : (
-							<p className="mx-auto p-2">
-								Enable EXTENDED_DEBUGGING_TOOLS in .env to see more debugging
-								tools.
-							</p>
-						)}
+						<PodState podId={podId} />
 					</ResizablePanel>
 				</ResizablePanelGroup>
 			</ResizablePanel>
