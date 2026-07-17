@@ -16,6 +16,7 @@ pub enum MqttTopic {
     ImdStatus,
     HvalRedStatus,
     HvalGreenStatus,
+    BrakeClampStatus,
     Controls,
     Heartbeat,
     Logs,
@@ -37,6 +38,7 @@ impl FromStr for MqttTopic {
             "hyped/the_podigal_son/status/imd_status" => Ok(MqttTopic::ImdStatus),
             "hyped/the_podigal_son/status/hval_red_status" => Ok(MqttTopic::HvalRedStatus),
             "hyped/the_podigal_son/status/hval_green_status" => Ok(MqttTopic::HvalGreenStatus),
+            "hyped/the_podigal_son/status/brake_clamp_status" => Ok(MqttTopic::BrakeClampStatus),
             "hyped/the_podigal_son/heartbeat" => Ok(MqttTopic::Heartbeat),
             "hyped/the_podigal_son/logs" => Ok(MqttTopic::Logs),
             "hyped/the_podigal_son/latency/request" => Ok(MqttTopic::LatencyRequest),
@@ -76,6 +78,9 @@ impl From<MqttTopic> for String<100> {
             MqttTopic::HvalGreenStatus => topic
                 .push_str("hyped/the_podigal_son/status/hval_green_status")
                 .unwrap(),
+            MqttTopic::BrakeClampStatus => topic
+                .push_str("hyped/the_podigal_son/status/brake_clamp_status")
+                .unwrap(),
             MqttTopic::Controls => topic.push_str("hyped/the_podigal_son/controls").unwrap(),
             MqttTopic::Heartbeat => topic.push_str("hyped/the_podigal_son/heartbeat").unwrap(),
             MqttTopic::Logs => topic.push_str("hyped/the_podigal_son/logs").unwrap(),
@@ -114,6 +119,10 @@ mod tests {
             (
                 MqttTopic::HvalGreenStatus,
                 "hyped/the_podigal_son/status/hval_green_status",
+            ),
+            (
+                MqttTopic::BrakeClampStatus,
+                "hyped/the_podigal_son/status/brake_clamp_status",
             ),
         ] {
             let encoded: String<100> = topic.into();

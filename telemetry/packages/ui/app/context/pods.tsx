@@ -76,6 +76,7 @@ type PodControlStatus = {
 };
 
 export type ImdStatus = 'HEALTHY' | 'FAULT' | 'UNKNOWN';
+export type BrakeClampStatus = 'CLAMPED' | 'UNCLAMPED' | 'UNKNOWN';
 
 const parseStatusValue = (message: Buffer) => {
 	const value = Number.parseInt(decodeMqttStringPayload(message), 10);
@@ -86,6 +87,13 @@ const parseImdStatus = (message: Buffer): ImdStatus => {
 	const value = parseStatusValue(message);
 	if (value === 1) return 'HEALTHY';
 	if (value === 0) return 'FAULT';
+	return 'UNKNOWN';
+};
+
+const parseBrakeClampStatus = (message: Buffer): BrakeClampStatus => {
+	const value = parseStatusValue(message);
+	if (value === 1) return 'CLAMPED';
+	if (value === 0) return 'UNCLAMPED';
 	return 'UNKNOWN';
 };
 
@@ -148,6 +156,7 @@ type PodsStateType = {
 		imdStatus: ImdStatus;
 		hvalRedActive: boolean | null;
 		hvalGreenActive: boolean | null;
+		brakeClampStatus: BrakeClampStatus;
 	};
 };
 
@@ -177,6 +186,7 @@ function createPodsStateFromIds(ids: readonly PodId[]): PodsStateType {
 			imdStatus: 'UNKNOWN',
 			hvalRedActive: null,
 			hvalGreenActive: null,
+			brakeClampStatus: 'UNKNOWN',
 		};
 	}
 	return podsContext;
@@ -219,6 +229,7 @@ export const PodsProvider = ({ children }: { children: React.ReactNode }) => {
 							newPodsState[podId].imdStatus = 'UNKNOWN';
 							newPodsState[podId].hvalRedActive = null;
 							newPodsState[podId].hvalGreenActive = null;
+							newPodsState[podId].brakeClampStatus = 'UNKNOWN';
 							raiseError(
 								ERROR_IDS.POD_DISCONNECT,
 								`Pod ${podId} disconnected!`,
@@ -275,6 +286,7 @@ export const PodsProvider = ({ children }: { children: React.ReactNode }) => {
 								imdStatus: 'UNKNOWN',
 								hvalRedActive: null,
 								hvalGreenActive: null,
+								brakeClampStatus: 'UNKNOWN',
 								// reset previous latencies
 								previousLatencies: [],
 								// reset latency
@@ -369,6 +381,14 @@ export const PodsProvider = ({ children }: { children: React.ReactNode }) => {
 							hvalGreenActive: value === null ? null : value === 1,
 						},
 					}));
+				} else if (topic === getTopic('status/brake_clamp_status', podId)) {
+					setPodsState((prevState) => ({
+						...prevState,
+						[podId]: {
+							...prevState[podId],
+							brakeClampStatus: parseBrakeClampStatus(message),
+						},
+					}));
 				} else if (topic === getTopic('latency/response', podId)) {
 					// calculate the latency
 					const latency =
@@ -421,6 +441,7 @@ export const PodsProvider = ({ children }: { children: React.ReactNode }) => {
 				subscribe('status/imd_status', podId);
 				subscribe('status/hval_red_status', podId);
 				subscribe('status/hval_green_status', podId);
+				subscribe('status/brake_clamp_status', podId);
 				client.on('message', (topic, message) =>
 					processMessage(podId, topic, message),
 				);
@@ -437,6 +458,7 @@ export const PodsProvider = ({ children }: { children: React.ReactNode }) => {
 					unsubscribe('status/imd_status', podId);
 					unsubscribe('status/hval_red_status', podId);
 					unsubscribe('status/hval_green_status', podId);
+					unsubscribe('status/brake_clamp_status', podId);
 				});
 			};
 		},

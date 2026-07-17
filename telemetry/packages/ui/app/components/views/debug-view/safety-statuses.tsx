@@ -40,13 +40,14 @@ const HvalLamp = ({
 );
 
 export const SafetyStatuses = ({ podId }: { podId: string }) => {
-	const { imdStatus, hvalRedActive, hvalGreenActive } = usePod(podId);
+	const { imdStatus, hvalRedActive, hvalGreenActive, brakeClampStatus } =
+		usePod(podId);
 
 	return (
 		<Card className="w-full border-none">
 			<CardHeader className="pb-2">
 				<CardTitle className="flex gap-2">
-					HVAL and IMD
+					HVAL, IMD and Brakes
 				</CardTitle>
 			</CardHeader>
 			<CardContent className="flex items-center justify-around gap-6">
@@ -70,6 +71,22 @@ export const SafetyStatuses = ({ podId }: { podId: string }) => {
 					<div>
 						<p className="font-semibold">IMD</p>
 						<p className="text-xs text-muted-foreground">{imdStatus}</p>
+					</div>
+				</div>
+				<div className="flex items-center gap-3">
+					<span
+						className={cn(
+							'h-4 w-4 rounded-full',
+							brakeClampStatus === 'CLAMPED' && 'bg-green-500',
+							brakeClampStatus === 'UNCLAMPED' && 'bg-gray-500',
+							brakeClampStatus === 'UNKNOWN' && 'bg-orange-500',
+						)}
+					/>
+					<div>
+						<p className="font-semibold">Brakes</p>
+						<p className="text-xs text-muted-foreground">
+							{brakeClampStatus}
+						</p>
 					</div>
 				</div>
 			</CardContent>

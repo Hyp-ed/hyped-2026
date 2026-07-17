@@ -2,6 +2,7 @@ use embassy_stm32::can::{CanRx, Id};
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, channel::Channel};
 use hyped_can::HypedCanFrame;
 use hyped_communications::{
+    boards::Board,
     bus::publish,
     can_id::CanId,
     events::Event,
@@ -14,7 +15,7 @@ use hyped_sensors::imd::ImdFrame;
 
 use crate::{
     board_state::{EMERGENCY, THIS_BOARD},
-    tasks::status_to_mqtt::set_hval_status,
+    tasks::status_to_mqtt::{set_brake_clamp_status, set_hval_status},
 };
 
 use defmt_rtt as _;
@@ -218,10 +219,16 @@ pub async fn can_receiver(mut rx: CanRx<'static>) {
             }
             CanMessage::BrakesClamped { from } => {
                 defmt::debug!("Brakes clamped. Board={}", from);
+                if from == Board::Pneumatics {
+                    set_brake_clamp_status(true);
+                }
                 publish(Event::BrakesClamped { from }).await;
             }
             CanMessage::BrakesUnclamped { from } => {
                 defmt::debug!("Brakes unclamped. Board={}", from);
+                if from == Board::Pneumatics {
+                    set_brake_clamp_status(false);
+                }
                 publish(Event::BrakesUnclamped { from }).await;
             }
             CanMessage::LateralSuspensionRetracted { from } => {

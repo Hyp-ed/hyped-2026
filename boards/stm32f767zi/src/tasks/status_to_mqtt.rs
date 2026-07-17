@@ -16,6 +16,7 @@ const STATUS_UNKNOWN: u8 = 2;
 static IMD_STATUS: AtomicU8 = AtomicU8::new(STATUS_UNKNOWN);
 static HVAL_RED_STATUS: AtomicU8 = AtomicU8::new(STATUS_UNKNOWN);
 static HVAL_GREEN_STATUS: AtomicU8 = AtomicU8::new(STATUS_UNKNOWN);
+static BRAKE_CLAMP_STATUS: AtomicU8 = AtomicU8::new(STATUS_UNKNOWN);
 
 pub fn set_imd_status(healthy: bool) {
     IMD_STATUS.store(bool_to_status(healthy), Ordering::Release);
@@ -28,6 +29,10 @@ pub fn set_hval_status(red: Option<bool>, green: Option<bool>) {
     if let Some(active) = green {
         HVAL_GREEN_STATUS.store(bool_to_status(active), Ordering::Release);
     }
+}
+
+pub fn set_brake_clamp_status(clamped: bool) {
+    BRAKE_CLAMP_STATUS.store(bool_to_status(clamped), Ordering::Release);
 }
 
 fn bool_to_status(value: bool) -> u8 {
@@ -52,6 +57,11 @@ pub async fn publish_safety_statuses() {
         publish_status(
             MqttTopic::HvalGreenStatus,
             HVAL_GREEN_STATUS.load(Ordering::Acquire),
+        )
+        .await;
+        publish_status(
+            MqttTopic::BrakeClampStatus,
+            BRAKE_CLAMP_STATUS.load(Ordering::Acquire),
         )
         .await;
         ticker.next().await;
