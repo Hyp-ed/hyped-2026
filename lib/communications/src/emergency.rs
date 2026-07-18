@@ -5,13 +5,15 @@ pub enum Reason {
     Unknown = 1,
     Test = 2,
     CriticalTemperatureLimit = 3,
-    NoInitialHeartbeat = 4,
-    MissingHeartbeat = 5,
+    NoInitialBoardHeartbeat = 4,
+    MissingBoardHeartbeat = 5,
     TemperatureUpperLimitFailure = 6,
     TemperatureLowerLimitFailure = 7,
     AccelerometerCriticalLimit = 8,
     Pressure = 9,
     IMD = 10,
+    MissingBaseStationHeartbeat = 11,
+    NoInitialBaseStationHeartbeat = 12,
 }
 
 impl TryFrom<u8> for Reason {
@@ -22,13 +24,15 @@ impl TryFrom<u8> for Reason {
             1 => Ok(Reason::Unknown),
             2 => Ok(Reason::Test),
             3 => Ok(Reason::CriticalTemperatureLimit),
-            4 => Ok(Reason::NoInitialHeartbeat),
-            5 => Ok(Reason::MissingHeartbeat),
+            4 => Ok(Reason::NoInitialBoardHeartbeat),
+            5 => Ok(Reason::MissingBoardHeartbeat),
             6 => Ok(Reason::TemperatureUpperLimitFailure),
             7 => Ok(Reason::TemperatureLowerLimitFailure),
             8 => Ok(Reason::AccelerometerCriticalLimit),
             9 => Ok(Reason::Pressure),
             10 => Ok(Reason::IMD),
+            11 => Ok(Reason::MissingBaseStationHeartbeat),
+            12 => Ok(Reason::NoInitialBaseStationHeartbeat),
             _ => Err("Invalid reason for emergency stop"),
         }
     }
@@ -50,12 +54,12 @@ mod tests {
             Reason::try_from(Reason::CriticalTemperatureLimit as u8).unwrap()
         );
         assert_eq!(
-            Reason::NoInitialHeartbeat,
-            Reason::try_from(Reason::NoInitialHeartbeat as u8).unwrap()
+            Reason::NoInitialBoardHeartbeat,
+            Reason::try_from(Reason::NoInitialBoardHeartbeat as u8).unwrap()
         );
         assert_eq!(
-            Reason::MissingHeartbeat,
-            Reason::try_from(Reason::MissingHeartbeat as u8).unwrap()
+            Reason::MissingBoardHeartbeat,
+            Reason::try_from(Reason::MissingBoardHeartbeat as u8).unwrap()
         );
         assert_eq!(
             Reason::TemperatureUpperLimitFailure,
@@ -75,8 +79,12 @@ mod tests {
         );
         assert_eq!(Reason::IMD, Reason::try_from(Reason::IMD as u8).unwrap());
         assert_eq!(
-            Err("Invalid reason for emergency stop"),
-            Reason::try_from(11)
+            Reason::MissingBaseStationHeartbeat,
+            Reason::try_from(Reason::MissingBaseStationHeartbeat as u8).unwrap()
+        );
+        assert_eq!(
+            Reason::NoInitialBaseStationHeartbeat,
+            Reason::try_from(Reason::NoInitialBaseStationHeartbeat as u8).unwrap()
         );
     }
 }

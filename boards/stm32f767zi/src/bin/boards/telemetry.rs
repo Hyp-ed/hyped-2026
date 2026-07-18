@@ -33,7 +33,8 @@ use hyped_boards_stm32f767zi::{
         },
         can_to_mqtt::can_to_mqtt,
         mqtt::{
-            base_station_heartbeat::base_station_heartbeat, mqtt,
+            base_station_heartbeat::base_station_heartbeat_listener,
+            mqtt,
             mqtt_to_event_bus::mqtt_to_event_bus,
         },
         network::net_task,
@@ -83,7 +84,7 @@ async fn main(spawner: Spawner) -> ! {
     // Network tasks: MQTT and base station heartbeat
     spawner.must_spawn(mqtt(stack));
     Timer::after(Duration::from_secs(2)).await;
-    spawner.must_spawn(base_station_heartbeat());
+    spawner.must_spawn(base_station_heartbeat_listener());
     defmt::info!("Base station heartbeat task started");
 
     bus::init().expect("Failed to initialise event bus publisher");
@@ -153,12 +154,12 @@ async fn heartbeat_monitor() {
         can_sender
             .send(CanMessage::Emergency(
                 Board::Telemetry,
-                Reason::NoInitialHeartbeat,
+                Reason::NoInitialBoardHeartbeat,
             ))
             .await;
         bus::publish(hyped_communications::events::Event::Emergency {
             from: Board::Telemetry,
-            reason: Reason::NoInitialHeartbeat,
+            reason: Reason::NoInitialBoardHeartbeat,
         })
         .await;
         return;
@@ -187,12 +188,12 @@ async fn heartbeat_monitor() {
                 can_sender
                     .send(CanMessage::Emergency(
                         Board::Telemetry,
-                        Reason::MissingHeartbeat,
+                        Reason::MissingBoardHeartbeat,
                     ))
                     .await;
                 bus::publish(hyped_communications::events::Event::Emergency {
                     from: Board::Telemetry,
-                    reason: Reason::MissingHeartbeat,
+                    reason: Reason::MissingBoardHeartbeat,
                 })
                 .await;
                 return;

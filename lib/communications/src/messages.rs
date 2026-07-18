@@ -725,7 +725,7 @@ mod tests {
 
     #[test]
     fn can_message_round_trip_emergency() {
-        let message = CanMessage::Emergency(Board::Navigation, Reason::MissingHeartbeat);
+        let message = CanMessage::Emergency(Board::Navigation, Reason::MissingBoardHeartbeat);
         let can_frame: HypedCanFrame = message.clone().into();
         let decoded: CanMessage = can_frame.into();
         assert_eq!(message, decoded)

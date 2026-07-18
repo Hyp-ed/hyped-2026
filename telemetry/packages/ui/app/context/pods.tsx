@@ -22,7 +22,7 @@ import { useMQTT } from './mqtt';
 /**
  * The maximum latency before a pod is considered disconnected, in milliseconds
  */
-const POD_MAX_LATENCY = 300 as const;
+const POD_MAX_LATENCY = 200 as const;
 
 /**
  * The latency at which a warning is sent to the server, in milliseconds
@@ -207,7 +207,7 @@ export const PodsProvider = ({ children }: { children: React.ReactNode }) => {
 	const { client, publish, subscribe, unsubscribe, mqttConnectionStatus } =
 		useMQTT();
 
-	const { raiseError } = useErrors();
+	const { raiseError } = useErrwors();
 
 	useEffect(
 		/**

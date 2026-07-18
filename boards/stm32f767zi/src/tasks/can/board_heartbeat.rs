@@ -28,7 +28,7 @@ pub async fn heartbeat_listener(from_board: Board) {
                 "Failed to receive first heartbeat from board {:?}",
                 from_board,
             );
-            emergency!(Reason::NoInitialHeartbeat);
+            emergency!(Reason::NoInitialBoardHeartbeat);
         }
     }
 
@@ -56,7 +56,7 @@ pub async fn heartbeat_listener(from_board: Board) {
                     "Emergency stop triggered due to missing heartbeat from board {:?}",
                     from_board
                 );
-                emergency!(Reason::MissingHeartbeat);
+                emergency!(Reason::MissingBoardHeartbeat);
             }
         }
     }

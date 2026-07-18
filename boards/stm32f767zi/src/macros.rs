@@ -11,19 +11,6 @@ macro_rules! emergency {
     };
 }
 
-/// Sends a state transition request to the state machine over CAN.
-#[macro_export]
-macro_rules! request_transition {
-    ($state:expr) => {
-        let can_sender = CAN_SEND.sender();
-        let can_message = CanMessage::StateTransitionRequest(StateTransitionRequest::new(
-            THIS_BOARD.get().await.clone(),
-            $state,
-        ));
-        can_sender.send(can_message).await;
-    };
-}
-
 /// Perform default CAN configuration.
 #[macro_export]
 macro_rules! default_can_config {
