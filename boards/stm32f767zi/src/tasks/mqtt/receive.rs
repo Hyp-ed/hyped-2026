@@ -24,6 +24,11 @@ use panic_probe as _;
 /// Note: excludes heartbeat and log messages
 pub static MQTT_RECEIVE: Channel<ThreadModeRawMutex, MqttMessage, 128> = Channel::new();
 
+/// Channel containing heartbeat messages that have been received from the MQTT broker from the base station.
+/// This channel is populated by the `mqtt_recv_task` and can be consumed by other tasks
+/// Note: only contains heartbeat messages
+pub static MQTT_HEARTBEAT_RECEIVE: Channel<ThreadModeRawMutex, MqttMessage, 128> = Channel::new();
+
 /// Receives messages from the MQTT broker and sends them to the `MQTT_RECEIVE` channel.
 pub async fn mqtt_receive(
     stack: &'static Stack<Ethernet<'static, ETH, GenericSMI>>,
@@ -74,7 +79,6 @@ pub async fn mqtt_receive(
 
                 match topic {
                     // Ignore heartbeat, log and latency response messages
-                    Ok(MqttTopic::Heartbeat) => {}
                     Ok(MqttTopic::Logs) => {}
                     Ok(MqttTopic::LatencyResponse) => {}
                     Ok(MqttTopic::LatencyRequest) => {
@@ -82,16 +86,6 @@ pub async fn mqtt_receive(
                             .send(MqttMessage::new(
                                 MqttTopic::LatencyResponse,
                                 String::from_str(message).unwrap(),
-                            ))
-                            .await;
-                    }
-                    Ok(MqttTopic::State) => {
-                        // Only forward STATE messages (commands) to the internal channel
-                        MQTT_RECEIVE
-                            .send(MqttMessage::new(
-                                MqttTopic::State,
-                                String::from_str(message)
-                                    .expect("Failed to convert message to string"),
                             ))
                             .await;
                     }
@@ -103,6 +97,15 @@ pub async fn mqtt_receive(
                                     .expect("Failed to convert message to string"),
                             ))
                             .await;
+                    }
+                    Ok(MqttTopic::Heartbeat) => {
+                        MQTT_HEARTBEAT_RECEIVE
+                            .send(MqttMessage::new(
+                                MqttTopic::Heartbeat,
+                                String::from_str(message)
+                                    .expect("Failed to convert message to string"),
+                            ))
+                        .await;
                     }
 
                     Ok(_) => {}

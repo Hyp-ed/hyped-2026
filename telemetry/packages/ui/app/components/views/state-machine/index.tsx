@@ -29,28 +29,34 @@ const runStates = [
 		position: { x: 480, y: 0 },
 	},
 	{
+		id: 'hv-active',
+		label: 'HV Active',
+		state: ALL_POD_STATES.HV_ACTIVE,
+		position: { x: 720, y: 0 },
+	},
+	{
 		id: 'ready-for-propulsion',
 		label: 'Ready for Propulsion',
 		state: ALL_POD_STATES.READY_FOR_PROPULSION,
-		position: { x: 720, y: 0 },
+		position: { x: 960, y: 0 },
 	},
 	{
 		id: 'accelerate',
 		label: 'Accelerate',
 		state: ALL_POD_STATES.ACCELERATE,
-		position: { x: 960, y: 0 },
+		position: { x: 1200, y: 0 },
 	},
 	{
 		id: 'brake',
 		label: 'Brake',
 		state: ALL_POD_STATES.BRAKE,
-		position: { x: 1200, y: 0 },
+		position: { x: 1440, y: 0 },
 	},
 	{
 		id: 'stopped',
 		label: 'Stopped',
 		state: ALL_POD_STATES.STOPPED,
-		position: { x: 1440, y: 0 },
+		position: { x: 1680, y: 0 },
 	},
 ] as const;
 
@@ -58,7 +64,14 @@ const emergencyNode = {
 	id: 'emergency',
 	label: 'Emergency',
 	state: ALL_POD_STATES.EMERGENCY,
-	position: { x: 720, y: 180 },
+	position: { x: 840, y: 220 },
+} as const;
+
+const maintenanceNode = {
+	id: 'maintenance',
+	label: 'Maintenance',
+	state: ALL_POD_STATES.MAINTENANCE,
+	position: { x: 0, y: 220 },
 } as const;
 
 export function StateMachine() {
@@ -78,7 +91,7 @@ export function StateMachine() {
 
 	const nodes: CustomNodeType[] = useMemo(
 		() =>
-			[...runStates, emergencyNode].map((node) => ({
+			[...runStates, maintenanceNode, emergencyNode].map((node) => ({
 				id: node.id,
 				data: {
 					label: node.label,
@@ -110,11 +123,26 @@ export function StateMachine() {
 			markerEnd: arrow,
 		}));
 
+		const maintenanceEdges: CustomEdgeType[] = [
+			{
+				id: 'idle-maintenance',
+				source: 'idle',
+				target: maintenanceNode.id,
+				sourceHandle: 'bottom',
+				targetHandle: 'top',
+				type: 'smoothstep',
+				pathOptions: { borderRadius: 20 },
+				markerEnd: arrow,
+			},
+		];
+
 		const activeNode = nodes.find((node) => node.data.active);
-		if (!activeNode || activeNode.id === emergencyNode.id) return runEdges;
+		if (!activeNode || activeNode.id === emergencyNode.id)
+			return [...runEdges, ...maintenanceEdges];
 
 		return [
 			...runEdges,
+			...maintenanceEdges,
 			{
 				id: `${activeNode.id}-emergency`,
 				source: activeNode.id,

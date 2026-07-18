@@ -1,14 +1,11 @@
 #![no_std]
 #![no_main]
 
-/// High-power board
+/// Sensors board 2
 /// Uses PA1 and 2 for low pressure
 use defmt_rtt as _;
 use embassy_executor::Spawner;
-use embassy_futures::{
-    select::{select, Either},
-    yield_now,
-};
+use embassy_futures::yield_now;
 use embassy_stm32::{
     bind_interrupts,
     can::{
@@ -19,7 +16,7 @@ use embassy_stm32::{
     peripherals::{self, CAN1},
     rng, Config,
 };
-use embassy_time::{Duration, Instant, Timer};
+use embassy_time::{Duration, Timer};
 use hyped_boards_stm32f767zi::{
     board_state::THIS_BOARD,
     default_can_config,
@@ -46,7 +43,7 @@ const DISCHARGE_SETTLE_TIME: Duration = Duration::from_secs(30);
 #[embassy_executor::main]
 async fn main(spawner: Spawner) -> ! {
     THIS_BOARD
-        .init(Board::HighPower)
+        .init(Board::Sensors2)
         .expect("Failed to initialize board");
 
     let config = Config::default();
@@ -57,11 +54,7 @@ async fn main(spawner: Spawner) -> ! {
     let gpio2: gpio::Output<'static> = gpio::Output::new(p.PE9, gpio::Level::Low, gpio::Speed::Low);
     let gpio3: gpio::Output<'static> =
         gpio::Output::new(p.PE11, gpio::Level::Low, gpio::Speed::Low);
-    // Temporary read-only HVAL input assignments. Keep these adjacent so the
-    // physical wiring can change without touching the telemetry path.
-    let hval_red = gpio::Input::new(p.PF14, gpio::Pull::Down);
-    let hval_green = gpio::Input::new(p.PF15, gpio::Pull::Down);
-    // Pressure sensors are temporarily disconnected on the high-power board.
+    // Pressure sensors are temporarily disconnected on Sensors2.
     // let adc1 = Adc::new(p.ADC1);
     // let pin1 = p.PA3.degrade_adc();
     //
@@ -96,11 +89,10 @@ async fn main(spawner: Spawner) -> ! {
     let (can_tx, can_rx) = can.split();
     spawner.must_spawn(can_sender(can_tx));
     spawner.must_spawn(send_heartbeat(Board::Telemetry));
-    spawner.must_spawn(read_hval_status(hval_red, hval_green));
-    spawner.must_spawn(high_power_can_receiver(can_rx, gpio_pins));
+    spawner.must_spawn(sensors_board_can_receiver(can_rx, gpio_pins));
     defmt::info!("CAN setup complete");
 
-    // spawner.must_spawn(high_power_pressure_sensors_task(pressure_sensors));
+    // spawner.must_spawn(sensors_board_pressure_sensors_task(pressure_sensors));
 
     loop {
         yield_now().await;
@@ -119,7 +111,7 @@ struct Pins {
 // }
 //
 // #[embassy_executor::task]
-// async fn high_power_pressure_sensors_task(mut pressure_sensors: PressureSensors) {
+// async fn sensors_board_pressure_sensors_task(mut pressure_sensors: PressureSensors) {
 //     loop {
 //         let low_pressures_ok = [
 //             !matches!(
@@ -138,7 +130,7 @@ struct Pins {
 //             defmt::warn!("Pressure sensor out of safe range, sending emergency");
 //             CAN_SEND
 //                 .send(CanMessage::Emergency(
-//                     Board::HighPower,
+//                     Board::Sensors2,
 //                     hyped_communications::emergency::Reason::Pressure,
 //                 ))
 //                 .await;
@@ -150,7 +142,7 @@ struct Pins {
 // }
 
 #[embassy_executor::task]
-async fn high_power_can_receiver(mut rx: CanRx<'static>, mut gpio_pins: Pins) {
+async fn sensors_board_can_receiver(mut rx: CanRx<'static>, mut gpio_pins: Pins) {
     loop {
         defmt::debug!("Waiting for CAN message");
 
@@ -174,36 +166,11 @@ async fn high_power_can_receiver(mut rx: CanRx<'static>, mut gpio_pins: Pins) {
         let message: CanMessage = frame.into();
         //defmt::info!("Received CAN message: {:?}", message);
 
-        respond_to_message(message, &mut gpio_pins, &mut rx).await;
+        respond_to_message(message, &mut gpio_pins).await;
     }
 }
 
-#[embassy_executor::task]
-async fn read_hval_status(
-    hval_red: gpio::Input<'static>,
-    hval_green: gpio::Input<'static>,
-) {
-    let mut previous_red = None;
-    let mut previous_green = None;
-
-    loop {
-        let red = hval_red.is_high();
-        let green = hval_green.is_high();
-
-        if previous_red != Some(red) {
-            CAN_SEND.send(CanMessage::HvalRedStatus(red)).await;
-            previous_red = Some(red);
-        }
-        if previous_green != Some(green) {
-            CAN_SEND.send(CanMessage::HvalGreenStatus(green)).await;
-            previous_green = Some(green);
-        }
-
-        Timer::after(Duration::from_millis(100)).await;
-    }
-}
-
-async fn respond_to_message(message: CanMessage, gpio_pins: &mut Pins, rx: &mut CanRx<'static>) {
+async fn respond_to_message(message: CanMessage, gpio_pins: &mut Pins) {
     match message {
         CanMessage::Heartbeat(_heartbeat) => {
             defmt::debug!("Heartbeat received");
@@ -213,13 +180,9 @@ async fn respond_to_message(message: CanMessage, gpio_pins: &mut Pins, rx: &mut 
             CAN_SEND.send(CanMessage::PrechargeStarted).await;
 
             gpio_pins.close_shutdown_circuitry_relay().await;
-            if !wait_interruptibly(Duration::from_secs(10), rx, gpio_pins).await {
-                return;
-            }
+            Timer::after(Duration::from_secs(10)).await;
             gpio_pins.close_battery_precharge_relay().await;
-            if !wait_interruptibly(PRECHARGE_SETTLE_TIME, rx, gpio_pins).await {
-                return;
-            }
+            Timer::after(PRECHARGE_SETTLE_TIME).await;
             CAN_SEND.send(CanMessage::PrechargeVoltageOK).await;
             gpio_pins.close_motor_controller_relay().await;
             CAN_SEND.send(CanMessage::PrechargeComplete).await;
@@ -232,59 +195,16 @@ async fn respond_to_message(message: CanMessage, gpio_pins: &mut Pins, rx: &mut 
             defmt::info!("StartDischargeCommand received");
             CAN_SEND.send(CanMessage::DischargeStarted).await;
             gpio_pins.open_shutdown_circuitry_relay().await;
-            if !wait_interruptibly(DISCHARGE_SETTLE_TIME, rx, gpio_pins).await {
-                return;
-            }
+            Timer::after(DISCHARGE_SETTLE_TIME).await;
             CAN_SEND.send(CanMessage::DischargeVoltageOK).await;
             CAN_SEND.send(CanMessage::DischargeComplete).await;
         }
         CanMessage::Emergency(from, reason) => {
             defmt::warn!("EMERGENCY: from {:?} reason={}", from, reason);
-            gpio_pins.open_precharge_relays().await;
+            gpio_pins.open_shutdown_circuitry_relay().await;
         }
         _ => {
             defmt::debug!("Ignored CAN message: {:?}", message);
-        }
-    }
-}
-
-/// Wait for relay settling while continuing to service isolation commands.
-async fn wait_interruptibly(
-    duration: Duration,
-    rx: &mut CanRx<'static>,
-    gpio_pins: &mut Pins,
-) -> bool {
-    let deadline = Instant::now() + duration;
-
-    loop {
-        match select(Timer::at(deadline), rx.read()).await {
-            Either::First(_) => return true,
-            Either::Second(Err(error)) => {
-                defmt::warn!("CAN receive error while waiting: {:?}", error);
-            }
-            Either::Second(Ok(envelope)) => {
-                let raw_id = match envelope.frame.id() {
-                    Id::Standard(id) => id.as_raw() as u32,
-                    Id::Extended(id) => id.as_raw(),
-                };
-                let mut data = [0u8; 8];
-                data.copy_from_slice(envelope.frame.data());
-                let message: CanMessage = hyped_can::HypedCanFrame::new(raw_id, data).into();
-
-                match message {
-                    CanMessage::OpenPrechargeRelaysCommand => {
-                        defmt::warn!("Relay sequence interrupted by isolation command");
-                        gpio_pins.open_precharge_relays().await;
-                        return false;
-                    }
-                    CanMessage::Emergency(from, reason) => {
-                        defmt::warn!("EMERGENCY: from {:?} reason={}", from, reason);
-                        gpio_pins.open_precharge_relays().await;
-                        return false;
-                    }
-                    _ => defmt::debug!("Ignored CAN message while waiting: {:?}", message),
-                }
-            }
         }
     }
 }

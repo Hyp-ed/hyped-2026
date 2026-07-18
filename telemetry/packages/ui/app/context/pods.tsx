@@ -8,8 +8,8 @@ import {
 	ALL_POD_STATES,
 	type ModeType,
 	type PodId,
-	podIds,
 	type PodStateType,
+	podIds,
 	pods,
 } from '@hyped/telemetry-constants';
 
@@ -22,7 +22,7 @@ import { useMQTT } from './mqtt';
 /**
  * The maximum latency before a pod is considered disconnected, in milliseconds
  */
-const POD_MAX_LATENCY = 300 as const;
+const POD_MAX_LATENCY = 200 as const;
 
 /**
  * The latency at which a warning is sent to the server, in milliseconds
@@ -46,8 +46,11 @@ const LATENCY_REQUEST_INTERVAL = 100 as const;
 
 const STATE_ALIASES: Record<string, PodStateType> = {
 	idle: ALL_POD_STATES.IDLE,
+	maintenance: ALL_POD_STATES.MAINTENANCE,
+	entering_maintenance: ALL_POD_STATES.ENTERING_MAINTENANCE,
 	setup_motor: ALL_POD_STATES.SETUP_MOTOR,
 	precharge: ALL_POD_STATES.PRECHARGE,
+	hv_active: ALL_POD_STATES.HV_ACTIVE,
 	ready_for_propulsion: ALL_POD_STATES.READY_FOR_PROPULSION,
 	accelerate: ALL_POD_STATES.ACCELERATE,
 	brake: ALL_POD_STATES.BRAKE,
@@ -70,6 +73,28 @@ type PodControlStatus = {
 	canPrecharge: boolean;
 	canReadyForPropulsion: boolean;
 	canAccelerate: boolean;
+};
+
+export type ImdStatus = 'HEALTHY' | 'FAULT' | 'UNKNOWN';
+export type BrakeClampStatus = 'CLAMPED' | 'UNCLAMPED' | 'UNKNOWN';
+
+const parseStatusValue = (message: Buffer) => {
+	const value = Number.parseInt(decodeMqttStringPayload(message), 10);
+	return value === 0 || value === 1 ? value : null;
+};
+
+const parseImdStatus = (message: Buffer): ImdStatus => {
+	const value = parseStatusValue(message);
+	if (value === 1) return 'HEALTHY';
+	if (value === 0) return 'FAULT';
+	return 'UNKNOWN';
+};
+
+const parseBrakeClampStatus = (message: Buffer): BrakeClampStatus => {
+	const value = parseStatusValue(message);
+	if (value === 1) return 'CLAMPED';
+	if (value === 0) return 'UNCLAMPED';
+	return 'UNKNOWN';
 };
 
 type RawPodControlStatus = Partial<
@@ -128,6 +153,10 @@ type PodsStateType = {
 		connectionEstablished?: Date;
 		podState: PodStateType;
 		controlStatus: PodControlStatus;
+		imdStatus: ImdStatus;
+		hvalRedActive: boolean | null;
+		hvalGreenActive: boolean | null;
+		brakeClampStatus: BrakeClampStatus;
 	};
 };
 
@@ -154,6 +183,10 @@ function createPodsStateFromIds(ids: readonly PodId[]): PodsStateType {
 			connectionStatus: POD_CONNECTION_STATUS.CONNECTED,
 			podState: ALL_POD_STATES.UNKNOWN,
 			controlStatus: DEFAULT_CONTROL_STATUS,
+			imdStatus: 'UNKNOWN',
+			hvalRedActive: null,
+			hvalGreenActive: null,
+			brakeClampStatus: 'UNKNOWN',
 		};
 	}
 	return podsContext;
@@ -174,7 +207,7 @@ export const PodsProvider = ({ children }: { children: React.ReactNode }) => {
 	const { client, publish, subscribe, unsubscribe, mqttConnectionStatus } =
 		useMQTT();
 
-	const { raiseError } = useErrors();
+	const { raiseError } = useErrwors();
 
 	useEffect(
 		/**
@@ -193,6 +226,10 @@ export const PodsProvider = ({ children }: { children: React.ReactNode }) => {
 							newPodsState[podId].connectionStatus =
 								POD_CONNECTION_STATUS.DISCONNECTED;
 							newPodsState[podId].controlStatus = DEFAULT_CONTROL_STATUS;
+							newPodsState[podId].imdStatus = 'UNKNOWN';
+							newPodsState[podId].hvalRedActive = null;
+							newPodsState[podId].hvalGreenActive = null;
+							newPodsState[podId].brakeClampStatus = 'UNKNOWN';
 							raiseError(
 								ERROR_IDS.POD_DISCONNECT,
 								`Pod ${podId} disconnected!`,
@@ -246,6 +283,10 @@ export const PodsProvider = ({ children }: { children: React.ReactNode }) => {
 								...prevState[podId],
 								connectionStatus: POD_CONNECTION_STATUS.DISCONNECTED,
 								controlStatus: DEFAULT_CONTROL_STATUS,
+								imdStatus: 'UNKNOWN',
+								hvalRedActive: null,
+								hvalGreenActive: null,
+								brakeClampStatus: 'UNKNOWN',
 								// reset previous latencies
 								previousLatencies: [],
 								// reset latency
@@ -292,7 +333,11 @@ export const PodsProvider = ({ children }: { children: React.ReactNode }) => {
 						}));
 					}
 					// raise an error if we are in a failure state
-					if ((Object.values(FAILURE_STATES) as string[]).includes(normalizedPodState)) {
+					if (
+						(Object.values(FAILURE_STATES) as string[]).includes(
+							normalizedPodState,
+						)
+					) {
 						raiseError(
 							ERROR_IDS.POD_FAILURE_STATE,
 							`Pod ${podId} in failure state!`,
@@ -308,6 +353,40 @@ export const PodsProvider = ({ children }: { children: React.ReactNode }) => {
 						[podId]: {
 							...prevState[podId],
 							controlStatus,
+						},
+					}));
+				} else if (topic === getTopic('status/imd_status', podId)) {
+					setPodsState((prevState) => ({
+						...prevState,
+						[podId]: {
+							...prevState[podId],
+							imdStatus: parseImdStatus(message),
+						},
+					}));
+				} else if (topic === getTopic('status/hval_red_status', podId)) {
+					const value = parseStatusValue(message);
+					setPodsState((prevState) => ({
+						...prevState,
+						[podId]: {
+							...prevState[podId],
+							hvalRedActive: value === null ? null : value === 1,
+						},
+					}));
+				} else if (topic === getTopic('status/hval_green_status', podId)) {
+					const value = parseStatusValue(message);
+					setPodsState((prevState) => ({
+						...prevState,
+						[podId]: {
+							...prevState[podId],
+							hvalGreenActive: value === null ? null : value === 1,
+						},
+					}));
+				} else if (topic === getTopic('status/brake_clamp_status', podId)) {
+					setPodsState((prevState) => ({
+						...prevState,
+						[podId]: {
+							...prevState[podId],
+							brakeClampStatus: parseBrakeClampStatus(message),
 						},
 					}));
 				} else if (topic === getTopic('latency/response', podId)) {
@@ -359,6 +438,10 @@ export const PodsProvider = ({ children }: { children: React.ReactNode }) => {
 				subscribe('latency/response', podId);
 				subscribe('state', podId);
 				subscribe('control-status', podId);
+				subscribe('status/imd_status', podId);
+				subscribe('status/hval_red_status', podId);
+				subscribe('status/hval_green_status', podId);
+				subscribe('status/brake_clamp_status', podId);
 				client.on('message', (topic, message) =>
 					processMessage(podId, topic, message),
 				);
@@ -372,6 +455,10 @@ export const PodsProvider = ({ children }: { children: React.ReactNode }) => {
 					unsubscribe('latency/response', podId);
 					unsubscribe('state', podId);
 					unsubscribe('control-status', podId);
+					unsubscribe('status/imd_status', podId);
+					unsubscribe('status/hval_red_status', podId);
+					unsubscribe('status/hval_green_status', podId);
+					unsubscribe('status/brake_clamp_status', podId);
 				});
 			};
 		},

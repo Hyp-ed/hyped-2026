@@ -18,6 +18,8 @@ pub enum EventId {
     PrechargeComplete,
     DischargeComplete,
     VoltageStatus,
+    HvalRedStatus,
+    HvalGreenStatus,
     PrechargeVoltageOK,
     DischargeVoltageOK,
     MotorControllerSetupCommand,
@@ -74,6 +76,8 @@ const DISCHARGE_STARTED_ID: u16 = MAX_MESSAGE_IDENTIFIER - 12;
 const DISCHARGE_COMPLETE_ID: u16 = MAX_MESSAGE_IDENTIFIER - 13;
 
 const VOLTAGE_STATUS_ID: u16 = MAX_MESSAGE_IDENTIFIER - 39;
+const HVAL_RED_STATUS_ID: u16 = MAX_MESSAGE_IDENTIFIER - 14;
+const HVAL_GREEN_STATUS_ID: u16 = MAX_MESSAGE_IDENTIFIER - 15;
 const PRECHARGE_VOLTAGE_OK_ID: u16 = MAX_MESSAGE_IDENTIFIER - 40;
 const DISCHARGE_VOLTAGE_OK_ID: u16 = MAX_MESSAGE_IDENTIFIER - 41;
 
@@ -94,7 +98,7 @@ const MOTOR_CONTROLLER_SETUP_COMPLETE_ID: u16 = MAX_MESSAGE_IDENTIFIER - 52;
 const MOTOR_CONTROLLER_OPERATIONAL_ID: u16 = MAX_MESSAGE_IDENTIFIER - 53;
 const OPEN_PRECHARGE_RELAYS_COMMAND_ID: u16 = MAX_MESSAGE_IDENTIFIER - 54;
 
-// Note: 3, 4, 11, 14-20 are free
+// Note: 3, 4, 11, 16-20 are free
 
 // Navigation
 const END_OF_TRACK_BRAKE_ID: u16 = MAX_MESSAGE_IDENTIFIER - 38;
@@ -129,6 +133,8 @@ impl From<EventId> for u16 {
             EventId::DischargeStarted => DISCHARGE_STARTED_ID,
             EventId::DischargeComplete => DISCHARGE_COMPLETE_ID,
             EventId::VoltageStatus => VOLTAGE_STATUS_ID,
+            EventId::HvalRedStatus => HVAL_RED_STATUS_ID,
+            EventId::HvalGreenStatus => HVAL_GREEN_STATUS_ID,
             EventId::PrechargeVoltageOK => PRECHARGE_VOLTAGE_OK_ID,
             EventId::DischargeVoltageOK => DISCHARGE_VOLTAGE_OK_ID,
             EventId::MotorControllerSetupCommand => MOTOR_CONTROLLER_SETUP_COMMAND_ID,
@@ -187,6 +193,8 @@ impl TryFrom<u16> for EventId {
             DISCHARGE_STARTED_ID => Ok(EventId::DischargeStarted),
             DISCHARGE_COMPLETE_ID => Ok(EventId::DischargeComplete),
             VOLTAGE_STATUS_ID => Ok(EventId::VoltageStatus),
+            HVAL_RED_STATUS_ID => Ok(EventId::HvalRedStatus),
+            HVAL_GREEN_STATUS_ID => Ok(EventId::HvalGreenStatus),
             PRECHARGE_VOLTAGE_OK_ID => Ok(EventId::PrechargeVoltageOK),
             DISCHARGE_VOLTAGE_OK_ID => Ok(EventId::DischargeVoltageOK),
             MOTOR_CONTROLLER_SET_OPERATIONAL_COMMAND_ID => {

@@ -1,7 +1,9 @@
 mod accelerate;
 mod brake;
 mod emergency;
+mod hv_active;
 mod idle;
+mod maintenance;
 mod precharge;
 mod ready_for_propulsion;
 mod setup_motor;

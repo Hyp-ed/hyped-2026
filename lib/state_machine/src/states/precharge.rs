@@ -13,6 +13,7 @@ impl StateMachine {
         self.precharge_voltage_ok = false;
         self.precharge_complete = false;
         self.ready_for_run = false;
+        self.shutdown_circuitry_relay_open = false;
         self.battery_precharge_relay_open = false;
         self.motor_controller_relay_open = false;
         self.motor_controller_operational_command_sent = false;
@@ -78,8 +79,8 @@ impl StateMachine {
             }
             Event::ReadyForPropulsionOperatorCommand => {
                 if self.ready_for_run {
-                    info!("Operator confirmed pod is ready for propulsion");
-                    self.transition_to(State::ReadyForPropulsion).await;
+                    info!("Operator confirmed precharge; entering HV Active");
+                    self.transition_to(State::HvActive).await;
                 } else {
                     warn!("Precharge incomplete, cannot enter ready for propulsion");
                 }

@@ -2,6 +2,7 @@ use embassy_stm32::can::{CanRx, Id};
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, channel::Channel};
 use hyped_can::HypedCanFrame;
 use hyped_communications::{
+    boards::Board,
     bus::publish,
     can_id::CanId,
     events::Event,
@@ -12,7 +13,10 @@ use hyped_communications::{
 };
 use hyped_sensors::imd::ImdFrame;
 
-use crate::board_state::{EMERGENCY, THIS_BOARD};
+use crate::{
+    board_state::{EMERGENCY, THIS_BOARD},
+    tasks::status_to_mqtt::{set_brake_clamp_status, set_hval_status},
+};
 
 use defmt_rtt as _;
 use panic_probe as _;
@@ -77,6 +81,11 @@ pub async fn can_receiver(mut rx: CanRx<'static>) {
             CanMessage::Emergency(board, reason) => {
                 emergency_sender.send(true);
                 defmt::error!("Emergency message from board {}: {}", board, reason);
+                publish(Event::Emergency {
+                    from: board,
+                    reason,
+                })
+                .await;
             }
             CanMessage::MeasurementReading(measurement_reading) => {
                 defmt::info!("Received measurement reading: {:?}", measurement_reading);
@@ -111,6 +120,14 @@ pub async fn can_receiver(mut rx: CanRx<'static>) {
             CanMessage::VoltageStatus { voltage } => {
                 defmt::debug!("Voltage status: {}cV", voltage.0);
                 publish(Event::VoltageStatus { voltage }).await;
+            }
+            CanMessage::HvalRedStatus(active) => {
+                defmt::debug!("HVAL red status: {}", active);
+                set_hval_status(Some(active), None);
+            }
+            CanMessage::HvalGreenStatus(active) => {
+                defmt::debug!("HVAL green status: {}", active);
+                set_hval_status(None, Some(active));
             }
             CanMessage::PrechargeVoltageOK => {
                 defmt::debug!("Precharge voltage OK");
@@ -202,10 +219,16 @@ pub async fn can_receiver(mut rx: CanRx<'static>) {
             }
             CanMessage::BrakesClamped { from } => {
                 defmt::debug!("Brakes clamped. Board={}", from);
+                if from == Board::Pneumatics {
+                    set_brake_clamp_status(true);
+                }
                 publish(Event::BrakesClamped { from }).await;
             }
             CanMessage::BrakesUnclamped { from } => {
                 defmt::debug!("Brakes unclamped. Board={}", from);
+                if from == Board::Pneumatics {
+                    set_brake_clamp_status(false);
+                }
                 publish(Event::BrakesUnclamped { from }).await;
             }
             CanMessage::LateralSuspensionRetracted { from } => {

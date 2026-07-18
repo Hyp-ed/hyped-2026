@@ -12,7 +12,7 @@ impl StateMachine {
         match event {
             // Braking
             Event::BrakeOperatorCommand => {
-                info!("Operator initiated braking");
+                info!("Normal braking requested during Demo; isolating HV");
                 self.transition_to(State::Brake).await;
             }
             Event::EmergencyStopOperatorCommand => {
@@ -20,8 +20,15 @@ impl StateMachine {
                 self.transition_to(State::Emergency).await;
             }
             Event::EndOfTrackBrakeCommand => {
-                info!("End of track approaching, braking");
+                info!("End of track reached; starting normal braking");
                 self.transition_to(State::Brake).await;
+            }
+            Event::BrakesClamped { .. }
+            | Event::ShutdownCircuitryRelayOpen
+            | Event::BatteryPrechargeRelayOpen
+            | Event::MotorControllerRelayOpen => {
+                warn!("Demo invariant violated; isolating HV");
+                self.transition_to(State::Emergency).await;
             }
             // Status
             Event::PropulsionAccelerationStarted => {

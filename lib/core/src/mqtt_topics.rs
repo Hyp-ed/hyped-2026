@@ -13,6 +13,10 @@ pub enum MqttTopic {
     Measurement(MeasurementId),
     State,
     ControlStatus,
+    ImdStatus,
+    HvalRedStatus,
+    HvalGreenStatus,
+    BrakeClampStatus,
     Controls,
     Heartbeat,
     Logs,
@@ -31,6 +35,10 @@ impl FromStr for MqttTopic {
                 Ok(MqttTopic::State)
             }
             "hyped/the_podigal_son/control-status" => Ok(MqttTopic::ControlStatus),
+            "hyped/the_podigal_son/status/imd_status" => Ok(MqttTopic::ImdStatus),
+            "hyped/the_podigal_son/status/hval_red_status" => Ok(MqttTopic::HvalRedStatus),
+            "hyped/the_podigal_son/status/hval_green_status" => Ok(MqttTopic::HvalGreenStatus),
+            "hyped/the_podigal_son/status/brake_clamp_status" => Ok(MqttTopic::BrakeClampStatus),
             "hyped/the_podigal_son/heartbeat" => Ok(MqttTopic::Heartbeat),
             "hyped/the_podigal_son/logs" => Ok(MqttTopic::Logs),
             "hyped/the_podigal_son/latency/request" => Ok(MqttTopic::LatencyRequest),
@@ -61,6 +69,18 @@ impl From<MqttTopic> for String<100> {
             MqttTopic::ControlStatus => topic
                 .push_str("hyped/the_podigal_son/control-status")
                 .unwrap(),
+            MqttTopic::ImdStatus => topic
+                .push_str("hyped/the_podigal_son/status/imd_status")
+                .unwrap(),
+            MqttTopic::HvalRedStatus => topic
+                .push_str("hyped/the_podigal_son/status/hval_red_status")
+                .unwrap(),
+            MqttTopic::HvalGreenStatus => topic
+                .push_str("hyped/the_podigal_son/status/hval_green_status")
+                .unwrap(),
+            MqttTopic::BrakeClampStatus => topic
+                .push_str("hyped/the_podigal_son/status/brake_clamp_status")
+                .unwrap(),
             MqttTopic::Controls => topic.push_str("hyped/the_podigal_son/controls").unwrap(),
             MqttTopic::Heartbeat => topic.push_str("hyped/the_podigal_son/heartbeat").unwrap(),
             MqttTopic::Logs => topic.push_str("hyped/the_podigal_son/logs").unwrap(),
@@ -78,5 +98,38 @@ impl From<MqttTopic> for String<100> {
             }
         }
         topic
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn safety_status_topics_round_trip() {
+        for (topic, expected) in [
+            (
+                MqttTopic::ImdStatus,
+                "hyped/the_podigal_son/status/imd_status",
+            ),
+            (
+                MqttTopic::HvalRedStatus,
+                "hyped/the_podigal_son/status/hval_red_status",
+            ),
+            (
+                MqttTopic::HvalGreenStatus,
+                "hyped/the_podigal_son/status/hval_green_status",
+            ),
+            (
+                MqttTopic::BrakeClampStatus,
+                "hyped/the_podigal_son/status/brake_clamp_status",
+            ),
+        ] {
+            let encoded: String<100> = topic.into();
+            assert_eq!(encoded.as_str(), expected);
+            let decoded: MqttTopic = encoded.parse().expect("status topic should parse");
+            let reencoded: String<100> = decoded.into();
+            assert_eq!(reencoded.as_str(), expected);
+        }
     }
 }

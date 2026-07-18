@@ -14,6 +14,10 @@ impl StateMachine {
 
     pub(crate) async fn react_setup_motor(&mut self, event: Event) {
         match event {
+            Event::ShutdownCircuitryRelayOpen => {
+                self.shutdown_circuitry_relay_open = true;
+                self.command_motor_controller_setup_if_precharge_relays_open();
+            }
             Event::BatteryPrechargeRelayOpen => {
                 self.battery_precharge_relay_open = true;
                 self.command_motor_controller_setup_if_precharge_relays_open();
@@ -23,7 +27,10 @@ impl StateMachine {
                 self.command_motor_controller_setup_if_precharge_relays_open();
             }
             Event::MotorControllerSetupComplete => {
-                if self.battery_precharge_relay_open && self.motor_controller_relay_open {
+                if self.shutdown_circuitry_relay_open
+                    && self.battery_precharge_relay_open
+                    && self.motor_controller_relay_open
+                {
                     self.motor_controller_setup_done = true;
                     info!("Motor controller setup complete; awaiting precharge command");
                 } else {
@@ -45,6 +52,10 @@ impl StateMachine {
                 warn!("Unexpected relay closure during motor setup");
                 self.transition_to(State::Emergency).await;
             }
+            Event::BrakesUnclamped { .. } | Event::PropulsionAccelerationStarted => {
+                warn!("Motor setup invariant violated");
+                self.transition_to(State::Emergency).await;
+            }
             Event::EmergencyStopOperatorCommand => {
                 warn!("EMERGENCY STOP PRESSED");
                 self.transition_to(State::Emergency).await;
@@ -56,7 +67,10 @@ impl StateMachine {
     }
 
     fn command_motor_controller_setup_if_precharge_relays_open(&mut self) {
-        if self.battery_precharge_relay_open && self.motor_controller_relay_open {
+        if self.shutdown_circuitry_relay_open
+            && self.battery_precharge_relay_open
+            && self.motor_controller_relay_open
+        {
             if self.motor_controller_setup_command_sent {
                 return;
             }
@@ -65,7 +79,8 @@ impl StateMachine {
             self.queue_publish(Event::MotorControllerSetupCommand);
         } else {
             warn!(
-                "Waiting for precharge relays to open before motor setup: battery_precharge_relay_open={}, motor_controller_relay_open={}",
+                "Waiting for HV relays to open before motor setup: shutdown_open={}, battery_precharge_open={}, motor_controller_open={}",
+                self.shutdown_circuitry_relay_open,
                 self.battery_precharge_relay_open,
                 self.motor_controller_relay_open,
             );

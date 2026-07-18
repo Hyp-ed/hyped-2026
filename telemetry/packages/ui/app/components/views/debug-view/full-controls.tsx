@@ -54,7 +54,9 @@ export const FullControls = ({ podId }: { podId: string }) => {
 								Motor Setup <Wrench size={16} />
 							</LeftButton>
 							<RightButton
-								onClick={() => void sendControlMessage(podId, CONTROLS.PRECHARGE)}
+								onClick={() =>
+									void sendControlMessage(podId, CONTROLS.PRECHARGE)
+								}
 							>
 								Precharge <Gauge size={16} />
 							</RightButton>
@@ -62,16 +64,15 @@ export const FullControls = ({ podId }: { podId: string }) => {
 						<ButtonPair>
 							<LeftButton
 								onClick={() =>
-									void sendControlMessage(
-										podId,
-										CONTROLS.READY_FOR_PROPULSION,
-									)
+									void sendControlMessage(podId, CONTROLS.READY_FOR_PROPULSION)
 								}
 							>
 								Ready Pod <ShieldCheck size={16} />
 							</LeftButton>
 							<RightButton
-								onClick={() => void sendControlMessage(podId, CONTROLS.ACCELERATE)}
+								onClick={() =>
+									void sendControlMessage(podId, CONTROLS.ACCELERATE)
+								}
 							>
 								Accelerate <ChevronsUp size={16} />
 							</RightButton>

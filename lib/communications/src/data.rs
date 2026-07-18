@@ -324,7 +324,7 @@ mod tests {
         round_trip(CanData::State(7));
         round_trip(CanData::U32(0xDEADBEEF));
         round_trip(CanData::Heartbeat(Board::Navigation));
-        round_trip(CanData::Emergency(Reason::MissingHeartbeat));
+        round_trip(CanData::Emergency(Reason::MissingBoardHeartbeat));
     }
 
     #[test]
